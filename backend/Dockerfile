@@ -1,0 +1,52 @@
+FROM php:8.2-apache
+
+RUN apt-get update && apt-get install -y \
+    git \
+    libfreetype6-dev \
+    libjpeg-dev \
+    libpng-dev \
+    libpq-dev \
+    locales \
+    unzip \
+    wget \
+    zip \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install bcmath gd pdo pdo_pgsql pgsql sockets \
+    && a2enmod rewrite \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN echo "pt_BR.UTF-8 UTF-8" >> /etc/locale.gen \
+    && locale-gen "pt_BR.UTF-8" \
+    && ln -fs /usr/share/zoneinfo/America/Sao_Paulo /etc/localtime
+
+COPY --from=composer:2 /usr/bin/composer /usr/local/bin/composer
+
+ENV APACHE_DOCUMENT_ROOT=/var/www/html/public
+
+RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf \
+    && sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf \
+    && printf "%s\n" \
+      "date.timezone = America/Sao_Paulo" \
+      "memory_limit = 512M" \
+      "upload_max_filesize = 64M" \
+      "post_max_size = 64M" \
+      "max_execution_time = 120" \
+      "max_input_vars = 3000" \
+      "display_errors = Off" \
+      "log_errors = On" \
+      "error_reporting = E_ALL" \
+      > /usr/local/etc/php/conf.d/novawave.ini
+
+WORKDIR /var/www/html
+
+COPY composer.json composer.lock ./
+RUN composer install --no-dev --prefer-dist --no-interaction --no-progress --optimize-autoloader
+
+COPY . .
+
+RUN mkdir -p logs \
+    && chown -R www-data:www-data /var/www/html \
+    && chmod -R 775 logs
+
+EXPOSE 80

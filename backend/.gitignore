@@ -1,0 +1,6 @@
+.env
+.env.prod
+vendor
+/logs
+/core
+core

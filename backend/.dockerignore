@@ -1,0 +1,13 @@
+.git/
+.gitignore
+vendor/
+logs/
+composer.phar
+.devops/
+.vscode/
+.idea/
+.env
+config/*.json
+*.log
+debug/
+.tmp/
