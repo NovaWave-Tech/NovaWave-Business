@@ -21,12 +21,16 @@ class AuthService
     {
         $user = $this->repository->findUserByEmail(trim($email));
 
-        if (!$user || !$this->passwordMatches((string) $user->senha, $password)) {
+        if (!$user || !password_verify($password, (string) $user->senha_hash)) {
             throw new RuntimeException('Email ou senha invalidos');
         }
 
         if ((int) $user->situacao !== 1) {
             throw new RuntimeException('Usuario inativo');
+        }
+
+        if ((int) $user->empresa_situacao !== 1) {
+            throw new RuntimeException('Empresa inativa ou bloqueada');
         }
 
         $authUser = [
@@ -54,12 +58,4 @@ class AuthService
         ];
     }
 
-    private function passwordMatches(string $storedPassword, string $plainPassword): bool
-    {
-        if (password_get_info($storedPassword)['algo'] !== 0) {
-            return password_verify($plainPassword, $storedPassword);
-        }
-
-        return hash_equals($storedPassword, $plainPassword);
-    }
 }

@@ -163,8 +163,7 @@ Tambem sao aceitos os campos legados `login` e `senha`.
 `AuthService::login`:
 
 - busca usuario por email;
-- valida senha com `password_verify` quando a senha esta com hash;
-- aceita senha em texto puro apenas para compatibilidade temporaria;
+- valida exclusivamente hashes seguros com `password_verify`;
 - valida usuario ativo;
 - monta `auth_user`;
 - gera JWT com `JwtService`.
@@ -249,3 +248,23 @@ Authorization: Bearer {token}
 - Nao criar arquivos fora de `src/Modules`, `src/Shared`, `src/Infrastructure` ou `src/Routes` sem motivo forte.
 - Nao misturar dados de empresas.
 - Nao confiar em permissao vinda apenas do frontend.
+
+## Fluxo Exclusivo da NovaWave Platform
+
+A administracao do SaaS vive em `src/Modules/Platform` e nunca reutiliza o guard do ERP:
+
+```txt
+PlatformAuthController -> PlatformAuthService -> PlatformAuthRepository
+PlatformController -> PlatformService -> PlatformRepository
+PlatformJwtService -> PlatformAuthMiddleware
+```
+
+- Login somente em `platform_usuario` por `POST /api/platform/auth/login`.
+- Tokens usam `PLATFORM_JWT_SECRET` e o claim `guard=platform`.
+- Refresh tokens ficam com hash em `sessao_platform_usuario` e sao rotacionados.
+- Rotas `/api/platform/*` usam exclusivamente `PlatformAuthMiddleware`.
+- Acoes criticas gravam auditoria com `origem_usuario=platform`.
+- Empresa, matriz, assinatura e admin sao provisionados na mesma transacao.
+- Um JWT do ERP nunca pode acessar as rotas da plataforma.
+
+O teste `tests/platform_smoke.php` valida login, tokens, plano, empresa, auditoria e dashboard em um PostgreSQL preparado com o schema e o seed.

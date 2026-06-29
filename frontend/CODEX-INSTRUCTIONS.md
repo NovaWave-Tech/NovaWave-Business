@@ -211,3 +211,29 @@ auth_user
 - Nao criar UI com textos explicativos sobre como usar o sistema.
 - Nao misturar componentes locais de um modulo em outro sem mover para `shared`.
 - Nao criar rota protegida fora de `ProtectedRoutes`.
+
+## Fluxo Exclusivo da NovaWave Platform
+
+O backoffice fica em `src/modules/platform` e possui sessao independente do ERP:
+
+```txt
+auth/             login e PlatformAuthContext
+layout/           sidebar, topbar e outlet protegido
+services/         platformApi e armazenamento da sessao
+dashboard/        indicadores globais
+empresas/         listagem, provisionamento e detalhes
+planos/           planos e limites
+assinaturas/      ciclo comercial
+usuarios/         admins internos
+auditoria/        rastreabilidade global
+configuracoes/    parametros do SaaS
+```
+
+- Rotas visuais usam `/platform`; APIs usam `/api/platform`.
+- Chaves `platform_*` nunca se misturam com `auth_*` do ERP.
+- `platformApi` injeta somente o token da plataforma.
+- O painel administrativo usa light mode e o ERP continua dark first.
+- Use React Query, loading e empty state nas paginas remotas.
+- Use React Hook Form e Zod em formularios complexos.
+- Consulte `PLATFORM-UI-GUIDE.md` antes de criar ou alterar interfaces da Platform.
+- Reutilize `platformTokens.ts` e `PlatformUI.tsx`; nao espalhe cores e sombras nas paginas.

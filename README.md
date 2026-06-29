@@ -71,9 +71,20 @@ Antes de deixar publico, confira se somente arquivos de exemplo foram versionado
 
 ## Proximos passos
 
-- Modelar schema definitivo do ERP.
-- Migrar todas as senhas para `password_hash`.
-- Implementar refresh token.
-- Criar RBAC completo.
-- Criar auditoria centralizada.
+## NovaWave Platform
+
+O backoffice oficial da NovaWave Tech foi implementado com login, token, layout e APIs separados do ERP. A interface inicia em:
+
+```txt
+http://localhost:5173/platform/login
+```
+
+O painel inclui dashboard global, empresas, provisionamento em etapas, planos, assinaturas, usuarios internos, auditoria e configuracoes. Consulte `backend/CODEX-INSTRUCTIONS.md` e `frontend/CODEX-INSTRUCTIONS.md` para os fluxos de desenvolvimento.
+
+## Proximos passos
+
+- Evoluir o schema por migrations versionadas a partir de `backend/banco.sql`.
+- Implementar refresh token sobre as tabelas de sessao existentes.
+- Aplicar o RBAC e o isolamento de tenant nos middlewares do backend.
+- Integrar a gravacao de auditoria aos servicos da aplicacao.
 - Implementar modulos reais em cima da estrutura modular.

@@ -22,6 +22,7 @@ services:
       - APP_TIMEZONE=${APP_TIMEZONE}
       - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS}
       - JWT_SECRET=${JWT_SECRET}
+      - PLATFORM_JWT_SECRET=${PLATFORM_JWT_SECRET}
       - DD_LOG_DIR=${DD_LOG_DIR}
     command: >
       sh -lc "composer install --prefer-dist --no-interaction --no-progress

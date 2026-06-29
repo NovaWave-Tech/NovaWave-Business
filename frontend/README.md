@@ -196,3 +196,23 @@ Com isso, o frontend passa a usar somente `app`, `layouts`, `modules`, `shared`,
 - Implementar RBAC no frontend.
 - Criar dashboard consumindo API real.
 - Criar os módulos reais em cima da estrutura limpa.
+
+## NovaWave Platform
+
+O painel interno da NovaWave Tech fica em `/platform/login`, usa light mode e mantém sessão separada do ERP.
+
+```txt
+/platform/dashboard
+/platform/empresas
+/platform/empresas/nova
+/platform/empresas/:id
+/platform/planos
+/platform/assinaturas
+/platform/usuarios
+/platform/auditoria
+/platform/configuracoes
+```
+
+O módulo usa React Query, React Hook Form, Zod, Recharts, Framer Motion, Chakra UI e Axios. Novas telas administrativas devem seguir `CODEX-INSTRUCTIONS.md`.
+
+O design system e as decisoes de UX da Platform estao documentados em `PLATFORM-UI-GUIDE.md`.
