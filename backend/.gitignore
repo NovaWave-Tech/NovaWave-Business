@@ -4,3 +4,6 @@ vendor
 /logs
 /core
 core
+/banco.sql
+/database/migrations/
+/tests

@@ -28,11 +28,13 @@ export function PageHeader({
   description,
   breadcrumbs = [],
   actions,
+  icon,
 }: {
   title: string;
   description?: string;
   breadcrumbs?: { label: string; to?: string }[];
   actions?: ReactNode;
+  icon?: LucideIcon;
 }) {
   return (
     <Flex
@@ -64,21 +66,41 @@ export function PageHeader({
             ))}
           </Breadcrumb>
         )}
-        <Heading
-          as="h1"
-          fontSize="28px"
-          lineHeight="36px"
-          fontWeight="700"
-          letterSpacing="0"
-          color="erp.text"
-        >
-          {title}
-        </Heading>
-        {description && (
-          <Text mt={1} color="erp.textSecondary" fontSize="sm">
-            {description}
-          </Text>
-        )}
+        <Flex align="center" gap={3}>
+          {icon && (
+            <Flex
+              w="40px"
+              h="40px"
+              align="center"
+              justify="center"
+              borderRadius="10px"
+              color="erp.brandText"
+              bg="erp.brandSoft"
+              border="1px solid"
+              borderColor="erp.brandBorder"
+              flexShrink={0}
+            >
+              <Icon as={icon} boxSize="19px" />
+            </Flex>
+          )}
+          <Box>
+            <Heading
+              as="h1"
+              fontSize="28px"
+              lineHeight="36px"
+              fontWeight="700"
+              letterSpacing="0"
+              color="erp.text"
+            >
+              {title}
+            </Heading>
+            {description && (
+              <Text mt={1} color="erp.textSecondary" fontSize="sm">
+                {description}
+              </Text>
+            )}
+          </Box>
+        </Flex>
       </Box>
       {actions && (
         <Flex
@@ -121,14 +143,46 @@ export function Surface({
   );
 }
 
+export function BrandSurface({
+  children,
+  ...props
+}: BoxProps & { children: ReactNode }) {
+  return (
+    <Box
+      position="relative"
+      bg="erp.surface"
+      border="1px solid"
+      borderColor="erp.brandBorder"
+      borderRadius="12px"
+      boxShadow="0 8px 24px rgba(37,99,255,.08)"
+      overflow="hidden"
+      _before={{
+        content: '""',
+        position: 'absolute',
+        insetX: 0,
+        top: 0,
+        h: '3px',
+        bg: 'linear-gradient(90deg, #2F80FF 0%, #2563FF 55%, #4F46E5 100%)',
+      }}
+      {...props}
+    >
+      {children}
+    </Box>
+  );
+}
+
 export function SectionHeader({
   title,
   description,
   action,
+  icon,
+  eyebrow,
 }: {
   title: string;
   description?: string;
   action?: ReactNode;
+  icon?: LucideIcon;
+  eyebrow?: string;
 }) {
   return (
     <Flex
@@ -140,16 +194,44 @@ export function SectionHeader({
       borderBottom="1px solid"
       borderColor="erp.border"
     >
-      <Box>
-        <Text color="erp.text" fontSize="sm" fontWeight="600">
-          {title}
-        </Text>
-        {description && (
-          <Text color="erp.textSecondary" fontSize="xs" mt={0.5}>
-            {description}
-          </Text>
+      <Flex align="center" gap={3}>
+        {icon && (
+          <Flex
+            w="32px"
+            h="32px"
+            align="center"
+            justify="center"
+            borderRadius="8px"
+            color="erp.brandText"
+            bg="erp.brandSoft"
+            border="1px solid"
+            borderColor="erp.brandBorder"
+            flexShrink={0}
+          >
+            <Icon as={icon} boxSize="15px" />
+          </Flex>
         )}
-      </Box>
+        <Box>
+          {eyebrow && (
+            <Text
+              color="erp.brandText"
+              fontSize="9px"
+              fontWeight="700"
+              textTransform="uppercase"
+            >
+              {eyebrow}
+            </Text>
+          )}
+          <Text color="erp.text" fontSize="sm" fontWeight="650">
+            {title}
+          </Text>
+          {description && (
+            <Text color="erp.textSecondary" fontSize="xs" mt={0.5}>
+              {description}
+            </Text>
+          )}
+        </Box>
+      </Flex>
       {action}
     </Flex>
   );

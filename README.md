@@ -83,7 +83,7 @@ O painel inclui dashboard global, empresas, provisionamento em etapas, planos, a
 
 ## Proximos passos
 
-- Evoluir o schema por migrations versionadas a partir de `backend/banco.sql`.
+- Evoluir o schema pelo processo privado de infraestrutura, fora do repositorio publico.
 - Implementar refresh token sobre as tabelas de sessao existentes.
 - Aplicar o RBAC e o isolamento de tenant nos middlewares do backend.
 - Integrar a gravacao de auditoria aos servicos da aplicacao.
