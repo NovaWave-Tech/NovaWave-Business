@@ -25,6 +25,12 @@ import { apiError, platformApi } from '../services/platformApi';
 import { platformTokens } from '../theme/platformTokens';
 import { usePlatformToast } from '../hooks/usePlatformToast';
 import { StatusBadge, Surface, platformColors } from '../components/PlatformUI';
+import {
+  formatCnpj,
+  formatCurrency,
+  formatDate,
+  formatPhone,
+} from '../../../shared/utils/formatters';
 
 type Detail = {
   idempresa: number;
@@ -136,9 +142,9 @@ export default function CompanyDetailPage() {
                     Dados principais
                   </Text>
                   {[
-                    ['CNPJ', data.cnpj],
+                    ['CNPJ', formatCnpj(data.cnpj)],
                     ['E-mail', data.email],
-                    ['Telefone', data.telefone],
+                    ['Telefone', formatPhone(data.telefone)],
                     [
                       'Localidade',
                       [data.cidade, data.estado].filter(Boolean).join(' / '),
@@ -234,18 +240,8 @@ export default function CompanyDetailPage() {
               >
                 {[
                   ['Plano atual', data.plano || '-'],
-                  [
-                    'Valor mensal',
-                    `R$ ${Number(data.valor_atual || 0).toFixed(2)}`,
-                  ],
-                  [
-                    'Proxima cobranca',
-                    data.data_proxima_cobranca
-                      ? new Date(
-                          `${data.data_proxima_cobranca}T12:00:00`
-                        ).toLocaleDateString('pt-BR')
-                      : '-',
-                  ],
+                  ['Valor mensal', formatCurrency(data.valor_atual)],
+                  ['Proxima cobranca', formatDate(data.data_proxima_cobranca)],
                 ].map(([l, v]) => (
                   <Box
                     key={l}

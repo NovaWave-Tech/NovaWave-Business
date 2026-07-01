@@ -14,6 +14,8 @@ Use este guia antes de criar paginas, componentes, services, hooks ou validacoes
 - Formularios futuros devem usar React Hook Form + Zod.
 - Dados remotos futuros devem usar React Query.
 - Toda tela deve considerar loading, erro e empty state quando consumir API.
+- Toda interface autenticada deve seguir `ERP-UI-GUIDE.md` e os tokens `erp.*`.
+- O catalogo de navegacao do ERP fica apenas em `src/layouts/erpNavigation.ts`.
 
 ## Estrutura Padrao de Modulo
 
@@ -43,9 +45,10 @@ Crie apenas as pastas necessarias para o modulo atual. Nao antecipe abstracoes v
 3. Crie service em `src/modules/{module}/services` se houver API.
 4. Crie types/schemas/hooks se a tela precisar.
 5. Registre a rota em `src/app/App.tsx`.
-6. Adicione item na sidebar em `src/layouts/AppSidebar.tsx` se for modulo navegavel.
-7. Adicione label no topbar em `src/layouts/AppTopbar.tsx`.
-8. Rode `npm run lint` e `npm run build`.
+6. Adicione o item em `src/layouts/erpNavigation.ts` se for modulo navegavel.
+7. Use `PageHeader`, `Surface` e os estados de `src/shared/ui/ErpUI.tsx`.
+8. Use `DataTable` para listagens operacionais.
+9. Rode `npm run lint` e `npm run build`.
 
 ## Paginas
 

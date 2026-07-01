@@ -35,6 +35,24 @@ const theme = extendTheme({
       hover: brand.colors.hover,
     },
   },
+  semanticTokens: {
+    colors: {
+      'erp.canvas': { default: '#F8FAFC', _dark: '#0F1117' },
+      'erp.sidebar': { default: '#FFFFFF', _dark: '#151922' },
+      'erp.surface': { default: '#FFFFFF', _dark: '#1A1F2B' },
+      'erp.surfaceSubtle': { default: '#F8FAFC', _dark: '#191E29' },
+      'erp.hover': { default: '#F1F5F9', _dark: '#232A38' },
+      'erp.border': { default: '#E2E8F0', _dark: '#2B3445' },
+      'erp.borderStrong': { default: '#CBD5E1', _dark: '#3A465A' },
+      'erp.text': { default: '#0F172A', _dark: '#F8FAFC' },
+      'erp.textSecondary': { default: '#64748B', _dark: '#A1A1AA' },
+      'erp.textMuted': { default: '#94A3B8', _dark: '#71717A' },
+      'erp.success': { default: '#15805D', _dark: '#4ADE80' },
+      'erp.warning': { default: '#B96800', _dark: '#FBBF24' },
+      'erp.danger': { default: '#C43D4B', _dark: '#FB7185' },
+      'erp.info': { default: '#1677C8', _dark: '#38BDF8' },
+    },
+  },
   fonts: {
     heading:
       'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
@@ -51,8 +69,8 @@ const theme = extendTheme({
   styles: {
     global: {
       body: {
-        bg: brand.colors.bgMain,
-        color: brand.colors.textPrimary,
+        bg: 'erp.canvas',
+        color: 'erp.text',
       },
       '::selection': {
         bg: 'brand.500',
@@ -102,6 +120,13 @@ const theme = extendTheme({
             color: mode('#172033', brand.colors.textPrimary)(props),
           },
           _active: { bg: mode('#E9EDF3', brand.colors.hover)(props) },
+        }),
+        danger: (props: StyleFunctionProps) => ({
+          bg: mode('#C43D4B', '#E05260')(props),
+          color: 'white',
+          _hover: { bg: mode('#A92E3A', '#C43D4B')(props) },
+          _active: { bg: mode('#8E2631', '#A92E3A')(props) },
+          _focusVisible: { boxShadow: '0 0 0 3px rgba(196,61,75,.2)' },
         }),
       },
     },

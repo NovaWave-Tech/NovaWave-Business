@@ -1,17 +1,13 @@
 import {
   Avatar,
-  Badge,
   Box,
-  Button,
   Divider,
   Drawer,
   DrawerBody,
   DrawerContent,
   DrawerOverlay,
   Flex,
-  HStack,
   IconButton,
-  Image,
   Input,
   InputGroup,
   InputLeftElement,
@@ -23,7 +19,9 @@ import {
   Text,
   Tooltip,
   VStack,
+  useBreakpointValue,
   useColorMode,
+  useColorModeValue,
   useDisclosure,
 } from '@chakra-ui/react';
 import {
@@ -31,104 +29,108 @@ import {
   Bell,
   Building2,
   ChevronDown,
-  CircleHelp,
   CreditCard,
   FileClock,
   LogOut,
   Menu as MenuIcon,
+  Moon,
   PanelLeftClose,
   PanelLeftOpen,
-  Plus,
   Search,
   Settings,
   ShieldCheck,
+  Sun,
+  User,
   Users,
   WalletCards,
   X,
   type LucideIcon,
 } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
+import BrandLogo from '../../../shared/brand/BrandLogo';
 import { usePlatformAuth } from '../auth/PlatformAuthContext';
-import { platformTokens } from '../theme/platformTokens';
 
-type NavItem = readonly [string, string, LucideIcon];
-type NavSection = { group: string; items: readonly NavItem[] };
+type NavItem = { label: string; path: string; icon: LucideIcon };
+type NavGroup = { label: string; items: NavItem[] };
 
-const navigation: readonly NavSection[] = [
+const navigation: NavGroup[] = [
   {
-    group: 'Visao geral',
-    items: [['Dashboard', '/platform/dashboard', BarChart3]],
-  },
-  {
-    group: 'Gestao',
+    label: 'Visao geral',
     items: [
-      ['Empresas', '/platform/empresas', Building2],
-      ['Planos', '/platform/planos', WalletCards],
-      ['Assinaturas', '/platform/assinaturas', CreditCard],
+      { label: 'Dashboard', path: '/platform/dashboard', icon: BarChart3 },
     ],
   },
   {
-    group: 'Sistema',
+    label: 'Gestao',
     items: [
-      ['Usuarios', '/platform/usuarios', Users],
-      ['Auditoria', '/platform/auditoria', FileClock],
-      ['Configuracoes', '/platform/configuracoes', Settings],
+      { label: 'Empresas', path: '/platform/empresas', icon: Building2 },
+      { label: 'Planos', path: '/platform/planos', icon: WalletCards },
+      {
+        label: 'Assinaturas',
+        path: '/platform/assinaturas',
+        icon: CreditCard,
+      },
     ],
   },
-] as const;
-const flatNavigation = navigation.flatMap(group => group.items);
+  {
+    label: 'Sistema',
+    items: [
+      { label: 'Usuarios', path: '/platform/usuarios', icon: Users },
+      { label: 'Auditoria', path: '/platform/auditoria', icon: FileClock },
+      {
+        label: 'Configuracoes',
+        path: '/platform/configuracoes',
+        icon: Settings,
+      },
+    ],
+  },
+];
 
-function Sidebar({
+const navItems = navigation.flatMap(group => group.items);
+
+function PlatformSidebar({
   collapsed = false,
-  close,
-  toggle,
+  mobile = false,
+  onToggle,
+  onClose,
 }: {
   collapsed?: boolean;
-  close?: () => void;
-  toggle?: () => void;
+  mobile?: boolean;
+  onToggle?: () => void;
+  onClose?: () => void;
 }) {
   const location = useLocation();
   const navigate = useNavigate();
-  const { signOut } = usePlatformAuth();
+  const { user, signOut } = usePlatformAuth();
+  const logoTone = useColorModeValue('dark', 'light') as 'dark' | 'light';
+  const userName = user?.nome || user?.email || 'Administrador';
+  const go = (path: string) => {
+    navigate(path);
+    onClose?.();
+  };
+
   return (
     <Flex
       direction="column"
       h="100%"
-      bg={platformTokens.colors.sidebar}
-      color="white"
-      px={collapsed ? 2.5 : 3}
+      bg="erp.sidebar"
+      color="erp.text"
+      borderRight="1px solid"
+      borderColor="erp.border"
+      px={collapsed ? 2 : 3}
       py={4}
       overflow="hidden"
     >
-      <Flex align="center" h="44px" px={1.5} mb={5} gap={3}>
-        <Image
-          src="/logobusiness.png"
-          boxSize="36px"
-          borderRadius="8px"
-          objectFit="cover"
-          alt="NovaWave"
-          flexShrink={0}
-        />
-        {!collapsed && (
-          <Box minW={0}>
-            <Text fontWeight="750" lineHeight="1.1" whiteSpace="nowrap">
-              NovaWave
-            </Text>
-            <Text fontSize="xs" color={platformTokens.colors.sidebarText}>
-              Platform
-            </Text>
-          </Box>
-        )}
-        {close ? (
+      <Flex h="44px" px={1} align="center" mb={5} gap={2}>
+        <BrandLogo compact={collapsed} tone={logoTone} flex="1" minW={0} />
+        {mobile ? (
           <IconButton
-            ml="auto"
             aria-label="Fechar menu"
             icon={<X size={18} />}
-            variant="ghost"
-            color="white"
             size="sm"
-            onClick={close}
+            variant="ghost"
+            onClick={onClose}
           />
         ) : (
           <Tooltip
@@ -136,7 +138,6 @@ function Sidebar({
             placement="right"
           >
             <IconButton
-              ml={collapsed ? 0 : 'auto'}
               aria-label={collapsed ? 'Expandir sidebar' : 'Recolher sidebar'}
               icon={
                 collapsed ? (
@@ -145,150 +146,305 @@ function Sidebar({
                   <PanelLeftClose size={17} />
                 )
               }
-              variant="ghost"
-              color={platformTokens.colors.sidebarText}
               size="sm"
-              onClick={toggle}
+              variant="ghost"
+              onClick={onToggle}
             />
           </Tooltip>
         )}
       </Flex>
-      <VStack spacing={5} align="stretch" flex="1">
-        {navigation.map(section => (
-          <Box key={section.group}>
+
+      <VStack
+        align="stretch"
+        spacing={5}
+        flex="1"
+        overflowY="auto"
+        overflowX="hidden"
+        sx={{ scrollbarWidth: 'thin' }}
+      >
+        {navigation.map(group => (
+          <Box key={group.label}>
             {!collapsed && (
               <Text
                 px={3}
                 mb={1.5}
-                color={platformTokens.colors.sidebarMuted}
+                color="erp.textMuted"
                 fontSize="10px"
-                fontWeight="700"
+                fontWeight="600"
                 textTransform="uppercase"
               >
-                {section.group}
+                {group.label}
               </Text>
             )}
-            <VStack spacing={1} align="stretch">
-              {section.items.map(([label, path, ItemIcon]) => {
+            <VStack align="stretch" spacing={1}>
+              {group.items.map(item => {
                 const active =
-                  location.pathname === path ||
-                  (path !== '/platform/dashboard' &&
-                    location.pathname.startsWith(path));
-                const button = (
-                  <Button
-                    key={path}
-                    justifyContent={collapsed ? 'center' : 'flex-start'}
-                    leftIcon={collapsed ? undefined : <ItemIcon size={17} />}
-                    variant="ghost"
-                    h="40px"
+                  location.pathname === item.path ||
+                  (item.path !== '/platform/dashboard' &&
+                    location.pathname.startsWith(item.path));
+                const content = (
+                  <Flex
+                    as="button"
+                    key={item.path}
+                    type="button"
+                    align="center"
+                    justify={collapsed ? 'center' : 'flex-start'}
+                    gap={3}
+                    w="full"
+                    h={mobile ? '44px' : '40px'}
                     px={collapsed ? 0 : 3}
-                    color={active ? 'white' : platformTokens.colors.sidebarText}
-                    bg={active ? 'rgba(47,128,255,.17)' : 'transparent'}
-                    position="relative"
-                    _hover={{
-                      bg: platformTokens.colors.sidebarHover,
-                      color: 'white',
-                    }}
-                    onClick={() => {
-                      navigate(path);
-                      close?.();
-                    }}
+                    borderRadius="8px"
+                    color={active ? 'erp.text' : 'erp.textSecondary'}
+                    bg={active ? 'erp.hover' : 'transparent'}
+                    borderLeft="2px solid"
+                    borderLeftColor={active ? 'brand.500' : 'transparent'}
+                    fontSize="14px"
+                    fontWeight={active ? '600' : '500'}
+                    transition="background-color 180ms ease, color 180ms ease"
+                    onClick={() => go(item.path)}
+                    _hover={{ bg: 'erp.hover', color: 'erp.text' }}
                   >
-                    {collapsed ? <ItemIcon size={18} /> : label}
-                    {active && (
-                      <Box
-                        position="absolute"
-                        left={0}
-                        top="10px"
-                        bottom="10px"
-                        w="2px"
-                        bg={platformTokens.colors.primaryLight}
-                        borderRadius="full"
-                      />
-                    )}
-                  </Button>
+                    <item.icon
+                      size={18}
+                      color={active ? '#2F80FF' : 'currentColor'}
+                    />
+                    {!collapsed && <Text noOfLines={1}>{item.label}</Text>}
+                  </Flex>
                 );
                 return collapsed ? (
-                  <Tooltip key={path} label={label} placement="right" hasArrow>
-                    {button}
+                  <Tooltip
+                    key={item.path}
+                    label={item.label}
+                    placement="right"
+                    hasArrow
+                  >
+                    {content}
                   </Tooltip>
                 ) : (
-                  button
+                  content
                 );
               })}
             </VStack>
           </Box>
         ))}
       </VStack>
-      <Divider borderColor="rgba(255,255,255,.08)" mb={3} />
-      <Tooltip label={collapsed ? 'Sair' : ''} placement="right">
-        <Button
-          justifyContent={collapsed ? 'center' : 'flex-start'}
-          leftIcon={collapsed ? undefined : <LogOut size={17} />}
+
+      <Divider borderColor="erp.border" my={3} />
+      <Flex
+        align="center"
+        gap={2.5}
+        px={collapsed ? 0 : 2}
+        minH="44px"
+        justify={collapsed ? 'center' : 'flex-start'}
+      >
+        <Avatar size="sm" name={userName} bg="brand.700" />
+        {!collapsed && (
+          <Box minW={0} flex="1">
+            <Text fontSize="13px" fontWeight="600" noOfLines={1}>
+              {userName}
+            </Text>
+            <Text fontSize="11px" color="erp.textMuted" noOfLines={1}>
+              {user?.email}
+            </Text>
+          </Box>
+        )}
+        <Tooltip label="Sair" placement="right">
+          <IconButton
+            aria-label="Sair"
+            icon={<LogOut size={17} />}
+            size="sm"
+            variant="ghost"
+            color="erp.textSecondary"
+            onClick={() => void signOut()}
+            _hover={{ color: 'erp.danger', bg: 'erp.hover' }}
+          />
+        </Tooltip>
+      </Flex>
+    </Flex>
+  );
+}
+
+function PlatformTopbar({ onMenuOpen }: { onMenuOpen: () => void }) {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { user, signOut } = usePlatformAuth();
+  const { colorMode, toggleColorMode } = useColorMode();
+  const [search, setSearch] = useState('');
+  const current =
+    navItems.find(
+      item =>
+        location.pathname === item.path ||
+        (item.path !== '/platform/dashboard' &&
+          location.pathname.startsWith(item.path))
+    )?.label || 'NovaWave Platform';
+  const match = useMemo(
+    () =>
+      navItems.find(item =>
+        item.label.toLowerCase().includes(search.trim().toLowerCase())
+      ),
+    [search]
+  );
+  const submit = (event: React.FormEvent) => {
+    event.preventDefault();
+    if (match) {
+      navigate(match.path);
+      setSearch('');
+    }
+  };
+  const userName = user?.nome || user?.email || 'Administrador';
+
+  return (
+    <Flex
+      as="header"
+      h="64px"
+      align="center"
+      justify="space-between"
+      gap={4}
+      px={{ base: 4, lg: 6 }}
+      bg="erp.sidebar"
+      borderBottom="1px solid"
+      borderColor="erp.border"
+      position="sticky"
+      top={0}
+      zIndex={20}
+    >
+      <Flex align="center" gap={3} minW={0}>
+        <IconButton
+          display={{ lg: 'none' }}
+          aria-label="Abrir menu"
+          icon={<MenuIcon size={20} />}
           variant="ghost"
-          h="40px"
-          px={collapsed ? 0 : 3}
-          color={platformTokens.colors.sidebarText}
-          _hover={{
-            bg: 'rgba(196,50,59,.13)',
-            color: platformTokens.colors.dangerTextHover,
-          }}
-          onClick={() => void signOut()}
+          onClick={onMenuOpen}
+        />
+        <Flex gap={1.5} align="center" fontSize="11px" color="erp.textMuted">
+          <Text display={{ base: 'none', sm: 'block' }}>NovaWave Platform</Text>
+          <Text display={{ base: 'none', sm: 'block' }}>/</Text>
+          <Text color="erp.textSecondary" fontWeight="600" noOfLines={1}>
+            {current}
+          </Text>
+        </Flex>
+      </Flex>
+
+      <Box
+        as="form"
+        onSubmit={submit}
+        flex="1"
+        maxW="420px"
+        display={{ base: 'none', md: 'block' }}
+      >
+        <InputGroup size="sm">
+          <InputLeftElement pointerEvents="none">
+            <Search size={15} />
+          </InputLeftElement>
+          <Input
+            value={search}
+            onChange={event => setSearch(event.target.value)}
+            placeholder="Buscar na plataforma"
+            bg="erp.surfaceSubtle"
+            borderColor="transparent"
+            _hover={{ borderColor: 'erp.border' }}
+          />
+        </InputGroup>
+      </Box>
+
+      <Flex align="center" gap={1}>
+        <Tooltip
+          label={colorMode === 'dark' ? 'Usar tema claro' : 'Usar tema escuro'}
         >
-          {collapsed ? <LogOut size={18} /> : 'Sair'}
-        </Button>
-      </Tooltip>
+          <IconButton
+            aria-label="Alternar tema"
+            icon={colorMode === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+            variant="ghost"
+            onClick={toggleColorMode}
+          />
+        </Tooltip>
+        <Menu>
+          <Tooltip label="Notificacoes">
+            <MenuButton
+              as={IconButton}
+              aria-label="Notificacoes"
+              icon={<Bell size={18} />}
+              variant="ghost"
+            />
+          </Tooltip>
+          <MenuList>
+            <Text px={3} py={2} fontSize="sm" fontWeight="600">
+              Notificacoes
+            </Text>
+            <MenuDivider />
+            <Box px={4} py={5} textAlign="center">
+              <Text color="erp.textSecondary" fontSize="sm">
+                Nenhuma notificacao nova
+              </Text>
+            </Box>
+          </MenuList>
+        </Menu>
+        <Menu>
+          <MenuButton
+            as={Flex}
+            align="center"
+            gap={2}
+            ml={1}
+            px={2}
+            h="44px"
+            borderRadius="8px"
+            cursor="pointer"
+            _hover={{ bg: 'erp.hover' }}
+          >
+            <Avatar size="sm" name={userName} bg="brand.700" />
+            <Box
+              display={{ base: 'none', xl: 'block' }}
+              textAlign="left"
+              maxW="150px"
+            >
+              <Text fontSize="13px" fontWeight="600" noOfLines={1}>
+                {userName}
+              </Text>
+              <Text fontSize="11px" color="erp.textMuted" noOfLines={1}>
+                Super Admin
+              </Text>
+            </Box>
+            <ChevronDown size={14} />
+          </MenuButton>
+          <MenuList>
+            <MenuItem icon={<User size={16} />}>Minha conta</MenuItem>
+            <MenuItem
+              icon={<ShieldCheck size={16} />}
+              onClick={() => navigate('/platform/configuracoes')}
+            >
+              Configuracoes
+            </MenuItem>
+            <MenuDivider />
+            <MenuItem
+              icon={<LogOut size={16} />}
+              color="erp.danger"
+              onClick={() => void signOut()}
+            >
+              Sair
+            </MenuItem>
+          </MenuList>
+        </Menu>
+      </Flex>
     </Flex>
   );
 }
 
 export default function PlatformLayout() {
   const drawer = useDisclosure();
-  const { setColorMode } = useColorMode();
-  const location = useLocation();
-  const navigate = useNavigate();
-  const { user, signOut } = usePlatformAuth();
-  const [collapsed, setCollapsed] = useState(
+  const [userCollapsed, setUserCollapsed] = useState(
     () => localStorage.getItem('platform_sidebar_collapsed') === 'true'
   );
-  const [search, setSearch] = useState('');
-  const current =
-    flatNavigation.find(
-      ([, path]) =>
-        location.pathname === path ||
-        (path !== '/platform/dashboard' && location.pathname.startsWith(path))
-    )?.[0] || 'Platform';
-  const sidebarWidth = collapsed ? '76px' : '248px';
-  useEffect(() => setColorMode('light'), [setColorMode]);
+  const collapsed =
+    useBreakpointValue({ base: true, xl: userCollapsed }) ?? true;
+  const sidebarWidth = collapsed ? '72px' : '260px';
   const toggle = () =>
-    setCollapsed(value => {
+    setUserCollapsed(value => {
       localStorage.setItem('platform_sidebar_collapsed', String(!value));
       return !value;
     });
-  const searchMatch = useMemo(
-    () =>
-      flatNavigation.find(([label]) =>
-        label.toLowerCase().includes(search.trim().toLowerCase())
-      ),
-    [search]
-  );
-  const submitSearch = (event: React.FormEvent) => {
-    event.preventDefault();
-    if (searchMatch) {
-      navigate(searchMatch[1]);
-      setSearch('');
-    }
-  };
 
   return (
-    <Flex
-      minH="100vh"
-      w="full"
-      maxW="100vw"
-      overflowX="hidden"
-      bg={platformTokens.colors.canvas}
-      color={platformTokens.colors.text}
-    >
+    <Flex minH="100vh" w="full" maxW="100vw" overflowX="hidden" bg="erp.canvas">
       <Box
         as="aside"
         display={{ base: 'none', lg: 'block' }}
@@ -296,16 +452,16 @@ export default function PlatformLayout() {
         insetY={0}
         left={0}
         w={sidebarWidth}
-        transition={`width ${platformTokens.transition}`}
+        transition="width 200ms ease"
         zIndex={30}
       >
-        <Sidebar collapsed={collapsed} toggle={toggle} />
+        <PlatformSidebar collapsed={collapsed} onToggle={toggle} />
       </Box>
       <Drawer isOpen={drawer.isOpen} placement="left" onClose={drawer.onClose}>
         <DrawerOverlay />
-        <DrawerContent maxW="280px">
+        <DrawerContent maxW="290px">
           <DrawerBody p={0}>
-            <Sidebar close={drawer.onClose} />
+            <PlatformSidebar mobile onClose={drawer.onClose} />
           </DrawerBody>
         </DrawerContent>
       </Drawer>
@@ -313,237 +469,17 @@ export default function PlatformLayout() {
         flex="1"
         w={{ base: '100%', lg: 'auto' }}
         maxW={{ base: '100vw', lg: 'none' }}
-        ml={{ base: 0, lg: sidebarWidth }}
         minW={0}
-        overflowX="clip"
-        transition={`margin-left ${platformTokens.transition}`}
+        ml={{ base: 0, lg: sidebarWidth }}
+        transition="margin-left 200ms ease"
       >
-        <Flex
-          as="header"
-          h="64px"
-          px={{ base: 4, md: 6 }}
-          align="center"
-          justify="space-between"
-          gap={4}
-          bg="rgba(255,255,255,.94)"
-          borderBottom="1px solid"
-          borderColor={platformTokens.colors.border}
-          position="sticky"
-          top={0}
-          zIndex={20}
-          backdropFilter="blur(12px)"
-        >
-          <Flex align="center" gap={3} minW={0}>
-            <IconButton
-              display={{ lg: 'none' }}
-              aria-label="Abrir menu"
-              icon={<MenuIcon size={20} />}
-              variant="ghost"
-              onClick={drawer.onOpen}
-            />
-            <Box minW={0}>
-              <HStack
-                spacing={1.5}
-                fontSize="xs"
-                color={platformTokens.colors.muted}
-              >
-                <Text display={{ base: 'none', sm: 'block' }}>Platform</Text>
-                <Text display={{ base: 'none', sm: 'block' }}>/</Text>
-                <Text
-                  color={platformTokens.colors.textSecondary}
-                  fontWeight="650"
-                  noOfLines={1}
-                >
-                  {current}
-                </Text>
-              </HStack>
-              <Text
-                display={{ base: 'block', md: 'none' }}
-                fontWeight="750"
-                noOfLines={1}
-              >
-                {current}
-              </Text>
-            </Box>
-          </Flex>
-          <Box
-            as="form"
-            onSubmit={submitSearch}
-            flex="1"
-            maxW="420px"
-            display={{ base: 'none', md: 'block' }}
-          >
-            <InputGroup size="sm">
-              <InputLeftElement pointerEvents="none">
-                <Search size={15} color={platformTokens.colors.muted} />
-              </InputLeftElement>
-              <Input
-                value={search}
-                onChange={event => setSearch(event.target.value)}
-                placeholder="Buscar na plataforma"
-                bg={platformTokens.colors.surfaceSubtle}
-                borderColor="transparent"
-                _hover={{ borderColor: platformTokens.colors.border }}
-              />
-            </InputGroup>
-          </Box>
-          <Flex align="center" gap={1.5}>
-            <Badge
-              display={{ base: 'none', xl: 'inline-flex' }}
-              alignItems="center"
-              gap={1.5}
-              color={platformTokens.colors.success}
-              bg={platformTokens.colors.successSubtle}
-              borderRadius="full"
-              px={2.5}
-              py={1}
-              textTransform="none"
-            >
-              <Box boxSize="6px" borderRadius="full" bg="currentColor" />
-              Produção
-            </Badge>
-            <Menu>
-              <Tooltip label="Acoes rapidas">
-                <MenuButton
-                  as={IconButton}
-                  aria-label="Acoes rapidas"
-                  icon={<Plus size={18} />}
-                  variant="ghost"
-                />
-              </Tooltip>
-              <MenuList>
-                <MenuItem
-                  icon={<Building2 size={16} />}
-                  onClick={() => navigate('/platform/empresas/nova')}
-                >
-                  Nova empresa
-                </MenuItem>
-                <MenuItem
-                  icon={<WalletCards size={16} />}
-                  onClick={() => navigate('/platform/planos')}
-                >
-                  Novo plano
-                </MenuItem>
-                <MenuItem
-                  icon={<Users size={16} />}
-                  onClick={() => navigate('/platform/usuarios')}
-                >
-                  Novo administrador
-                </MenuItem>
-              </MenuList>
-            </Menu>
-            <Menu>
-              <Tooltip label="Notificacoes">
-                <MenuButton
-                  as={IconButton}
-                  aria-label="Notificacoes"
-                  icon={<Bell size={18} />}
-                  variant="ghost"
-                  position="relative"
-                  _after={{
-                    content: '""',
-                    position: 'absolute',
-                    top: '8px',
-                    right: '8px',
-                    boxSize: '6px',
-                    bg: platformTokens.colors.danger,
-                    borderRadius: 'full',
-                    border: '1px solid white',
-                  }}
-                />
-              </Tooltip>
-              <MenuList>
-                <Text px={3} py={2} fontSize="sm" fontWeight="700">
-                  Notificacoes
-                </Text>
-                <MenuDivider />
-                <Box px={3} py={4} textAlign="center">
-                  <Text fontSize="sm" color={platformTokens.colors.muted}>
-                    Nenhuma notificacao nova
-                  </Text>
-                </Box>
-              </MenuList>
-            </Menu>
-            <Menu>
-              <MenuButton
-                as={Button}
-                display={{ base: 'none', sm: 'inline-flex' }}
-                variant="ghost"
-                px={2}
-                h="44px"
-                rightIcon={<ChevronDown size={14} />}
-              >
-                <Flex align="center" gap={2.5}>
-                  <Avatar
-                    size="sm"
-                    name={user?.nome}
-                    bg={platformTokens.colors.indigo}
-                  />
-                  <Box display={{ base: 'none', xl: 'block' }} textAlign="left">
-                    <Text
-                      fontSize="sm"
-                      fontWeight="700"
-                      lineHeight="1.2"
-                      maxW="140px"
-                      noOfLines={1}
-                    >
-                      {user?.nome}
-                    </Text>
-                    <Text
-                      fontSize="10px"
-                      color={platformTokens.colors.muted}
-                      textTransform="capitalize"
-                    >
-                      {user?.nivel_acesso?.replace('_', ' ')}
-                    </Text>
-                  </Box>
-                </Flex>
-              </MenuButton>
-              <MenuList>
-                <Flex px={3} py={2} gap={2.5} align="center">
-                  <Avatar
-                    size="sm"
-                    name={user?.nome}
-                    bg={platformTokens.colors.indigo}
-                  />
-                  <Box minW={0}>
-                    <Text fontSize="sm" fontWeight="700" noOfLines={1}>
-                      {user?.nome}
-                    </Text>
-                    <Text
-                      fontSize="xs"
-                      color={platformTokens.colors.muted}
-                      noOfLines={1}
-                    >
-                      {user?.email}
-                    </Text>
-                  </Box>
-                </Flex>
-                <MenuDivider />
-                <MenuItem icon={<ShieldCheck size={16} />}>
-                  Minha conta
-                </MenuItem>
-                <MenuItem icon={<CircleHelp size={16} />}>
-                  Central de ajuda
-                </MenuItem>
-                <MenuDivider />
-                <MenuItem
-                  icon={<LogOut size={16} />}
-                  color={platformTokens.colors.danger}
-                  onClick={() => void signOut()}
-                >
-                  Sair
-                </MenuItem>
-              </MenuList>
-            </Menu>
-          </Flex>
-        </Flex>
+        <PlatformTopbar onMenuOpen={drawer.onOpen} />
         <Box
           as="main"
           w="full"
           minW={0}
-          px={{ base: 4, md: 6, xl: 8 }}
-          py={{ base: 5, md: 7 }}
+          px={{ base: 4, md: 6 }}
+          py={6}
           maxW="1600px"
           mx="auto"
         >

@@ -25,6 +25,8 @@ import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import {
   EmptyState,
+  ErrorState,
+  FilterBar,
   LoadingTable,
   PageHeader,
   Surface,
@@ -34,6 +36,7 @@ import {
 import { platformApi } from '../services/platformApi';
 import { useClientPagination } from '../hooks/useClientPagination';
 import { platformTokens } from '../theme/platformTokens';
+import { formatDateTime } from '../../../shared/utils/formatters';
 
 type Audit = {
   idauditoria: number;
@@ -58,7 +61,12 @@ export default function AuditPage() {
   const [table, setTable] = useState('');
   const [selected, setSelected] = useState<Audit | null>(null);
   const drawer = useDisclosure();
-  const { data = [], isLoading } = useQuery({
+  const {
+    data = [],
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
     queryKey: ['platform-audit', origin, table],
     queryFn: async () =>
       (
@@ -78,9 +86,8 @@ export default function AuditPage() {
         title="Auditoria global"
         description="Rastreabilidade de acoes da plataforma, empresas e processos automaticos."
       />
-      <Flex gap={3} mb={4} direction={{ base: 'column', md: 'row' }}>
+      <FilterBar>
         <Select
-          bg="white"
           maxW="190px"
           value={origin}
           onChange={e => setOrigin(e.target.value)}
@@ -91,14 +98,17 @@ export default function AuditPage() {
           <option value="sistema">Sistema</option>
         </Select>
         <Input
-          bg="white"
           maxW="240px"
           value={table}
           onChange={e => setTable(e.target.value)}
           placeholder="Filtrar por tabela"
         />
-      </Flex>
-      {isLoading ? (
+      </FilterBar>
+      {isError ? (
+        <Surface>
+          <ErrorState retry={() => void refetch()} />
+        </Surface>
+      ) : isLoading ? (
         <LoadingTable columns={7} rows={8} />
       ) : (
         <Surface overflow="hidden">
@@ -122,9 +132,7 @@ export default function AuditPage() {
                     cursor="pointer"
                     onClick={() => open(i)}
                   >
-                    <Td whiteSpace="nowrap">
-                      {new Date(i.criado_em).toLocaleString('pt-BR')}
-                    </Td>
+                    <Td whiteSpace="nowrap">{formatDateTime(i.criado_em)}</Td>
                     <Td textTransform="capitalize">{i.origem_usuario}</Td>
                     <Td>{i.empresa || '-'}</Td>
                     <Td>{i.usuario}</Td>
@@ -164,10 +172,7 @@ export default function AuditPage() {
             {selected && (
               <Box>
                 {[
-                  [
-                    'Data',
-                    new Date(selected.criado_em).toLocaleString('pt-BR'),
-                  ],
+                  ['Data', formatDateTime(selected.criado_em)],
                   ['Usuario', selected.usuario],
                   ['Empresa', selected.empresa || '-'],
                   ['Filial', selected.filial || '-'],

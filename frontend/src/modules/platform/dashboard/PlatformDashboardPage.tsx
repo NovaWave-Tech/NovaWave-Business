@@ -40,13 +40,20 @@ import {
 import { useNavigate } from 'react-router-dom';
 import {
   MetricCard,
+  EmptyState,
   PageHeader,
   PanelHeader,
+  ErrorState,
   StatusBadge,
   Surface,
 } from '../components/PlatformUI';
 import { platformApi } from '../services/platformApi';
 import { platformTokens } from '../theme/platformTokens';
+import {
+  formatCurrency,
+  formatDate,
+  formatNumber,
+} from '../../../shared/utils/formatters';
 
 type DashboardData = {
   metrics: Record<string, string>;
@@ -67,16 +74,9 @@ type DashboardData = {
     status: number;
   }[];
 };
-const money = (value: string | number) =>
-  new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-    maximumFractionDigits: 0,
-  }).format(Number(value));
-
 export default function PlatformDashboardPage() {
   const navigate = useNavigate();
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['platform-dashboard'],
     queryFn: async () =>
       (await platformApi.get<{ data: DashboardData }>('/dashboard')).data.data,
@@ -93,6 +93,20 @@ export default function PlatformDashboardPage() {
       Number(metrics?.assinaturas_vencidas || 0) >
     0;
 
+  if (isError) {
+    return (
+      <Box>
+        <PageHeader
+          title="Dashboard"
+          description="Visao consolidada da operacao NovaWave."
+        />
+        <Surface>
+          <ErrorState retry={() => void refetch()} />
+        </Surface>
+      </Box>
+    );
+  }
+
   return (
     <Box w="full" minW={0}>
       <PageHeader
@@ -102,23 +116,23 @@ export default function PlatformDashboardPage() {
       <SimpleGrid columns={{ base: 1, sm: 2, xl: 4 }} spacing={4} mb={5}>
         <MetricCard
           label="Empresas ativas"
-          value={metrics?.empresas_ativas || 0}
+          value={formatNumber(metrics?.empresas_ativas)}
           icon={Building2}
           color={platformTokens.colors.primary}
-          detail={`${metrics?.novos_clientes_mes || 0} novas neste mes`}
+          detail={`${formatNumber(metrics?.novos_clientes_mes)} novas neste mes`}
           loading={isLoading}
         />
         <MetricCard
           label="Receita recorrente"
-          value={money(metrics?.mrr || 0)}
+          value={formatCurrency(metrics?.mrr)}
           icon={CircleDollarSign}
           color={platformTokens.colors.success}
-          detail={`${money(metrics?.arr || 0)} projetado ao ano`}
+          detail={`${formatCurrency(metrics?.arr)} projetado ao ano`}
           loading={isLoading}
         />
         <MetricCard
           label="Assinaturas ativas"
-          value={metrics?.assinaturas_ativas || 0}
+          value={formatNumber(metrics?.assinaturas_ativas)}
           icon={CreditCard}
           color={platformTokens.colors.indigo}
           detail={`${metrics?.empresas_teste || 0} empresas em teste`}
@@ -151,6 +165,11 @@ export default function PlatformDashboardPage() {
             <Box p={5} h="330px">
               {isLoading ? (
                 <Skeleton h="100%" />
+              ) : chartData.length === 0 ? (
+                <EmptyState
+                  title="Sem historico de crescimento"
+                  description="Os indicadores aparecerao quando houver dados consolidados."
+                />
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
                   <ComposedChart
@@ -190,7 +209,7 @@ export default function PlatformDashboardPage() {
                       }}
                       formatter={(value, name) =>
                         name === 'Receita'
-                          ? money(Number(value))
+                          ? formatCurrency(Number(value))
                           : Number(value)
                       }
                     />
@@ -381,9 +400,7 @@ export default function PlatformDashboardPage() {
                     <Td>
                       <StatusBadge value={item.situacao} />
                     </Td>
-                    <Td whiteSpace="nowrap">
-                      {new Date(item.criado_em).toLocaleDateString('pt-BR')}
-                    </Td>
+                    <Td whiteSpace="nowrap">{formatDate(item.criado_em)}</Td>
                   </Tr>
                 ))}
               </Tbody>
@@ -420,9 +437,7 @@ export default function PlatformDashboardPage() {
                     <Td fontWeight="650">{item.nome_fantasia}</Td>
                     <Td>{item.plano}</Td>
                     <Td whiteSpace="nowrap">
-                      {new Date(
-                        `${item.data_proxima_cobranca}T12:00:00`
-                      ).toLocaleDateString('pt-BR')}
+                      {formatDate(item.data_proxima_cobranca)}
                     </Td>
                   </Tr>
                 ))}

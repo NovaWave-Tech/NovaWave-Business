@@ -1,6 +1,9 @@
 import {
   Badge,
   Box,
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
   Button,
   Flex,
   Heading,
@@ -27,6 +30,8 @@ import {
 import type { ReactNode } from 'react';
 import { platformTokens } from '../theme/platformTokens';
 
+export { ErrorState } from '../../../shared/ui/ErpUI';
+
 // eslint-disable-next-line react-refresh/only-export-components
 export const platformColors = {
   bg: platformTokens.colors.canvas,
@@ -52,16 +57,32 @@ export function PageHeader({
   return (
     <Flex
       justify="space-between"
-      align={{ base: 'start', md: 'center' }}
+      align={{ base: 'start', md: 'end' }}
       gap={4}
       mb={6}
       direction={{ base: 'column', md: 'row' }}
     >
-      <Box>
+      <Box minW={0}>
+        <Breadcrumb
+          spacing={1.5}
+          separator={<ChevronRight size={12} />}
+          mb={2}
+          fontSize="xs"
+          color="erp.textMuted"
+        >
+          <BreadcrumbItem>
+            <BreadcrumbLink>Platform</BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbItem isCurrentPage>
+            <BreadcrumbLink>{title}</BreadcrumbLink>
+          </BreadcrumbItem>
+        </Breadcrumb>
         <Heading
           as="h1"
-          fontSize="24px"
-          lineHeight="32px"
+          fontSize="28px"
+          lineHeight="36px"
+          fontWeight="700"
+          letterSpacing="0"
           color={platformTokens.colors.text}
         >
           {title}
@@ -103,13 +124,60 @@ export function Surface({
           ? {
               borderColor: platformTokens.colors.borderStrong,
               boxShadow: '0 4px 12px rgba(16,24,40,.07)',
-              transform: 'translateY(-1px)',
             }
           : undefined
       }
       {...props}
     >
       {children}
+    </Box>
+  );
+}
+
+export function FilterBar({ children }: { children: ReactNode }) {
+  return (
+    <Surface
+      display="flex"
+      gap={3}
+      mb={4}
+      p={3}
+      alignItems={{ md: 'center' }}
+      flexDirection={{ base: 'column', md: 'row' }}
+      boxShadow="none"
+    >
+      {children}
+    </Surface>
+  );
+}
+
+export function DetailList({
+  items,
+}: {
+  items: Array<{ label: string; value: ReactNode }>;
+}) {
+  return (
+    <Box>
+      {items.map(item => (
+        <Flex
+          key={item.label}
+          justify="space-between"
+          gap={4}
+          py={2.5}
+          borderBottom="1px solid"
+          borderColor={platformTokens.colors.border}
+        >
+          <Text color={platformTokens.colors.muted} fontSize="sm">
+            {item.label}
+          </Text>
+          <Text
+            color={platformTokens.colors.text}
+            fontWeight="600"
+            textAlign="right"
+          >
+            {item.value || '-'}
+          </Text>
+        </Flex>
+      ))}
     </Box>
   );
 }

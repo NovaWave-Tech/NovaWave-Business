@@ -13,7 +13,6 @@ import {
   InputRightElement,
   Text,
   VStack,
-  useColorMode,
 } from '@chakra-ui/react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { motion } from 'framer-motion';
@@ -40,7 +39,6 @@ export default function PlatformLoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
   const toast = usePlatformToast();
-  const { setColorMode } = useColorMode();
   const {
     register,
     handleSubmit,
@@ -50,10 +48,9 @@ export default function PlatformLoginPage() {
   });
 
   useEffect(() => {
-    setColorMode('light');
     if (platformSession.token() && platformSession.valid())
       navigate('/platform/dashboard', { replace: true });
-  }, [navigate, setColorMode]);
+  }, [navigate]);
 
   const submit = async (values: FormData) => {
     try {
@@ -75,7 +72,7 @@ export default function PlatformLoginPage() {
         display={{ base: 'none', lg: 'flex' }}
         w="48%"
         bg={platformTokens.colors.sidebar}
-        color="white"
+        color={platformTokens.colors.text}
         p={12}
         direction="column"
         justify="space-between"
@@ -186,7 +183,7 @@ export default function PlatformLoginPage() {
                   {...register('email')}
                   type="email"
                   autoComplete="email"
-                  bg="white"
+                  bg={platformTokens.colors.surface}
                   h="44px"
                   placeholder="admin@novawave.com"
                 />
@@ -199,7 +196,7 @@ export default function PlatformLoginPage() {
                     {...register('senha')}
                     type={showPassword ? 'text' : 'password'}
                     autoComplete="current-password"
-                    bg="white"
+                    bg={platformTokens.colors.surface}
                     h="44px"
                     pr={11}
                     placeholder="Sua senha"

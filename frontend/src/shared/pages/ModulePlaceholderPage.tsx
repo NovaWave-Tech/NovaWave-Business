@@ -1,38 +1,31 @@
-import { Box, Heading, Text } from '@chakra-ui/react';
-import { brand } from '../brand/brand';
+import { Box } from '@chakra-ui/react';
+import { Construction } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { EmptyState, PageHeader, Surface } from '../ui/ErpUI';
 
-type ModulePlaceholderPageProps = {
-  title: string;
-  description: string;
-};
+type ModulePlaceholderPageProps = { title: string; description: string };
 
 export default function ModulePlaceholderPage({
   title,
   description,
 }: ModulePlaceholderPageProps) {
+  const navigate = useNavigate();
   return (
-    <Box
-      bg={brand.colors.surface}
-      border="1px solid"
-      borderColor={brand.colors.border}
-      borderRadius="md"
-      p={6}
-      boxShadow={brand.shadows.level1}
-    >
-      <Text
-        color={brand.colors.secondary}
-        fontSize="xs"
-        fontWeight="800"
-        textTransform="uppercase"
-      >
-        Modulo preparado
-      </Text>
-      <Heading mt={2} size="md" color={brand.colors.textPrimary}>
-        {title}
-      </Heading>
-      <Text color={brand.colors.textSecondary} mt={2} maxW="760px">
-        {description}
-      </Text>
+    <Box>
+      <PageHeader
+        title={title}
+        description={description}
+        breadcrumbs={[{ label: 'ERP', to: '/dashboard' }, { label: title }]}
+      />
+      <Surface>
+        <EmptyState
+          title={`${title} em preparacao`}
+          description="A estrutura de navegacao esta pronta. Os dados e operacoes deste modulo serao disponibilizados conforme o desenvolvimento funcional."
+          icon={Construction}
+          action={() => navigate('/dashboard')}
+          actionLabel="Voltar ao dashboard"
+        />
+      </Surface>
     </Box>
   );
 }

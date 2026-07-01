@@ -19,6 +19,10 @@ import { PageHeader, Surface, platformColors } from '../components/PlatformUI';
 import { apiError, platformApi } from '../services/platformApi';
 import { platformTokens } from '../theme/platformTokens';
 import { usePlatformToast } from '../hooks/usePlatformToast';
+import FormattedInput, {
+  CurrencyInput,
+} from '../../../shared/ui/FormattedInput';
+import { formatCurrency } from '../../../shared/utils/formatters';
 
 type Plan = { idplano: number; nome: string; valor_mensal: string };
 type FormState = Record<string, string>;
@@ -62,6 +66,7 @@ function Field({
   setForm,
   type = 'text',
   required = false,
+  mask,
 }: {
   label: string;
   name: string;
@@ -69,16 +74,29 @@ function Field({
   setForm: React.Dispatch<React.SetStateAction<FormState>>;
   type?: string;
   required?: boolean;
+  mask?: 'cnpj' | 'cpf' | 'document' | 'phone' | 'cep';
 }) {
   return (
     <FormControl isRequired={required}>
       <FormLabel fontSize="sm">{label}</FormLabel>
-      <Input
-        type={type}
-        value={form[name]}
-        onChange={e => setForm(v => ({ ...v, [name]: e.target.value }))}
-        bg="white"
-      />
+      {type === 'currency' ? (
+        <CurrencyInput
+          value={form[name]}
+          onValueChange={value => setForm(v => ({ ...v, [name]: value }))}
+        />
+      ) : mask ? (
+        <FormattedInput
+          mask={mask}
+          value={form[name]}
+          onValueChange={value => setForm(v => ({ ...v, [name]: value }))}
+        />
+      ) : (
+        <Input
+          type={type}
+          value={form[name]}
+          onChange={e => setForm(v => ({ ...v, [name]: e.target.value }))}
+        />
+      )}
     </FormControl>
   );
 }
@@ -242,7 +260,13 @@ export default function NewCompanyPage() {
               setForm={setForm}
               required
             />
-            <Field label="CNPJ" name="cnpj" form={form} setForm={setForm} />
+            <Field
+              label="CNPJ"
+              name="cnpj"
+              form={form}
+              setForm={setForm}
+              mask="cnpj"
+            />
             <Field
               label="Inscricao estadual"
               name="inscricao_estadual"
@@ -261,8 +285,15 @@ export default function NewCompanyPage() {
               name="telefone"
               form={form}
               setForm={setForm}
+              mask="phone"
             />
-            <Field label="CEP" name="cep" form={form} setForm={setForm} />
+            <Field
+              label="CEP"
+              name="cep"
+              form={form}
+              setForm={setForm}
+              mask="cep"
+            />
             <Field
               label="Endereco"
               name="endereco"
@@ -295,7 +326,7 @@ export default function NewCompanyPage() {
                 <option value="">Selecione</option>
                 {plans.map(p => (
                   <option key={p.idplano} value={p.idplano}>
-                    {p.nome} · R$ {Number(p.valor_mensal).toFixed(2)}
+                    {p.nome} - {formatCurrency(p.valor_mensal)}
                   </option>
                 ))}
               </Select>
@@ -305,7 +336,7 @@ export default function NewCompanyPage() {
               name="valor_atual"
               form={form}
               setForm={setForm}
-              type="number"
+              type="currency"
             />
             <Field
               label="Data de inicio"
@@ -369,6 +400,7 @@ export default function NewCompanyPage() {
               name="filial_cnpj"
               form={form}
               setForm={setForm}
+              mask="cnpj"
             />
             <Box
               p={4}
@@ -407,6 +439,7 @@ export default function NewCompanyPage() {
               name="admin_telefone"
               form={form}
               setForm={setForm}
+              mask="phone"
             />
             <Field
               label="Senha temporaria"
@@ -437,7 +470,7 @@ export default function NewCompanyPage() {
                     plans.find(p => p.idplano === Number(form.idplano))?.nome ||
                       '-',
                   ],
-                  ['Valor', `R$ ${Number(form.valor_atual || 0).toFixed(2)}`],
+                  ['Valor', formatCurrency(form.valor_atual)],
                   ['Inicio', form.data_inicio],
                 ],
               ],

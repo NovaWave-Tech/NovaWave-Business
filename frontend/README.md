@@ -1,5 +1,18 @@
 # NovaWave Business ERP - Frontend
 
+O padrao atual da area autenticada esta documentado em `ERP-UI-GUIDE.md`.
+
+## Refatoracao UI/UX do ERP
+
+- Design system claro/escuro centralizado em tokens semanticos `erp.*`.
+- Sidebar agrupada, recolhivel e persistida; drawer dedicado no mobile.
+- Topbar com breadcrumb, busca de modulos, notificacoes, tema e menu do usuario.
+- Dashboard operacional conectado ao endpoint `/dashboard`, sem metricas ficticias.
+- Componentes compartilhados para cabecalho, superficies, metricas e estados de tela.
+- Tabela reutilizavel com busca, filtros, ordenacao, selecao, acoes e paginacao.
+- Estados de loading, erro e vazio padronizados.
+- ERP e NovaWave Platform compartilham o mesmo tema, tokens e comportamento responsivo.
+
 SPA do NovaWave Business ERP, construída com React, TypeScript, Vite, Chakra UI, React Router e Axios.
 
 Esta base foi reestruturada para sair do formato reaproveitado anterior e iniciar uma fundação própria para o ERP SaaS multiempresa e multifilial da NovaWave Tech.
