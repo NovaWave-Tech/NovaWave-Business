@@ -44,6 +44,9 @@ const AuditPage = lazy(() => import('../modules/platform/auditoria/AuditPage'));
 const SettingsPage = lazy(
   () => import('../modules/platform/configuracoes/SettingsPage')
 );
+const BranchesPage = lazy(
+  () => import('../modules/branches/pages/BranchesPage')
+);
 
 function LoadingPage() {
   return (
@@ -84,11 +87,6 @@ const placeholders = [
     'companies',
     'Empresas',
     'Cadastro e administracao de empresas do ambiente SaaS.',
-  ],
-  [
-    'branches',
-    'Filiais',
-    'Gestao de filiais, estoques, caixas e operacao por unidade.',
   ],
   [
     'users',
@@ -185,6 +183,7 @@ export default function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route element={<ProtectedRoutes />}>
             <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/branches" element={<BranchesPage />} />
             {placeholders.map(([path, title, description]) => (
               <Route
                 key={path}
