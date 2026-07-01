@@ -9,6 +9,7 @@ use App\Modules\Companies\Controllers\CompanyController;
 use App\Modules\Dashboard\Controllers\DashboardController;
 use App\Modules\Platform\Controllers\PlatformAuthController;
 use App\Modules\Platform\Controllers\PlatformController;
+use App\Modules\Users\Controllers\UserController;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 
@@ -58,6 +59,13 @@ $app->group('', function ($group): void {
     $group->get('/dashboard', DashboardController::class . ':index');
     $group->get('/companies', CompanyController::class . ':index');
     $group->get('/branches', BranchController::class . ':index');
+    $group->get('/users', UserController::class . ':index');
+    $group->post('/users', UserController::class . ':store');
+    $group->get('/users/{id:[0-9]+}', UserController::class . ':show');
+    $group->put('/users/{id:[0-9]+}', UserController::class . ':update');
+    $group->patch('/users/{id:[0-9]+}/status', UserController::class . ':status');
+    $group->post('/users/{id:[0-9]+}/reset-password', UserController::class . ':resetPassword');
+    $group->delete('/users/{id:[0-9]+}/sessions/{sessionId:[0-9]+}', UserController::class . ':revokeSession');
 })->add(new JwtAuthMiddleware());
 
 $app->options('/{routes:.+}', function (Request $request, Response $response): Response {
