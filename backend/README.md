@@ -71,7 +71,7 @@ Requerem `Authorization: Bearer <token>`.
 | Método | Rota | Descrição |
 | --- | --- | --- |
 | GET | `/auth/me` | Dados do contexto autenticado |
-| GET | `/dashboard` | Dashboard base |
+| GET | `/dashboard?period=30d` | Dashboard inteligente consolidada da matriz |
 | GET | `/companies` | Placeholder do módulo Empresas |
 | GET | `/branches` | Placeholder do módulo Filiais |
 
@@ -85,8 +85,16 @@ Requerem `Authorization: Bearer <token>`.
 - Criado `src/Infrastructure` com `JwtService` e novo `JwtAuthMiddleware`.
 - Criado `src/Routes/api.php` como novo arquivo principal de rotas.
 - Atualizado `public/index.php` para carregar `src/Routes/api.php`.
-- O schema inicial multiempresa e multifilial esta em `banco.sql` e a query de login fica em `Domains/SQL/login`.
+- A query de login fica em `Domains/SQL/login`. O schema e provisionado separadamente e nao e versionado neste repositorio publico.
 - Removidos controllers, services, repositories, rotas e SQLs legados que pertenciam à base anterior.
+
+## Dashboard Inteligente da Matriz
+
+O endpoint protegido `GET /dashboard` consolida todas as filiais da empresa identificada pelo `company_id` do JWT. O parametro `period` aceita `today`, `7d`, `30d`, `90d` e `year`.
+
+A resposta inclui KPIs executivos, comparacao com o periodo anterior, meta geral, projecao mensal, ranking e metas por filial, evolucao diaria, alertas gerenciais e atividade recente.
+
+As metas mensais ficam em `meta_venda`. Uma meta com `idfilial` nulo representa a meta geral. Quando ela nao existe, o dashboard usa a soma das metas cadastradas para as filiais.
 
 ## Autenticação
 
@@ -157,7 +165,7 @@ A API fica disponível em:
 http://localhost:8085
 ```
 
-O schema inicial do ERP e criado por `banco.sql` em um volume PostgreSQL novo. Alteracoes posteriores devem ser feitas por migrations versionadas, sem editar bancos existentes diretamente.
+O schema do ERP deve ser provisionado por um processo privado de infraestrutura, fora deste repositorio publico.
 
 ### Estrutura do banco
 
@@ -201,7 +209,7 @@ docker compose up -d --build
 
 ## Próximos Passos Técnicos
 
-- Adotar uma ferramenta de migrations antes da primeira alteracao incremental do schema.
+- Manter a evolucao do schema no processo privado de infraestrutura.
 - Implementar emissao, rotacao e revogacao de refresh token usando as tabelas de sessao.
 - Criar middleware de tenant para obrigar `company_id`.
 - Implementar o servico de gravacao na tabela de auditoria.

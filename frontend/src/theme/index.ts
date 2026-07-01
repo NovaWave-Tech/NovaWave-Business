@@ -51,6 +51,9 @@ const theme = extendTheme({
       'erp.warning': { default: '#B96800', _dark: '#FBBF24' },
       'erp.danger': { default: '#C43D4B', _dark: '#FB7185' },
       'erp.info': { default: '#1677C8', _dark: '#38BDF8' },
+      'erp.brandSoft': { default: '#F3F6FF', _dark: '#121A2C' },
+      'erp.brandBorder': { default: '#C9D7FF', _dark: '#29416F' },
+      'erp.brandText': { default: '#1D4ED8', _dark: '#84B8FF' },
     },
   },
   fonts: {
