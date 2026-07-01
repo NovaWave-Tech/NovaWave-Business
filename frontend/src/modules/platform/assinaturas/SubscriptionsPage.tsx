@@ -14,6 +14,8 @@ import { useQuery } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 import {
   EmptyState,
+  ErrorState,
+  FilterBar,
   LoadingTable,
   PageHeader,
   StatusBadge,
@@ -23,6 +25,11 @@ import {
 } from '../components/PlatformUI';
 import { platformApi } from '../services/platformApi';
 import { useClientPagination } from '../hooks/useClientPagination';
+import {
+  formatCurrency,
+  formatDate,
+  formatPaymentMethod,
+} from '../../../shared/utils/formatters';
 
 type Subscription = {
   idassinatura: number;
@@ -37,7 +44,12 @@ type Subscription = {
 export default function SubscriptionsPage() {
   const [status, setStatus] = useState('');
   const [q, setQ] = useState('');
-  const { data = [], isLoading } = useQuery({
+  const {
+    data = [],
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
     queryKey: ['platform-subscriptions'],
     queryFn: async () =>
       (await platformApi.get<{ data: Subscription[] }>('/assinaturas')).data
@@ -59,21 +71,14 @@ export default function SubscriptionsPage() {
         title="Assinaturas"
         description="Ciclo comercial e cobrancas das empresas clientes."
       />
-      <Box
-        display="flex"
-        flexDirection={{ base: 'column', md: 'row' }}
-        gap={3}
-        mb={4}
-      >
+      <FilterBar>
         <Input
-          bg="white"
           maxW="360px"
           value={q}
           onChange={e => setQ(e.target.value)}
           placeholder="Buscar empresa"
         />
         <Select
-          bg="white"
           maxW="190px"
           value={status}
           onChange={e => setStatus(e.target.value)}
@@ -85,8 +90,12 @@ export default function SubscriptionsPage() {
           <option value="4">Cancelada</option>
           <option value="5">Bloqueada</option>
         </Select>
-      </Box>
-      {isLoading ? (
+      </FilterBar>
+      {isError ? (
+        <Surface>
+          <ErrorState retry={() => void refetch()} />
+        </Surface>
+      ) : isLoading ? (
         <LoadingTable columns={7} />
       ) : (
         <Surface overflow="hidden">
@@ -111,26 +120,16 @@ export default function SubscriptionsPage() {
                     <Td>
                       <StatusBadge value={i.status} type="subscription" />
                     </Td>
-                    <Td isNumeric>R$ {Number(i.valor_atual).toFixed(2)}</Td>
-                    <Td>
-                      {new Date(`${i.data_inicio}T12:00:00`).toLocaleDateString(
-                        'pt-BR'
-                      )}
-                    </Td>
-                    <Td>
-                      {i.data_proxima_cobranca
-                        ? new Date(
-                            `${i.data_proxima_cobranca}T12:00:00`
-                          ).toLocaleDateString('pt-BR')
-                        : '-'}
-                    </Td>
+                    <Td isNumeric>{formatCurrency(i.valor_atual)}</Td>
+                    <Td>{formatDate(i.data_inicio)}</Td>
+                    <Td>{formatDate(i.data_proxima_cobranca)}</Td>
                     <Td>
                       <Text
                         textTransform="uppercase"
                         fontSize="xs"
                         color={platformColors.muted}
                       >
-                        {i.forma_pagamento || '-'}
+                        {formatPaymentMethod(i.forma_pagamento)}
                       </Text>
                     </Td>
                   </Tr>

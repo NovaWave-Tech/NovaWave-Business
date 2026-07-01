@@ -21,6 +21,8 @@ import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   EmptyState,
+  ErrorState,
+  FilterBar,
   LoadingTable,
   PageHeader,
   StatusBadge,
@@ -31,6 +33,7 @@ import {
 import { useClientPagination } from '../hooks/useClientPagination';
 import { platformApi } from '../services/platformApi';
 import { platformTokens } from '../theme/platformTokens';
+import { formatCnpj, formatNumber } from '../../../shared/utils/formatters';
 
 type Company = {
   idempresa: number;
@@ -50,7 +53,12 @@ export default function CompaniesPage() {
   const [q, setQ] = useState('');
   const [situacao, setSituacao] = useState('');
   const [sortAscending, setSortAscending] = useState(true);
-  const { data = [], isLoading } = useQuery({
+  const {
+    data = [],
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
     queryKey: ['platform-companies', q, situacao],
     queryFn: async () =>
       (
@@ -77,7 +85,7 @@ export default function CompaniesPage() {
         action={() => navigate('/platform/empresas/nova')}
         actionLabel="Nova empresa"
       />
-      <Flex gap={3} mb={4} direction={{ base: 'column', md: 'row' }}>
+      <FilterBar>
         <InputGroup maxW={{ md: '380px' }}>
           <InputLeftElement>
             <Search size={17} color={platformTokens.colors.placeholder} />
@@ -85,14 +93,12 @@ export default function CompaniesPage() {
           <Input
             value={q}
             onChange={e => setQ(e.target.value)}
-            bg="white"
             placeholder="Nome, CNPJ ou e-mail"
           />
         </InputGroup>
         <Select
           value={situacao}
           onChange={e => setSituacao(e.target.value)}
-          bg="white"
           maxW={{ md: '190px' }}
         >
           <option value="">Todas as situacoes</option>
@@ -100,8 +106,12 @@ export default function CompaniesPage() {
           <option value="2">Bloqueadas</option>
           <option value="0">Inativas</option>
         </Select>
-      </Flex>
-      {isLoading ? (
+      </FilterBar>
+      {isError ? (
+        <Surface>
+          <ErrorState retry={() => void refetch()} />
+        </Surface>
+      ) : isLoading ? (
         <LoadingTable columns={8} />
       ) : (
         <Surface overflow="hidden">
@@ -137,7 +147,7 @@ export default function CompaniesPage() {
                         {item.razao_social}
                       </Text>
                     </Td>
-                    <Td>{item.cnpj || '-'}</Td>
+                    <Td whiteSpace="nowrap">{formatCnpj(item.cnpj)}</Td>
                     <Td>{item.plano || '-'}</Td>
                     <Td>
                       <StatusBadge
@@ -145,8 +155,8 @@ export default function CompaniesPage() {
                         type="subscription"
                       />
                     </Td>
-                    <Td isNumeric>{item.filiais}</Td>
-                    <Td isNumeric>{item.usuarios}</Td>
+                    <Td isNumeric>{formatNumber(item.filiais)}</Td>
+                    <Td isNumeric>{formatNumber(item.usuarios)}</Td>
                     <Td>
                       <StatusBadge value={item.situacao} />
                     </Td>

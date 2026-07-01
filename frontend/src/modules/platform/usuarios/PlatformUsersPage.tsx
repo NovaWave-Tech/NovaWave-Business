@@ -29,6 +29,8 @@ import { Search } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import {
   EmptyState,
+  ErrorState,
+  FilterBar,
   LoadingTable,
   PageHeader,
   StatusBadge,
@@ -40,6 +42,8 @@ import { apiError, platformApi } from '../services/platformApi';
 import { useClientPagination } from '../hooks/useClientPagination';
 import { platformTokens } from '../theme/platformTokens';
 import { usePlatformToast } from '../hooks/usePlatformToast';
+import FormattedInput from '../../../shared/ui/FormattedInput';
+import { formatDateTime } from '../../../shared/utils/formatters';
 
 type User = {
   idplatform_usuario: number;
@@ -66,7 +70,12 @@ export default function PlatformUsersPage() {
   const client = useQueryClient();
   const [form, setForm] = useState(initial);
   const [search, setSearch] = useState('');
-  const { data = [], isLoading } = useQuery({
+  const {
+    data = [],
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
     queryKey: ['platform-users'],
     queryFn: async () =>
       (await platformApi.get<{ data: User[] }>('/usuarios')).data.data,
@@ -99,18 +108,23 @@ export default function PlatformUsersPage() {
         action={modal.onOpen}
         actionLabel="Novo administrador"
       />
-      <InputGroup maxW="360px" mb={4}>
-        <InputLeftElement>
-          <Search size={16} color={platformTokens.colors.muted} />
-        </InputLeftElement>
-        <Input
-          value={search}
-          onChange={event => setSearch(event.target.value)}
-          placeholder="Buscar administrador"
-          bg="white"
-        />
-      </InputGroup>
-      {isLoading ? (
+      <FilterBar>
+        <InputGroup maxW="360px">
+          <InputLeftElement>
+            <Search size={16} color={platformTokens.colors.muted} />
+          </InputLeftElement>
+          <Input
+            value={search}
+            onChange={event => setSearch(event.target.value)}
+            placeholder="Buscar administrador"
+          />
+        </InputGroup>
+      </FilterBar>
+      {isError ? (
+        <Surface>
+          <ErrorState retry={() => void refetch()} />
+        </Surface>
+      ) : isLoading ? (
         <LoadingTable columns={5} />
       ) : (
         <Surface overflow="hidden">
@@ -140,7 +154,7 @@ export default function PlatformUsersPage() {
                     </Td>
                     <Td>
                       {u.ultimo_login
-                        ? new Date(u.ultimo_login).toLocaleString('pt-BR')
+                        ? formatDateTime(u.ultimo_login)
                         : 'Nunca'}
                     </Td>
                     <Td>
@@ -182,19 +196,29 @@ export default function PlatformUsersPage() {
                     isRequired={['nome', 'email', 'senha'].includes(key)}
                   >
                     <FormLabel textTransform="capitalize">{key}</FormLabel>
-                    <Input
-                      type={
-                        key === 'senha'
-                          ? 'password'
-                          : key === 'email'
-                            ? 'email'
-                            : 'text'
-                      }
-                      value={form[key]}
-                      onChange={e =>
-                        setForm(v => ({ ...v, [key]: e.target.value }))
-                      }
-                    />
+                    {key === 'telefone' ? (
+                      <FormattedInput
+                        mask="phone"
+                        value={form.telefone}
+                        onValueChange={value =>
+                          setForm(v => ({ ...v, telefone: value }))
+                        }
+                      />
+                    ) : (
+                      <Input
+                        type={
+                          key === 'senha'
+                            ? 'password'
+                            : key === 'email'
+                              ? 'email'
+                              : 'text'
+                        }
+                        value={form[key]}
+                        onChange={e =>
+                          setForm(v => ({ ...v, [key]: e.target.value }))
+                        }
+                      />
+                    )}
                   </FormControl>
                 )
               )}

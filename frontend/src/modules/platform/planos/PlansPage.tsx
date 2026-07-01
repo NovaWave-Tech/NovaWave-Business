@@ -13,6 +13,7 @@ import {
   ModalHeader,
   ModalOverlay,
   SimpleGrid,
+  Skeleton,
   Switch,
   Text,
   Textarea,
@@ -24,12 +25,15 @@ import { useState } from 'react';
 import { apiError, platformApi } from '../services/platformApi';
 import {
   EmptyState,
+  ErrorState,
   PageHeader,
   Surface,
   platformColors,
 } from '../components/PlatformUI';
 import { platformTokens } from '../theme/platformTokens';
 import { usePlatformToast } from '../hooks/usePlatformToast';
+import { CurrencyInput } from '../../../shared/ui/FormattedInput';
+import { formatCurrency, formatNumber } from '../../../shared/utils/formatters';
 
 type Plan = {
   idplano: number;
@@ -62,7 +66,12 @@ export default function PlansPage() {
   const toast = usePlatformToast();
   const client = useQueryClient();
   const [form, setForm] = useState(empty);
-  const { data = [] } = useQuery({
+  const {
+    data = [],
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
     queryKey: ['platform-plans'],
     queryFn: async () =>
       (await platformApi.get<{ data: Plan[] }>('/planos')).data.data,
@@ -98,7 +107,19 @@ export default function PlansPage() {
         action={modal.onOpen}
         actionLabel="Novo plano"
       />
-      {data.length === 0 ? (
+      {isError ? (
+        <Surface>
+          <ErrorState retry={() => void refetch()} />
+        </Surface>
+      ) : isLoading ? (
+        <SimpleGrid columns={{ base: 1, md: 2, xl: 3 }} spacing={5}>
+          {Array.from({ length: 3 }).map((_, index) => (
+            <Surface key={index} p={5}>
+              <Skeleton h="190px" />
+            </Surface>
+          ))}
+        </SimpleGrid>
+      ) : data.length === 0 ? (
         <Surface>
           <EmptyState
             title="Nenhum plano cadastrado"
@@ -126,7 +147,7 @@ export default function PlansPage() {
                 {plan.descricao || 'Sem descricao'}
               </Text>
               <Text fontSize="2xl" fontWeight="800" mt={5}>
-                R$ {Number(plan.valor_mensal).toFixed(2)}
+                {formatCurrency(plan.valor_mensal)}
                 <Text
                   as="span"
                   fontSize="sm"
@@ -158,7 +179,12 @@ export default function PlansPage() {
                         color: platformTokens.colors.success,
                       }}
                     />
-                    {label}: <b>{value ?? 'Ilimitado'}</b>
+                    {label}:{' '}
+                    <b>
+                      {typeof value === 'number'
+                        ? formatNumber(value)
+                        : (value ?? 'Ilimitado')}
+                    </b>
                   </Text>
                 ))}
               </Box>
@@ -191,21 +217,19 @@ export default function PlansPage() {
               </FormControl>
               <FormControl>
                 <FormLabel>Valor mensal</FormLabel>
-                <Input
-                  type="number"
+                <CurrencyInput
                   value={form.valor_mensal}
-                  onChange={e =>
-                    setForm(v => ({ ...v, valor_mensal: e.target.value }))
+                  onValueChange={value =>
+                    setForm(v => ({ ...v, valor_mensal: value }))
                   }
                 />
               </FormControl>
               <FormControl>
                 <FormLabel>Valor anual</FormLabel>
-                <Input
-                  type="number"
+                <CurrencyInput
                   value={form.valor_anual}
-                  onChange={e =>
-                    setForm(v => ({ ...v, valor_anual: e.target.value }))
+                  onValueChange={value =>
+                    setForm(v => ({ ...v, valor_anual: value }))
                   }
                 />
               </FormControl>

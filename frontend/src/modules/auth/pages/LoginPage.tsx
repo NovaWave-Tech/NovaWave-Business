@@ -18,7 +18,6 @@ import {
   Text,
   VStack,
   useToast,
-  useColorMode,
 } from '@chakra-ui/react';
 import { motion } from 'framer-motion';
 import { useEffect, useMemo, useState } from 'react';
@@ -41,7 +40,6 @@ export default function LoginPage() {
   const [authError, setAuthError] = useState('');
   const navigate = useNavigate();
   const toast = useToast();
-  const { setColorMode } = useColorMode();
 
   const emailError = useMemo(() => {
     if (!submitAttempted) {
@@ -64,11 +62,10 @@ export default function LoginPage() {
   const isSubmitDisabled = isLoading || !email || !password;
 
   useEffect(() => {
-    setColorMode('dark');
     if (getToken() && isTokenValid()) {
       navigate('/dashboard', { replace: true });
     }
-  }, [navigate, setColorMode]);
+  }, [navigate]);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
