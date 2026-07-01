@@ -44,6 +44,7 @@ const AuditPage = lazy(() => import('../modules/platform/auditoria/AuditPage'));
 const SettingsPage = lazy(
   () => import('../modules/platform/configuracoes/SettingsPage')
 );
+const UsersPage = lazy(() => import('../modules/users/pages/UsersPage'));
 
 function LoadingPage() {
   return (
@@ -89,11 +90,6 @@ const placeholders = [
     'branches',
     'Filiais',
     'Gestao de filiais, estoques, caixas e operacao por unidade.',
-  ],
-  [
-    'users',
-    'Usuarios',
-    'Controle de usuarios vinculados a empresas, filiais e cargos.',
   ],
   [
     'permissions',
@@ -185,6 +181,7 @@ export default function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route element={<ProtectedRoutes />}>
             <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/users" element={<UsersPage />} />
             {placeholders.map(([path, title, description]) => (
               <Route
                 key={path}
