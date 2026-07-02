@@ -6,6 +6,7 @@ use App\Infrastructure\Middleware\PlatformRoleMiddleware;
 use App\Modules\Auth\Controllers\AuthController;
 use App\Modules\Branches\Controllers\BranchController;
 use App\Modules\Companies\Controllers\CompanyController;
+use App\Modules\Customers\Controllers\CustomerController;
 use App\Modules\Dashboard\Controllers\DashboardController;
 use App\Modules\Platform\Controllers\PlatformAuthController;
 use App\Modules\Platform\Controllers\PlatformController;
@@ -71,6 +72,12 @@ $app->group('', function ($group): void {
     $group->patch('/users/{id:[0-9]+}/status', UserController::class . ':status');
     $group->post('/users/{id:[0-9]+}/reset-password', UserController::class . ':resetPassword');
     $group->delete('/users/{id:[0-9]+}/sessions/{sessionId:[0-9]+}', UserController::class . ':revokeSession');
+    $group->get('/customers', CustomerController::class . ':index');
+    $group->post('/customers', CustomerController::class . ':store');
+    $group->get('/customers/{id:[0-9]+}', CustomerController::class . ':show');
+    $group->put('/customers/{id:[0-9]+}', CustomerController::class . ':update');
+    $group->patch('/customers/{id:[0-9]+}/status', CustomerController::class . ':status');
+    $group->post('/customers/{id:[0-9]+}/notes', CustomerController::class . ':note');
 })->add(new JwtAuthMiddleware());
 
 $app->options('/{routes:.+}', function (Request $request, Response $response): Response {
