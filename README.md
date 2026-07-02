@@ -141,3 +141,6 @@ docker compose exec -T php php -l src/Modules/Users/Controllers/UserController.p
 - Aplicar o RBAC e o isolamento de tenant nos middlewares do backend.
 - Integrar a gravacao de auditoria aos servicos da aplicacao.
 - Implementar modulos reais em cima da estrutura modular.
+# Central de Relatorios
+
+A rota `/reports` oferece catalogo pesquisavel, favoritos, historico local, filtros por filial e periodo, pre-visualizacao com KPIs, grafico, resumo executivo e tabela. Os documentos podem ser exportados em Excel (`.xlsx`) e PDF com identificacao da empresa, filial, periodo, usuario e identidade NovaWave. A API autenticada esta disponivel em `GET /reports` e `GET /reports/{slug}`.

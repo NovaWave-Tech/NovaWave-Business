@@ -55,6 +55,7 @@ const ProductsPage = lazy(
   () => import('../modules/products/pages/ProductsPage')
 );
 const FinancePage = lazy(() => import('../modules/finance/pages/FinancePage'));
+const ReportsPage = lazy(() => import('../modules/reports/pages/ReportsPage'));
 
 function LoadingPage() {
   return (
@@ -118,11 +119,6 @@ const placeholders = [
     'Solicitacoes, pedidos de compra e entrada de mercadorias.',
   ],
   [
-    'reports',
-    'Relatorios',
-    'Relatorios gerenciais por empresa, filial e periodo.',
-  ],
-  [
     'cashier',
     'Caixa',
     'Abertura, fechamento e movimentacoes de caixa por filial.',
@@ -176,6 +172,7 @@ export default function App() {
             <Route path="/customers" element={<CustomersPage />} />
             <Route path="/products" element={<ProductsPage />} />
             <Route path="/finance" element={<FinancePage />} />
+            <Route path="/reports" element={<ReportsPage />} />
             {placeholders.map(([path, title, description]) => (
               <Route
                 key={path}
