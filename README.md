@@ -81,6 +81,14 @@ http://localhost:5173/platform/login
 
 O painel inclui dashboard global, empresas, provisionamento em etapas, planos, assinaturas, usuarios internos, auditoria e configuracoes. Consulte `backend/CODEX-INSTRUCTIONS.md` e `frontend/CODEX-INSTRUCTIONS.md` para os fluxos de desenvolvimento.
 
+## Centro de Gestao de Filiais
+
+A rota autenticada `/branches` concentra a administracao operacional das unidades da empresa. A tela apresenta indicadores consolidados, busca e filtros, cards responsivos, cadastro guiado, edicao e um drawer com visao geral, indicadores, usuarios, operacao e auditoria.
+
+As APIs de filiais usam exclusivamente a empresa do token JWT. Criacao, edicao, definicao de matriz, metas e auditoria sao executadas de forma transacional. A exclusao fisica fica bloqueada para preservar o historico do ERP; unidades podem ser inativadas, e uma matriz ativa precisa ser substituida antes da inativacao.
+
+Campos planejados que ainda nao existem no schema privado, como metas diarias, meta de ticket, meta de clientes e participacao no ranking, ficam identificados e desabilitados na interface, sem persistencia ficticia.
+
 ## Centro de Gestao de Usuarios
 
 A rota autenticada `/users` concentra a administracao dos usuarios de cada empresa. O modulo inclui indicadores, busca e filtros, cadastro guiado, edicao, perfis, filiais, bloqueio, redefinicao de senha, sessoes e historico de auditoria.

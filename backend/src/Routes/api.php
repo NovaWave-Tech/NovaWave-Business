@@ -59,6 +59,11 @@ $app->group('', function ($group): void {
     $group->get('/dashboard', DashboardController::class . ':index');
     $group->get('/companies', CompanyController::class . ':index');
     $group->get('/branches', BranchController::class . ':index');
+    $group->post('/branches', BranchController::class . ':store');
+    $group->get('/branches/{id:[0-9]+}', BranchController::class . ':show');
+    $group->put('/branches/{id:[0-9]+}', BranchController::class . ':update');
+    $group->patch('/branches/{id:[0-9]+}/status', BranchController::class . ':status');
+    $group->patch('/branches/{id:[0-9]+}/matrix', BranchController::class . ':matrix');
     $group->get('/users', UserController::class . ':index');
     $group->post('/users', UserController::class . ':store');
     $group->get('/users/{id:[0-9]+}', UserController::class . ':show');
