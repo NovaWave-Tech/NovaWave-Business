@@ -105,6 +105,14 @@ Criacao, estoque inicial, fornecedores, imagens e auditoria sao persistidos em u
 
 Os formatadores compartilhados contemplam moeda, percentual, quantidade, codigo de barras, peso e dimensoes. A migration privada adiciona dados fiscais e logisticos, reserva de estoque, galeria de imagens e multiplos fornecedores, mantendo preparada a evolucao para variacoes, kits, lotes, series e validade.
 
+## Centro Financeiro Executivo
+
+A rota autenticada `/finance` consolida saldo atual e projetado, receitas, despesas, contas a pagar e receber, fluxo de caixa, bancos, cartoes, metas e insights financeiros. O painel utiliza Recharts para evolucao e comparacao dos valores por periodo.
+
+Receitas e despesas podem ser cadastradas, editadas, duplicadas, canceladas e baixadas como pagas ou recebidas. O parcelamento gera automaticamente os titulos mensais dentro de uma transacao, com categorias, centro de custo, conta bancaria, filial, cliente ou fornecedor e auditoria por parcela.
+
+A migration privada cria categorias financeiras, centros de custo, contas bancarias, cartoes corporativos, anexos e configuracao de meta, alem de estender os titulos com juros, descontos, multas, documentos, observacoes, forma de pagamento e recorrencia.
+
 ## Centro de Gestao de Usuarios
 
 A rota autenticada `/users` concentra a administracao dos usuarios de cada empresa. O modulo inclui indicadores, busca e filtros, cadastro guiado, edicao, perfis, filiais, bloqueio, redefinicao de senha, sessoes e historico de auditoria.

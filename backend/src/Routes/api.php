@@ -8,6 +8,7 @@ use App\Modules\Branches\Controllers\BranchController;
 use App\Modules\Companies\Controllers\CompanyController;
 use App\Modules\Customers\Controllers\CustomerController;
 use App\Modules\Dashboard\Controllers\DashboardController;
+use App\Modules\Finance\Controllers\FinanceController;
 use App\Modules\Platform\Controllers\PlatformAuthController;
 use App\Modules\Platform\Controllers\PlatformController;
 use App\Modules\Products\Controllers\ProductController;
@@ -86,6 +87,12 @@ $app->group('', function ($group): void {
     $group->patch('/products/{id:[0-9]+}/status', ProductController::class . ':status');
     $group->post('/products/{id:[0-9]+}/duplicate', ProductController::class . ':duplicate');
     $group->post('/products/{id:[0-9]+}/movements', ProductController::class . ':movement');
+    $group->get('/finance', FinanceController::class . ':index');
+    $group->get('/finance/{type:revenue|expense}/{id:[0-9]+}', FinanceController::class . ':show');
+    $group->post('/finance/{type:revenue|expense}', FinanceController::class . ':store');
+    $group->put('/finance/{type:revenue|expense}/{id:[0-9]+}', FinanceController::class . ':update');
+    $group->patch('/finance/{type:revenue|expense}/{id:[0-9]+}/status', FinanceController::class . ':status');
+    $group->post('/finance/{type:revenue|expense}/{id:[0-9]+}/duplicate', FinanceController::class . ':duplicate');
 })->add(new JwtAuthMiddleware());
 
 $app->options('/{routes:.+}', function (Request $request, Response $response): Response {
