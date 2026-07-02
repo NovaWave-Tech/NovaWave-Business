@@ -126,8 +126,13 @@ const defaults: BranchForm = {
   longitude: undefined,
   permite_estoque_negativo: false,
   caixa_obrigatorio: true,
+  participa_metas: true,
+  aparece_ranking: true,
   situacao: true,
   meta_mensal: undefined,
+  meta_diaria: undefined,
+  meta_ticket: undefined,
+  meta_clientes: undefined,
 };
 
 function Kpi({
@@ -309,6 +314,15 @@ export default function BranchesPage() {
         situacao: Boolean(current.situacao),
         meta_mensal: current.monthly_goal
           ? Number(current.monthly_goal)
+          : undefined,
+        meta_diaria: current.daily_goal
+          ? Number(current.daily_goal)
+          : undefined,
+        meta_ticket: current.ticket_goal
+          ? Number(current.ticket_goal)
+          : undefined,
+        meta_clientes: current.customer_goal
+          ? Number(current.customer_goal)
           : undefined,
       });
       formDrawer.onOpen();
@@ -839,6 +853,14 @@ function DetailDrawer({
                     />
                     <Info label="E-mail" value={detail.email} />
                     <Info
+                      label="Participa das metas"
+                      value={detail.participa_metas ? 'Sim' : 'Nao'}
+                    />
+                    <Info
+                      label="Aparece no ranking"
+                      value={detail.aparece_ranking ? 'Sim' : 'Nao'}
+                    />
+                    <Info
                       label="Endereco"
                       value={`${detail.endereco || ''}, ${detail.numero || 's/n'} - ${detail.bairro || ''}, ${detail.cidade}/${detail.estado} - ${formatCep(detail.cep)}`}
                     />
@@ -878,6 +900,10 @@ function DetailDrawer({
                           'Caixa atual',
                           formatCurrency(detail.indicators.current_cash),
                         ],
+                        ['Meta mensal', formatCurrency(detail.monthly_goal)],
+                        ['Meta diaria', formatCurrency(detail.daily_goal)],
+                        ['Meta ticket', formatCurrency(detail.ticket_goal)],
+                        ['Meta clientes', formatNumber(detail.customer_goal)],
                       ].map(([label, value]) => (
                         <Surface key={label} p={3}>
                           <Text
@@ -1280,12 +1306,12 @@ function BranchStep({
         </Checkbox>
         <Checkbox {...form.register('situacao')}>Filial ativa</Checkbox>
         <Divider />
-        <Tooltip label="Requer evolucao do schema privado">
-          <Checkbox isDisabled>Filial participa das metas</Checkbox>
-        </Tooltip>
-        <Tooltip label="Requer evolucao do schema privado">
-          <Checkbox isDisabled>Filial aparece no ranking</Checkbox>
-        </Tooltip>
+        <Checkbox {...form.register('participa_metas')}>
+          Filial participa das metas
+        </Checkbox>
+        <Checkbox {...form.register('aparece_ranking')}>
+          Filial aparece no ranking
+        </Checkbox>
       </VStack>
     );
   if (step === 4)
@@ -1304,18 +1330,34 @@ function BranchStep({
           )}
         />
         <SimpleGrid columns={{ base: 1, md: 3 }} spacing={3}>
-          {[
-            'Meta diaria sugerida',
-            'Meta de ticket medio',
-            'Meta de clientes',
-          ].map(label => (
-            <Tooltip key={label} label="Requer evolucao do schema privado">
-              <FormControl>
-                <FormLabel>{label}</FormLabel>
-                <Input isDisabled />
-              </FormControl>
-            </Tooltip>
-          ))}
+          <Controller
+            control={form.control}
+            name="meta_diaria"
+            render={({ field }) => (
+              <Field label="Meta diaria sugerida">
+                <CurrencyInput
+                  value={field.value?.toString() || ''}
+                  onValueChange={field.onChange}
+                />
+              </Field>
+            )}
+          />
+          <Controller
+            control={form.control}
+            name="meta_ticket"
+            render={({ field }) => (
+              <Field label="Meta de ticket medio">
+                <CurrencyInput
+                  value={field.value?.toString() || ''}
+                  onValueChange={field.onChange}
+                />
+              </Field>
+            )}
+          />
+          <FormControl>
+            <FormLabel>Meta de clientes</FormLabel>
+            <Input type="number" min={0} {...form.register('meta_clientes')} />
+          </FormControl>
         </SimpleGrid>
       </VStack>
     );

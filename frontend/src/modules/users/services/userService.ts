@@ -39,6 +39,8 @@ export type UserDetail = UserRow & {
   empresa: string;
   cpf?: string;
   birth_date?: string;
+  exigir_troca_senha: boolean;
+  dois_fatores_ativo: boolean;
   idcargo?: number;
   iddepartamento?: number;
   data_admissao?: string;
@@ -70,6 +72,7 @@ export type UserPayload = {
   nome: string;
   cpf?: string;
   telefone?: string;
+  birth_date?: string;
   email: string;
   idfilial: number;
   filiais?: number[];
@@ -79,6 +82,7 @@ export type UserPayload = {
   senha?: string;
   admin_empresa?: boolean;
   force_password_change?: boolean;
+  two_factor_enabled?: boolean;
 };
 
 export const userService = {

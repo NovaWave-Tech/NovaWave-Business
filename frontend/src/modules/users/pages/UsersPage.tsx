@@ -125,6 +125,7 @@ const defaultForm: UserFormData = {
   nome: '',
   cpf: '',
   telefone: '',
+  birth_date: '',
   email: '',
   idfilial: 0,
   iddepartamento: undefined,
@@ -134,6 +135,7 @@ const defaultForm: UserFormData = {
   confirmar_senha: '',
   admin_empresa: false,
   force_password_change: true,
+  two_factor_enabled: false,
 };
 
 function Kpi({
@@ -245,12 +247,15 @@ export default function UsersPage() {
       nome: '',
       cpf: '',
       telefone: '',
+      birth_date: '',
       email: '',
       idfilial: 0,
       iddepartamento: undefined,
       idcargo: undefined,
       idperfil: undefined,
       admin_empresa: false,
+      force_password_change: false,
+      two_factor_enabled: false,
     },
   });
 
@@ -375,12 +380,15 @@ export default function UsersPage() {
         nome: current.nome,
         cpf: current.cpf || '',
         telefone: current.telefone || '',
+        birth_date: current.birth_date || '',
         email: current.email,
         idfilial: Number(current.idfilial_padrao || 0),
         iddepartamento: current.iddepartamento || undefined,
         idcargo: current.idcargo || undefined,
         idperfil: current.profiles[0]?.id || undefined,
         admin_empresa: current.admin_empresa,
+        force_password_change: current.exigir_troca_senha,
+        two_factor_enabled: current.dois_fatores_ativo,
       });
       editModal.onOpen();
     } catch (error) {
@@ -953,6 +961,10 @@ function EditUserModal({
                 </FormControl>
               )}
             />
+            <FormControl>
+              <FormLabel>Data de nascimento</FormLabel>
+              <Input type="date" {...form.register('birth_date')} />
+            </FormControl>
             <FormControl isInvalid={Boolean(errors.idfilial)} isRequired>
               <FormLabel>Filial principal</FormLabel>
               <Select {...form.register('idfilial')}>
@@ -1001,6 +1013,12 @@ function EditUserModal({
           </SimpleGrid>
           <Checkbox mt={5} {...form.register('admin_empresa')}>
             Administrador da empresa
+          </Checkbox>
+          <Checkbox mt={5} ml={5} {...form.register('force_password_change')}>
+            Exigir troca de senha
+          </Checkbox>
+          <Checkbox mt={5} ml={5} {...form.register('two_factor_enabled')}>
+            Autenticacao em dois fatores
           </Checkbox>
         </ModalBody>
         <ModalFooter>
@@ -1071,10 +1089,7 @@ function UserStep({
         </FormControl>
         <FormControl>
           <FormLabel>Data de nascimento</FormLabel>
-          <Input type="date" isDisabled />
-          <Text mt={1} fontSize="10px" color="erp.textMuted">
-            Campo aguardando suporte no schema privado.
-          </Text>
+          <Input type="date" {...form.register('birth_date')} />
         </FormControl>
         <FormControl>
           <FormLabel>Foto</FormLabel>
@@ -1185,9 +1200,14 @@ function UserStep({
           onChange={event =>
             form.setValue('force_password_change', event.target.checked)
           }
-          isDisabled
         >
-          Obrigar troca no primeiro acesso (aguardando suporte no schema)
+          Obrigar troca de senha no primeiro acesso
+        </Checkbox>
+        <Checkbox
+          gridColumn={{ md: '1 / -1' }}
+          {...form.register('two_factor_enabled')}
+        >
+          Ativar autenticacao em dois fatores
         </Checkbox>
       </SimpleGrid>
     );

@@ -28,8 +28,13 @@ export const branchSchema = z.object({
   longitude: optionalNumber,
   permite_estoque_negativo: z.boolean(),
   caixa_obrigatorio: z.boolean(),
+  participa_metas: z.boolean(),
+  aparece_ranking: z.boolean(),
   situacao: z.boolean(),
   meta_mensal: optionalNumber,
+  meta_diaria: optionalNumber,
+  meta_ticket: optionalNumber,
+  meta_clientes: optionalNumber,
 });
 
 export type BranchForm = z.infer<typeof branchSchema>;

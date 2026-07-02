@@ -86,8 +86,9 @@ final class UserRepository
         $user = $this->fetchOne(
             "SELECT u.idusuario, u.idfilial_padrao, u.idfuncionario, u.nome, u.email,
                     u.telefone, u.avatar_url, u.admin_empresa, u.situacao, u.ultimo_login,
+                    u.exigir_troca_senha, u.dois_fatores_ativo,
                     u.criado_em, e.nome_fantasia AS empresa, f.nome AS filial,
-                    fn.cpf, fn.data_admissao, c.idcargo, c.nome AS cargo,
+                    fn.cpf, fn.data_nascimento AS birth_date, fn.data_admissao, c.idcargo, c.nome AS cargo,
                     d.iddepartamento, d.nome AS departamento
              FROM usuario u JOIN empresa e ON e.idempresa=u.idempresa
              LEFT JOIN filial f ON f.idempresa=u.idempresa AND f.idfilial=u.idfilial_padrao
@@ -132,8 +133,7 @@ final class UserRepository
              ORDER BY criado_em DESC LIMIT 30",
             ['company_id' => $companyId, 'user_id' => $userId]
         );
-        $user['birth_date'] = null;
-        $user['capabilities'] = ['force_password_change' => false, 'two_factor' => false, 'email_invite' => false];
+        $user['capabilities'] = ['force_password_change' => true, 'two_factor' => true, 'email_invite' => false];
         return $user;
     }
 
@@ -144,8 +144,8 @@ final class UserRepository
             $this->assertReferences($companyId, $data);
             $employeeId = $this->insertEmployee($companyId, $data);
             $statement = $this->pdo->prepare(
-                'INSERT INTO usuario (idempresa,idfilial_padrao,idfuncionario,nome,email,senha_hash,telefone,admin_empresa,situacao)
-                 VALUES (:company_id,:branch_id,:employee_id,:name,LOWER(BTRIM(:email)),:password,:phone,:admin,1)
+                'INSERT INTO usuario (idempresa,idfilial_padrao,idfuncionario,nome,email,senha_hash,telefone,admin_empresa,exigir_troca_senha,dois_fatores_ativo,situacao)
+                 VALUES (:company_id,:branch_id,:employee_id,:name,LOWER(BTRIM(:email)),:password,:phone,:admin,:force_password_change,:two_factor,1)
                  RETURNING idusuario'
             );
             $statement->execute([
@@ -157,6 +157,8 @@ final class UserRepository
                 'password' => password_hash((string) $data['senha'], PASSWORD_DEFAULT),
                 'phone' => $data['telefone'] ?? null,
                 'admin' => !empty($data['admin_empresa']) ? 'true' : 'false',
+                'force_password_change' => !empty($data['force_password_change']) ? 'true' : 'false',
+                'two_factor' => !empty($data['two_factor_enabled']) ? 'true' : 'false',
             ]);
             $userId = (int) $statement->fetchColumn();
             $this->syncAccess($companyId, $userId, $data);
@@ -178,23 +180,27 @@ final class UserRepository
             $this->assertReferences($companyId, $data);
             $statement = $this->pdo->prepare(
                 'UPDATE usuario SET nome=:name,email=LOWER(BTRIM(:email)),telefone=:phone,
-                 idfilial_padrao=:branch_id,admin_empresa=:admin,atualizado_em=CURRENT_TIMESTAMP
+                 idfilial_padrao=:branch_id,admin_empresa=:admin,exigir_troca_senha=:force_password_change,
+                 dois_fatores_ativo=:two_factor,atualizado_em=CURRENT_TIMESTAMP
                  WHERE idempresa=:company_id AND idusuario=:user_id'
             );
             $statement->execute([
                 'name' => trim((string) $data['nome']), 'email' => trim((string) $data['email']),
                 'phone' => $data['telefone'] ?? null, 'branch_id' => (int) $data['idfilial'],
                 'admin' => !empty($data['admin_empresa']) ? 'true' : 'false',
+                'force_password_change' => !empty($data['force_password_change']) ? 'true' : 'false',
+                'two_factor' => !empty($data['two_factor_enabled']) ? 'true' : 'false',
                 'company_id' => $companyId, 'user_id' => $userId,
             ]);
             if ($before['idfuncionario']) {
                 $employee = $this->pdo->prepare(
-                    'UPDATE funcionario SET nome=:name,cpf=:cpf,email=:email,telefone=:phone,idfilial=:branch_id,
+                    'UPDATE funcionario SET nome=:name,cpf=:cpf,email=:email,telefone=:phone,data_nascimento=:birth_date,idfilial=:branch_id,
                      idcargo=:role_id,atualizado_em=CURRENT_TIMESTAMP WHERE idempresa=:company_id AND idfuncionario=:employee_id'
                 );
                 $employee->execute([
                     'name' => $data['nome'], 'cpf' => $data['cpf'] ?? null, 'email' => $data['email'],
                     'phone' => $data['telefone'] ?? null, 'branch_id' => (int) $data['idfilial'],
+                    'birth_date' => !empty($data['birth_date']) ? $data['birth_date'] : null,
                     'role_id' => !empty($data['idcargo']) ? (int) $data['idcargo'] : null,
                     'company_id' => $companyId, 'employee_id' => (int) $before['idfuncionario'],
                 ]);
@@ -252,14 +258,15 @@ final class UserRepository
     private function insertEmployee(int $companyId, array $data): int
     {
         $statement = $this->pdo->prepare(
-            'INSERT INTO funcionario (idempresa,idfilial,idcargo,nome,cpf,email,telefone,situacao)
-             VALUES (:company_id,:branch_id,:role_id,:name,:cpf,:email,:phone,1) RETURNING idfuncionario'
+            'INSERT INTO funcionario (idempresa,idfilial,idcargo,nome,cpf,email,telefone,data_nascimento,situacao)
+             VALUES (:company_id,:branch_id,:role_id,:name,:cpf,:email,:phone,:birth_date,1) RETURNING idfuncionario'
         );
         $statement->execute([
             'company_id' => $companyId, 'branch_id' => (int) $data['idfilial'],
             'role_id' => !empty($data['idcargo']) ? (int) $data['idcargo'] : null,
             'name' => trim((string) $data['nome']), 'cpf' => $data['cpf'] ?? null,
             'email' => trim((string) $data['email']), 'phone' => $data['telefone'] ?? null,
+            'birth_date' => !empty($data['birth_date']) ? $data['birth_date'] : null,
         ]);
         return (int) $statement->fetchColumn();
     }
