@@ -48,6 +48,9 @@ const BranchesPage = lazy(
   () => import('../modules/branches/pages/BranchesPage')
 );
 const UsersPage = lazy(() => import('../modules/users/pages/UsersPage'));
+const CustomersPage = lazy(
+  () => import('../modules/customers/pages/CustomersPage')
+);
 
 function LoadingPage() {
   return (
@@ -93,11 +96,6 @@ const placeholders = [
     'permissions',
     'Permissoes',
     'RBAC com perfis, permissoes e acoes sensiveis auditaveis.',
-  ],
-  [
-    'customers',
-    'Clientes',
-    'Base comercial de clientes com isolamento por empresa.',
   ],
   [
     'suppliers',
@@ -181,6 +179,7 @@ export default function App() {
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/branches" element={<BranchesPage />} />
             <Route path="/users" element={<UsersPage />} />
+            <Route path="/customers" element={<CustomersPage />} />
             {placeholders.map(([path, title, description]) => (
               <Route
                 key={path}
