@@ -12,6 +12,7 @@ use App\Modules\Finance\Controllers\FinanceController;
 use App\Modules\Platform\Controllers\PlatformAuthController;
 use App\Modules\Platform\Controllers\PlatformController;
 use App\Modules\Products\Controllers\ProductController;
+use App\Modules\Reports\Controllers\ReportController;
 use App\Modules\Users\Controllers\UserController;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
@@ -93,6 +94,8 @@ $app->group('', function ($group): void {
     $group->put('/finance/{type:revenue|expense}/{id:[0-9]+}', FinanceController::class . ':update');
     $group->patch('/finance/{type:revenue|expense}/{id:[0-9]+}/status', FinanceController::class . ':status');
     $group->post('/finance/{type:revenue|expense}/{id:[0-9]+}/duplicate', FinanceController::class . ':duplicate');
+    $group->get('/reports', ReportController::class . ':index');
+    $group->get('/reports/{slug:[a-z-]+}', ReportController::class . ':preview');
 })->add(new JwtAuthMiddleware());
 
 $app->options('/{routes:.+}', function (Request $request, Response $response): Response {
