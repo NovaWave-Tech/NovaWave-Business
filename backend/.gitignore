@@ -6,4 +6,5 @@ vendor
 core
 /banco.sql
 /database/migrations/
+/database/seeds/
 /tests

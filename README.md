@@ -89,6 +89,23 @@ As APIs de filiais usam exclusivamente a empresa do token JWT. Criacao, edicao, 
 
 Campos planejados que ainda nao existem no schema privado, como metas diarias, meta de ticket, meta de clientes e participacao no ranking, ficam identificados e desabilitados na interface, sem persistencia ficticia.
 
+## Centro de Gestao de Usuarios
+
+A rota autenticada `/users` concentra a administracao dos usuarios de cada empresa. O modulo inclui indicadores, busca e filtros, cadastro guiado, edicao, perfis, filiais, bloqueio, redefinicao de senha, sessoes e historico de auditoria.
+
+As APIs ficam sob `/users` e sempre utilizam o tenant do token JWT. Operacoes de criacao e edicao sincronizam o funcionario, a filial e o perfil em transacao. Recursos que ainda dependem de evolucao do schema privado, como data de nascimento, upload de foto, 2FA e troca obrigatoria da primeira senha, aparecem identificados na interface e nao geram persistencia ficticia.
+
+Validacao do modulo:
+
+```bash
+cd frontend
+npm run lint
+npm run build
+
+cd ../backend
+docker compose exec -T php php -l src/Modules/Users/Controllers/UserController.php
+```
+
 ## Proximos passos
 
 - Evoluir o schema pelo processo privado de infraestrutura, fora do repositorio publico.

@@ -47,6 +47,7 @@ const SettingsPage = lazy(
 const BranchesPage = lazy(
   () => import('../modules/branches/pages/BranchesPage')
 );
+const UsersPage = lazy(() => import('../modules/users/pages/UsersPage'));
 
 function LoadingPage() {
   return (
@@ -87,11 +88,6 @@ const placeholders = [
     'companies',
     'Empresas',
     'Cadastro e administracao de empresas do ambiente SaaS.',
-  ],
-  [
-    'users',
-    'Usuarios',
-    'Controle de usuarios vinculados a empresas, filiais e cargos.',
   ],
   [
     'permissions',
@@ -184,6 +180,7 @@ export default function App() {
           <Route element={<ProtectedRoutes />}>
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/branches" element={<BranchesPage />} />
+            <Route path="/users" element={<UsersPage />} />
             {placeholders.map(([path, title, description]) => (
               <Route
                 key={path}
