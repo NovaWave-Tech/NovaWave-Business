@@ -51,6 +51,9 @@ const UsersPage = lazy(() => import('../modules/users/pages/UsersPage'));
 const CustomersPage = lazy(
   () => import('../modules/customers/pages/CustomersPage')
 );
+const ProductsPage = lazy(
+  () => import('../modules/products/pages/ProductsPage')
+);
 
 function LoadingPage() {
   return (
@@ -101,11 +104,6 @@ const placeholders = [
     'suppliers',
     'Fornecedores',
     'Cadastro de fornecedores e relacionamento com compras.',
-  ],
-  [
-    'products',
-    'Produtos',
-    'Catalogo, categorias, marcas e dados comerciais dos produtos.',
   ],
   [
     'inventory',
@@ -180,6 +178,7 @@ export default function App() {
             <Route path="/branches" element={<BranchesPage />} />
             <Route path="/users" element={<UsersPage />} />
             <Route path="/customers" element={<CustomersPage />} />
+            <Route path="/products" element={<ProductsPage />} />
             {placeholders.map(([path, title, description]) => (
               <Route
                 key={path}

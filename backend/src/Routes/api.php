@@ -10,6 +10,7 @@ use App\Modules\Customers\Controllers\CustomerController;
 use App\Modules\Dashboard\Controllers\DashboardController;
 use App\Modules\Platform\Controllers\PlatformAuthController;
 use App\Modules\Platform\Controllers\PlatformController;
+use App\Modules\Products\Controllers\ProductController;
 use App\Modules\Users\Controllers\UserController;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
@@ -78,6 +79,13 @@ $app->group('', function ($group): void {
     $group->put('/customers/{id:[0-9]+}', CustomerController::class . ':update');
     $group->patch('/customers/{id:[0-9]+}/status', CustomerController::class . ':status');
     $group->post('/customers/{id:[0-9]+}/notes', CustomerController::class . ':note');
+    $group->get('/products', ProductController::class . ':index');
+    $group->post('/products', ProductController::class . ':store');
+    $group->get('/products/{id:[0-9]+}', ProductController::class . ':show');
+    $group->put('/products/{id:[0-9]+}', ProductController::class . ':update');
+    $group->patch('/products/{id:[0-9]+}/status', ProductController::class . ':status');
+    $group->post('/products/{id:[0-9]+}/duplicate', ProductController::class . ':duplicate');
+    $group->post('/products/{id:[0-9]+}/movements', ProductController::class . ':movement');
 })->add(new JwtAuthMiddleware());
 
 $app->options('/{routes:.+}', function (Request $request, Response $response): Response {

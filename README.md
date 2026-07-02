@@ -97,6 +97,14 @@ As APIs respeitam a empresa do token JWT e registram criacao, alteracoes, observ
 
 Formatadores de documento, telefone, CEP, moeda e datas sao reutilizados da camada compartilhada. O schema de clientes contempla RG, nome fantasia, inscricao estadual, nascimento ou abertura, recorrencia manual e permissao de venda a prazo.
 
+## Centro de Gestao de Produtos
+
+A rota autenticada `/products` concentra catalogo, precos, estoque, fornecedores e desempenho comercial. O modulo inclui indicadores, filtros, tabela responsiva, cadastro guiado em sete etapas e detalhes de informacoes gerais, estoque por filial, financeiro, movimentacoes, vendas, fornecedores e auditoria.
+
+Criacao, estoque inicial, fornecedores, imagens e auditoria sao persistidos em uma unica transacao. Movimentacoes de entrada, saida e ajuste validam a disponibilidade e a politica de estoque negativo. SKU e codigo de barras permanecem unicos por empresa, e a exclusao fisica fica bloqueada para preservar compras, vendas e movimentacoes.
+
+Os formatadores compartilhados contemplam moeda, percentual, quantidade, codigo de barras, peso e dimensoes. A migration privada adiciona dados fiscais e logisticos, reserva de estoque, galeria de imagens e multiplos fornecedores, mantendo preparada a evolucao para variacoes, kits, lotes, series e validade.
+
 ## Centro de Gestao de Usuarios
 
 A rota autenticada `/users` concentra a administracao dos usuarios de cada empresa. O modulo inclui indicadores, busca e filtros, cadastro guiado, edicao, perfis, filiais, bloqueio, redefinicao de senha, sessoes e historico de auditoria.

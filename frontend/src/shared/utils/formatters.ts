@@ -20,6 +20,35 @@ export const formatCurrency = (
 export const formatNumber = (value: string | number | null | undefined) =>
   new Intl.NumberFormat(ptBR).format(Number(value ?? 0) || 0);
 
+export const formatQuantity = (
+  value: string | number | null | undefined,
+  maximumFractionDigits = 3
+) =>
+  new Intl.NumberFormat(ptBR, { maximumFractionDigits }).format(
+    Number(value ?? 0) || 0
+  );
+
+export const formatBarcode = (value?: string | null) =>
+  digitsOnly(value)
+    .replace(/(.{4})/g, '$1 ')
+    .trim() || '-';
+
+export const formatWeight = (value?: string | number | null) =>
+  value === null || value === undefined || value === ''
+    ? '-'
+    : `${formatQuantity(value)} kg`;
+
+export const formatDimensions = (
+  height?: string | number | null,
+  width?: string | number | null,
+  length?: string | number | null
+) =>
+  [height, width, length].every(
+    value => value === null || value === undefined || value === ''
+  )
+    ? '-'
+    : `${formatQuantity(height)} x ${formatQuantity(width)} x ${formatQuantity(length)} cm`;
+
 export const formatPercent = (
   value: string | number | null | undefined,
   fractionDigits = 1
