@@ -20,6 +20,14 @@ export const formatCurrency = (
 export const formatNumber = (value: string | number | null | undefined) =>
   new Intl.NumberFormat(ptBR).format(Number(value ?? 0) || 0);
 
+export const formatCompactNumber = (
+  value: string | number | null | undefined
+) =>
+  new Intl.NumberFormat(ptBR, {
+    notation: 'compact',
+    maximumFractionDigits: 1,
+  }).format(Number(value ?? 0) || 0);
+
 export const formatQuantity = (
   value: string | number | null | undefined,
   maximumFractionDigits = 3
@@ -83,6 +91,17 @@ export const formatDateTime = (
   return Number.isNaN(date.getTime())
     ? fallback
     : date.toLocaleString(ptBR, { dateStyle: 'short', timeStyle: 'short' });
+};
+
+export const formatShortDate = (
+  value?: string | Date | null,
+  fallback = '-'
+) => {
+  if (!value) return fallback;
+  const date = parseDate(value);
+  return Number.isNaN(date.getTime())
+    ? fallback
+    : date.toLocaleDateString(ptBR, { day: '2-digit', month: '2-digit' });
 };
 
 export const formatCnpj = (value?: string | null) => {
@@ -158,6 +177,8 @@ export const formatPaymentMethod = (value?: string | null) => {
     pix: 'PIX',
     cartao: 'Cartao',
     boleto: 'Boleto',
+    transferencia: 'Transferencia',
+    dinheiro: 'Dinheiro',
   };
   return value ? (labels[value.toLowerCase()] ?? value) : '-';
 };

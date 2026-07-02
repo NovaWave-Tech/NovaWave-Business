@@ -38,17 +38,34 @@ export function CurrencyInput({
   onValueChange: (value: string) => void;
   currency?: string;
 }) {
+  const formattedValue = value
+    ? new Intl.NumberFormat('pt-BR', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }).format(Number(value) || 0)
+    : '';
+
+  const handleChange = (input: string) => {
+    const digits = input.replace(/\D/g, '');
+
+    if (!digits) {
+      onValueChange('');
+      return;
+    }
+
+    onValueChange((Number(digits) / 100).toFixed(2));
+  };
+
   return (
     <InputGroup>
       <InputLeftAddon>{currency}</InputLeftAddon>
       <Input
         {...props}
-        type="number"
-        inputMode="decimal"
-        min={0}
-        step="0.01"
-        value={value}
-        onChange={event => onValueChange(event.target.value)}
+        type="text"
+        inputMode="numeric"
+        value={formattedValue}
+        placeholder="0,00"
+        onChange={event => handleChange(event.target.value)}
       />
     </InputGroup>
   );
