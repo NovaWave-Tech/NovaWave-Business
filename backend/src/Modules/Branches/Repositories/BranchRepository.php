@@ -56,9 +56,11 @@ final class BranchRepository
         $branch['users'] = $this->all("SELECT u.idusuario,u.nome,u.email,u.situacao,u.ultimo_login,c.nome cargo,COALESCE(string_agg(DISTINCT pa.nome,', '),'Sem perfil') perfil FROM usuario u LEFT JOIN funcionario fn ON fn.idempresa=u.idempresa AND fn.idfuncionario=u.idfuncionario LEFT JOIN cargo c ON c.idempresa=fn.idempresa AND c.idcargo=fn.idcargo LEFT JOIN usuario_perfil up ON up.idempresa=u.idempresa AND up.idusuario=u.idusuario LEFT JOIN perfil_acesso pa ON pa.idempresa=up.idempresa AND pa.idperfil=up.idperfil WHERE u.idempresa=:company_id AND (u.idfilial_padrao=:branch_id OR EXISTS(SELECT 1 FROM usuario_filial uf WHERE uf.idempresa=u.idempresa AND uf.idusuario=u.idusuario AND uf.idfilial=:branch_id)) GROUP BY u.idusuario,c.nome ORDER BY u.nome", ['company_id' => $companyId, 'branch_id' => $branchId]);
         $branch['operation'] = $this->one("SELECT (SELECT MAX(data_venda) FROM venda WHERE idempresa=:company_id AND idfilial=:branch_id) last_sale,(SELECT MAX(data_compra) FROM compra WHERE idempresa=:company_id AND idfilial=:branch_id) last_purchase,(SELECT MAX(criado_em) FROM movimentacao_estoque WHERE idempresa=:company_id AND idfilial=:branch_id) last_stock,(SELECT COUNT(*) FROM conta_pagar WHERE idempresa=:company_id AND idfilial=:branch_id)+(SELECT COUNT(*) FROM conta_receber WHERE idempresa=:company_id AND idfilial=:branch_id) linked_accounts", ['company_id' => $companyId, 'branch_id' => $branchId]);
         $branch['history'] = $this->all("SELECT idauditoria,acao,valores_anteriores,valores_novos,criado_em FROM auditoria WHERE idempresa=:company_id AND ((tabela='filial' AND registro_id=:branch_id) OR idfilial=:branch_id) ORDER BY criado_em DESC LIMIT 30", ['company_id' => $companyId, 'branch_id' => $branchId]);
-        $goal = $this->one("SELECT valor_meta FROM meta_venda WHERE idempresa=:company_id AND idfilial=:branch_id AND competencia=date_trunc('month',CURRENT_DATE)::date", ['company_id' => $companyId, 'branch_id' => $branchId]);
+        $goal = $this->one("SELECT valor_meta,valor_meta_diaria,valor_meta_ticket,meta_clientes FROM meta_venda WHERE idempresa=:company_id AND idfilial=:branch_id AND competencia=date_trunc('month',CURRENT_DATE)::date", ['company_id' => $companyId, 'branch_id' => $branchId]);
         $branch['monthly_goal'] = $goal['valor_meta'] ?? null;
-        $branch['capabilities'] = ['daily_goal' => false, 'ticket_goal' => false, 'customer_goal' => false, 'ranking' => false];
+        $branch['daily_goal'] = $goal['valor_meta_diaria'] ?? null;
+        $branch['ticket_goal'] = $goal['valor_meta_ticket'] ?? null;
+        $branch['customer_goal'] = $goal['meta_clientes'] ?? null;
         return $branch;
     }
 
@@ -66,9 +68,9 @@ final class BranchRepository
     {
         return $this->transaction(function () use ($companyId, $actorId, $data, $ip, $agent) {
             if (!empty($data['matriz'])) $this->pdo->prepare('UPDATE filial SET matriz=false WHERE idempresa=:company_id')->execute(['company_id' => $companyId]);
-            $sql = 'INSERT INTO filial (idempresa,nome,codigo,cnpj,inscricao_estadual,email,telefone,cep,endereco,numero,complemento,bairro,cidade,estado,matriz,idgerente,latitude,longitude,permite_estoque_negativo,caixa_obrigatorio,situacao) VALUES (:idempresa,:nome,:codigo,:cnpj,:ie,:email,:telefone,:cep,:endereco,:numero,:complemento,:bairro,:cidade,:estado,:matriz,:idgerente,:latitude,:longitude,:estoque_negativo,:caixa_obrigatorio,:situacao) RETURNING idfilial';
+            $sql = 'INSERT INTO filial (idempresa,nome,codigo,cnpj,inscricao_estadual,email,telefone,cep,endereco,numero,complemento,bairro,cidade,estado,matriz,idgerente,latitude,longitude,permite_estoque_negativo,caixa_obrigatorio,participa_metas,aparece_ranking,situacao) VALUES (:idempresa,:nome,:codigo,:cnpj,:ie,:email,:telefone,:cep,:endereco,:numero,:complemento,:bairro,:cidade,:estado,:matriz,:idgerente,:latitude,:longitude,:estoque_negativo,:caixa_obrigatorio,:participa_metas,:aparece_ranking,:situacao) RETURNING idfilial';
             $statement = $this->pdo->prepare($sql); $statement->execute($this->params($companyId, $data)); $id = (int) $statement->fetchColumn();
-            $this->saveGoal($companyId, $id, $data['meta_mensal'] ?? null);
+            $this->saveGoal($companyId, $id, $data);
             $this->audit($companyId, $actorId, $id, 'criar', null, ['nome' => $data['nome']], $ip, $agent);
             return $id;
         });
@@ -80,9 +82,9 @@ final class BranchRepository
             $before = $this->one('SELECT nome,codigo,matriz,situacao FROM filial WHERE idempresa=:company_id AND idfilial=:branch_id', ['company_id' => $companyId, 'branch_id' => $branchId]);
             if (!$before) throw new InvalidArgumentException('Filial nao encontrada');
             if (!empty($data['matriz'])) $this->pdo->prepare('UPDATE filial SET matriz=false WHERE idempresa=:company_id')->execute(['company_id' => $companyId]);
-            $sql = 'UPDATE filial SET nome=:nome,codigo=:codigo,cnpj=:cnpj,inscricao_estadual=:ie,email=:email,telefone=:telefone,cep=:cep,endereco=:endereco,numero=:numero,complemento=:complemento,bairro=:bairro,cidade=:cidade,estado=:estado,matriz=:matriz,idgerente=:idgerente,latitude=:latitude,longitude=:longitude,permite_estoque_negativo=:estoque_negativo,caixa_obrigatorio=:caixa_obrigatorio,situacao=:situacao,atualizado_em=CURRENT_TIMESTAMP WHERE idempresa=:idempresa AND idfilial=:idfilial';
+            $sql = 'UPDATE filial SET nome=:nome,codigo=:codigo,cnpj=:cnpj,inscricao_estadual=:ie,email=:email,telefone=:telefone,cep=:cep,endereco=:endereco,numero=:numero,complemento=:complemento,bairro=:bairro,cidade=:cidade,estado=:estado,matriz=:matriz,idgerente=:idgerente,latitude=:latitude,longitude=:longitude,permite_estoque_negativo=:estoque_negativo,caixa_obrigatorio=:caixa_obrigatorio,participa_metas=:participa_metas,aparece_ranking=:aparece_ranking,situacao=:situacao,atualizado_em=CURRENT_TIMESTAMP WHERE idempresa=:idempresa AND idfilial=:idfilial';
             $params = $this->params($companyId, $data); $params['idfilial'] = $branchId; $this->pdo->prepare($sql)->execute($params);
-            $this->saveGoal($companyId, $branchId, $data['meta_mensal'] ?? null);
+            $this->saveGoal($companyId, $branchId, $data);
             $this->audit($companyId, $actorId, $branchId, 'editar', $before, ['nome' => $data['nome']], $ip, $agent);
         });
     }
@@ -100,7 +102,8 @@ final class BranchRepository
     {
         $this->transaction(function () use ($companyId, $actorId, $branchId, $ip, $agent) {
             if (!$this->one('SELECT idfilial FROM filial WHERE idempresa=:company_id AND idfilial=:branch_id AND situacao=1', ['company_id' => $companyId, 'branch_id' => $branchId])) throw new InvalidArgumentException('Somente uma filial ativa pode ser matriz');
-            $this->pdo->prepare('UPDATE filial SET matriz=(idfilial=:branch_id),atualizado_em=CURRENT_TIMESTAMP WHERE idempresa=:company_id')->execute(['branch_id' => $branchId, 'company_id' => $companyId]);
+            $this->pdo->prepare('UPDATE filial SET matriz=false,atualizado_em=CURRENT_TIMESTAMP WHERE idempresa=:company_id AND matriz=true')->execute(['company_id' => $companyId]);
+            $this->pdo->prepare('UPDATE filial SET matriz=true,atualizado_em=CURRENT_TIMESTAMP WHERE idempresa=:company_id AND idfilial=:branch_id')->execute(['branch_id' => $branchId, 'company_id' => $companyId]);
             $this->audit($companyId, $actorId, $branchId, 'definir_matriz', null, ['matriz' => true], $ip, $agent);
         });
     }
@@ -108,14 +111,15 @@ final class BranchRepository
     private function params(int $companyId, array $data): array
     {
         $nullable = fn (string $key) => ($data[$key] ?? '') !== '' ? $data[$key] : null;
-        return ['idempresa' => $companyId, 'nome' => trim($data['nome']), 'codigo' => trim($data['codigo']), 'cnpj' => $nullable('cnpj'), 'ie' => $nullable('inscricao_estadual'), 'email' => $nullable('email'), 'telefone' => $nullable('telefone'), 'cep' => $nullable('cep'), 'endereco' => $nullable('endereco'), 'numero' => $nullable('numero'), 'complemento' => $nullable('complemento'), 'bairro' => $nullable('bairro'), 'cidade' => trim($data['cidade']), 'estado' => strtoupper(trim($data['estado'])), 'matriz' => !empty($data['matriz']) ? 'true' : 'false', 'idgerente' => !empty($data['idgerente']) ? (int) $data['idgerente'] : null, 'latitude' => $nullable('latitude'), 'longitude' => $nullable('longitude'), 'estoque_negativo' => !empty($data['permite_estoque_negativo']) ? 'true' : 'false', 'caixa_obrigatorio' => !empty($data['caixa_obrigatorio']) ? 'true' : 'false', 'situacao' => !isset($data['situacao']) || !empty($data['situacao']) ? 1 : 0];
+        return ['idempresa' => $companyId, 'nome' => trim($data['nome']), 'codigo' => trim($data['codigo']), 'cnpj' => $nullable('cnpj'), 'ie' => $nullable('inscricao_estadual'), 'email' => $nullable('email'), 'telefone' => $nullable('telefone'), 'cep' => $nullable('cep'), 'endereco' => $nullable('endereco'), 'numero' => $nullable('numero'), 'complemento' => $nullable('complemento'), 'bairro' => $nullable('bairro'), 'cidade' => trim($data['cidade']), 'estado' => strtoupper(trim($data['estado'])), 'matriz' => !empty($data['matriz']) ? 'true' : 'false', 'idgerente' => !empty($data['idgerente']) ? (int) $data['idgerente'] : null, 'latitude' => $nullable('latitude'), 'longitude' => $nullable('longitude'), 'estoque_negativo' => !empty($data['permite_estoque_negativo']) ? 'true' : 'false', 'caixa_obrigatorio' => !empty($data['caixa_obrigatorio']) ? 'true' : 'false', 'participa_metas' => !isset($data['participa_metas']) || !empty($data['participa_metas']) ? 'true' : 'false', 'aparece_ranking' => !isset($data['aparece_ranking']) || !empty($data['aparece_ranking']) ? 'true' : 'false', 'situacao' => !isset($data['situacao']) || !empty($data['situacao']) ? 1 : 0];
     }
 
-    private function saveGoal(int $companyId, int $branchId, mixed $value): void
+    private function saveGoal(int $companyId, int $branchId, array $data): void
     {
-        if ($value === null || $value === '') return;
-        $statement = $this->pdo->prepare("INSERT INTO meta_venda(idempresa,idfilial,competencia,valor_meta) VALUES(:company_id,:branch_id,date_trunc('month',CURRENT_DATE)::date,:value) ON CONFLICT(idempresa,idfilial,competencia) DO UPDATE SET valor_meta=EXCLUDED.valor_meta,atualizado_em=CURRENT_TIMESTAMP");
-        $statement->execute(['company_id' => $companyId, 'branch_id' => $branchId, 'value' => $value]);
+        $values = ['monthly' => $data['meta_mensal'] ?? null, 'daily' => $data['meta_diaria'] ?? null, 'ticket' => $data['meta_ticket'] ?? null, 'customers' => $data['meta_clientes'] ?? null];
+        if (count(array_filter($values, fn ($value) => $value !== null && $value !== '')) === 0) return;
+        $statement = $this->pdo->prepare("INSERT INTO meta_venda(idempresa,idfilial,competencia,valor_meta,valor_meta_diaria,valor_meta_ticket,meta_clientes) VALUES(:company_id,:branch_id,date_trunc('month',CURRENT_DATE)::date,:monthly,:daily,:ticket,:customers) ON CONFLICT(idempresa,idfilial,competencia) DO UPDATE SET valor_meta=EXCLUDED.valor_meta,valor_meta_diaria=EXCLUDED.valor_meta_diaria,valor_meta_ticket=EXCLUDED.valor_meta_ticket,meta_clientes=EXCLUDED.meta_clientes,atualizado_em=CURRENT_TIMESTAMP");
+        $statement->execute(['company_id' => $companyId, 'branch_id' => $branchId] + $values);
     }
 
     private function options(int $companyId): array

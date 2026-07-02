@@ -23,6 +23,8 @@ export type Branch = {
   longitude?: number;
   permite_estoque_negativo: boolean;
   caixa_obrigatorio: boolean;
+  participa_metas: boolean;
+  aparece_ranking: boolean;
   situacao: number;
   criado_em: string;
   atualizado_em: string;
@@ -58,6 +60,9 @@ export type BranchList = {
 export type BranchDetail = Branch & {
   empresa: string;
   monthly_goal?: number;
+  daily_goal?: number;
+  ticket_goal?: number;
+  customer_goal?: number;
   indicators: {
     revenue_today: number;
     revenue_month: number;
@@ -111,8 +116,13 @@ export type BranchPayload = {
   longitude?: number;
   permite_estoque_negativo: boolean;
   caixa_obrigatorio: boolean;
+  participa_metas: boolean;
+  aparece_ranking: boolean;
   situacao: boolean;
   meta_mensal?: number;
+  meta_diaria?: number;
+  meta_ticket?: number;
+  meta_clientes?: number;
 };
 
 export const branchService = {

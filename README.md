@@ -87,13 +87,25 @@ A rota autenticada `/branches` concentra a administracao operacional das unidade
 
 As APIs de filiais usam exclusivamente a empresa do token JWT. Criacao, edicao, definicao de matriz, metas e auditoria sao executadas de forma transacional. A exclusao fisica fica bloqueada para preservar o historico do ERP; unidades podem ser inativadas, e uma matriz ativa precisa ser substituida antes da inativacao.
 
-Campos planejados que ainda nao existem no schema privado, como metas diarias, meta de ticket, meta de clientes e participacao no ranking, ficam identificados e desabilitados na interface, sem persistencia ficticia.
+O schema de filiais inclui participacao em metas, exibicao no ranking, meta mensal, diaria, ticket medio e quantidade de clientes. Esses dados sao persistidos e exibidos nos indicadores da unidade.
+
+## Centro de Gestao de Clientes
+
+A rota autenticada `/customers` oferece uma visao comercial e financeira da base de clientes. O modulo inclui indicadores, filtros avancados, listagem responsiva, cadastro adaptativo para pessoa fisica ou juridica, edicao, historico de compras, contas a receber e relacionamento em timeline.
+
+As APIs respeitam a empresa do token JWT e registram criacao, alteracoes, observacoes e mudancas de situacao na auditoria. CPF e CNPJ sao validados no frontend e no backend. A exclusao fisica permanece bloqueada para preservar vendas e registros financeiros, sendo substituida pela inativacao.
+
+Formatadores de documento, telefone, CEP, moeda e datas sao reutilizados da camada compartilhada. O schema de clientes contempla RG, nome fantasia, inscricao estadual, nascimento ou abertura, recorrencia manual e permissao de venda a prazo.
 
 ## Centro de Gestao de Usuarios
 
 A rota autenticada `/users` concentra a administracao dos usuarios de cada empresa. O modulo inclui indicadores, busca e filtros, cadastro guiado, edicao, perfis, filiais, bloqueio, redefinicao de senha, sessoes e historico de auditoria.
 
-As APIs ficam sob `/users` e sempre utilizam o tenant do token JWT. Operacoes de criacao e edicao sincronizam o funcionario, a filial e o perfil em transacao. Recursos que ainda dependem de evolucao do schema privado, como data de nascimento, upload de foto, 2FA e troca obrigatoria da primeira senha, aparecem identificados na interface e nao geram persistencia ficticia.
+As APIs ficam sob `/users` e sempre utilizam o tenant do token JWT. Operacoes de criacao e edicao sincronizam o funcionario, a filial e o perfil em transacao. Data de nascimento, exigencia de troca de senha e autenticacao em dois fatores sao persistidas. Upload de foto e convite por e-mail continuam dependentes da futura camada de arquivos e mensageria.
+
+## Evolucao Privada do Schema
+
+As migrations de banco permanecem em `backend/database/migrations/` e sao ignoradas pelo Git para proteger a estrutura privada. A evolucao de cadastros adiciona campos operacionais para clientes, usuarios e filiais e deve ser aplicada pela rotina privada de infraestrutura antes da publicacao de uma nova versao da API.
 
 Validacao do modulo:
 
