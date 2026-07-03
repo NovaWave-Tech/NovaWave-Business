@@ -14,7 +14,12 @@ final class ReportRepository
     {
         $company = $this->one('SELECT nome_fantasia name FROM empresa WHERE idempresa=:company', ['company' => $companyId]);
         $branches = $this->all('SELECT idfilial id,nome name FROM filial WHERE idempresa=:company AND situacao=1 ORDER BY matriz DESC,nome', ['company' => $companyId]);
-        return ['company' => $company['name'] ?? 'Empresa', 'branches' => $branches, 'generated_at' => date(DATE_ATOM)];
+        return [
+            'company' => $company['name'] ?? 'Empresa',
+            'branches' => $branches,
+            'reports' => $this->reportCatalog($companyId),
+            'generated_at' => date(DATE_ATOM),
+        ];
     }
 
     public function preview(int $companyId, int $userId, string $slug, array $filters): array
@@ -56,6 +61,40 @@ final class ReportRepository
     {
         $balance = (float) $finance['received'] - (float) $finance['paid'];
         return sprintf('No periodo selecionado, o relatorio %s consolidou %d operacoes comerciais. O saldo financeiro realizado foi de R$ %s.', ucfirst($slug), (int) $sales['orders'], number_format($balance, 2, ',', '.'));
+    }
+
+    private function reportCatalog(int $companyId): array
+    {
+        $definitions = [
+            ['slug' => 'executive', 'name' => 'Resumo executivo', 'description' => 'Visao consolidada dos principais indicadores da empresa.', 'category' => 'Executivo', 'metric' => 'sales'],
+            ['slug' => 'finance', 'name' => 'DRE gerencial', 'description' => 'Receitas, despesas e resultado financeiro realizado.', 'category' => 'Financeiro', 'metric' => 'finance'],
+            ['slug' => 'sales', 'name' => 'Vendas por filial', 'description' => 'Desempenho comercial detalhado por unidade e periodo.', 'category' => 'Vendas', 'metric' => 'sales'],
+            ['slug' => 'customers', 'name' => 'Analise de clientes', 'description' => 'Compras, recorrencia e valor movimentado por cliente.', 'category' => 'Clientes', 'metric' => 'customers'],
+            ['slug' => 'products', 'name' => 'Performance de produtos', 'description' => 'Catalogo, precificacao e valor de estoque.', 'category' => 'Produtos', 'metric' => 'products'],
+            ['slug' => 'stock', 'name' => 'Posicao de estoque', 'description' => 'Saldo, cobertura e capital imobilizado em produtos.', 'category' => 'Estoque', 'metric' => 'products'],
+            ['slug' => 'purchases', 'name' => 'Compras e fornecedores', 'description' => 'Evolucao de compras e compromissos com fornecedores.', 'category' => 'Compras', 'metric' => 'purchases'],
+        ];
+        $metrics = $this->catalogMetrics($companyId);
+        return array_map(function (array $report) use ($metrics): array {
+            $metric = $metrics[$report['metric']] ?? ['uses' => 0, 'last' => null];
+            unset($report['metric']);
+            return [
+                ...$report,
+                'uses' => (int) ($metric['uses'] ?? 0),
+                'last' => $metric['last'] ?? null,
+            ];
+        }, $definitions);
+    }
+
+    private function catalogMetrics(int $companyId): array
+    {
+        return [
+            'sales' => $this->one("SELECT COUNT(*) uses,MAX(data_venda)::date last FROM venda WHERE idempresa=:company AND situacao<>4", ['company' => $companyId]),
+            'finance' => $this->one("SELECT COUNT(*) uses,MAX(due_date)::date last FROM (SELECT data_vencimento due_date FROM conta_receber WHERE idempresa=:company UNION ALL SELECT data_vencimento FROM conta_pagar WHERE idempresa=:company) x", ['company' => $companyId]),
+            'customers' => $this->one('SELECT COUNT(*) uses,NULL last FROM cliente WHERE idempresa=:company', ['company' => $companyId]),
+            'products' => $this->one('SELECT COUNT(*) uses,NULL last FROM produto WHERE idempresa=:company', ['company' => $companyId]),
+            'purchases' => $this->one("SELECT COUNT(*) uses,MAX(data_compra)::date last FROM compra WHERE idempresa=:company", ['company' => $companyId]),
+        ];
     }
 
     private function date(string $value): string { $date = \DateTimeImmutable::createFromFormat('Y-m-d', $value); return $date ? $date->format('Y-m-d') : date('Y-m-d'); }

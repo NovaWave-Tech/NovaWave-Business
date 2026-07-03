@@ -4,6 +4,14 @@ import type { ReportFilters } from '../schemas/reportSchema';
 export type ReportCatalogData = {
   company: string;
   branches: Array<{ id: number; name: string }>;
+  reports: Array<{
+    slug: string;
+    name: string;
+    description: string;
+    category: string;
+    uses: number;
+    last: string | null;
+  }>;
   generated_at: string;
 };
 
