@@ -97,76 +97,44 @@ type ReportDefinition = {
   category: string;
   icon: typeof FileBarChart;
   uses: number;
-  last: string;
+  last: string | null;
 };
-const reports: ReportDefinition[] = [
-  {
-    slug: 'executive',
-    name: 'Resumo executivo',
-    description: 'Visao consolidada dos principais indicadores da empresa.',
-    category: 'Executivo',
-    icon: Sparkles,
-    uses: 184,
-    last: 'Hoje, 09:42',
-  },
-  {
-    slug: 'finance',
-    name: 'DRE gerencial',
-    description: 'Receitas, despesas e resultado financeiro realizado.',
-    category: 'Financeiro',
-    icon: ReceiptText,
-    uses: 156,
-    last: 'Hoje, 08:10',
-  },
-  {
-    slug: 'sales',
-    name: 'Vendas por filial',
-    description: 'Desempenho comercial detalhado por unidade e periodo.',
-    category: 'Vendas',
-    icon: ShoppingCart,
-    uses: 142,
-    last: 'Ontem, 17:25',
-  },
-  {
-    slug: 'customers',
-    name: 'Analise de clientes',
-    description: 'Compras, recorrencia e valor movimentado por cliente.',
-    category: 'Clientes',
-    icon: Users,
-    uses: 98,
-    last: 'Ontem, 15:04',
-  },
-  {
-    slug: 'products',
-    name: 'Performance de produtos',
-    description: 'Catalogo, precificacao e valor de estoque.',
-    category: 'Produtos',
-    icon: Package,
-    uses: 87,
-    last: '30/06/2026',
-  },
-  {
-    slug: 'stock',
-    name: 'Posicao de estoque',
-    description: 'Saldo, cobertura e capital imobilizado em produtos.',
-    category: 'Estoque',
-    icon: Boxes,
-    uses: 76,
-    last: '30/06/2026',
-  },
-  {
-    slug: 'purchases',
-    name: 'Compras e fornecedores',
-    description: 'Evolucao de compras e compromissos com fornecedores.',
-    category: 'Compras',
-    icon: BriefcaseBusiness,
-    uses: 61,
-    last: '29/06/2026',
-  },
-];
+const reportIcons: Record<string, typeof FileBarChart> = {
+  executive: Sparkles,
+  finance: ReceiptText,
+  sales: ShoppingCart,
+  customers: Users,
+  products: Package,
+  stock: Boxes,
+  purchases: BriefcaseBusiness,
+};
+const fallbackReport: ReportDefinition = {
+  slug: 'executive',
+  name: 'Resumo executivo',
+  description: 'Visao consolidada dos principais indicadores da empresa.',
+  category: 'Executivo',
+  icon: Sparkles,
+  uses: 0,
+  last: null,
+};
 const storage = {
   favorites: 'novawave:reports:favorites',
   history: 'novawave:reports:history',
+};
+const lightReportTokens = {
+  '--chakra-colors-erp-canvas': '#F8FAFC',
+  '--chakra-colors-erp-sidebar': '#FFFFFF',
+  '--chakra-colors-erp-surface': '#FFFFFF',
+  '--chakra-colors-erp-surface-subtle': '#F8FAFC',
+  '--chakra-colors-erp-hover': '#F1F5F9',
+  '--chakra-colors-erp-border': '#E2E8F0',
+  '--chakra-colors-erp-border-strong': '#CBD5E1',
+  '--chakra-colors-erp-text': '#0F172A',
+  '--chakra-colors-erp-text-secondary': '#64748B',
+  '--chakra-colors-erp-text-muted': '#94A3B8',
+  '--chakra-colors-erp-brand-soft': '#F3F6FF',
+  '--chakra-colors-erp-brand-border': '#C9D7FF',
+  '--chakra-colors-erp-brand-text': '#1D4ED8',
 };
 
 export default function ReportsPage() {
@@ -181,11 +149,19 @@ export default function ReportsPage() {
   const [history, setHistory] = useState<
     Array<{ name: string; date: string; format: string }>
   >(() => read(storage.history, []));
-  const [selected, setSelected] = useState<ReportDefinition>(reports[0]);
+  const [selected, setSelected] = useState<ReportDefinition>(fallbackReport);
   const catalog = useQuery({
     queryKey: ['reports-catalog'],
     queryFn: getReportCatalog,
   });
+  const reports = useMemo<ReportDefinition[]>(
+    () =>
+      (catalog.data?.reports ?? []).map(report => ({
+        ...report,
+        icon: reportIcons[report.slug] ?? FileBarChart,
+      })),
+    [catalog.data?.reports]
+  );
   const form = useForm<ReportFilters>({
     resolver: zodResolver(reportFilterSchema),
     defaultValues: { start: dateOffset(-29), end: dateOffset(0), branch: '' },
@@ -207,7 +183,7 @@ export default function ReportsPage() {
           (category === 'all' || report.category === category) &&
           (!onlyFavorites || favorites.includes(report.slug))
       ),
-    [search, category, onlyFavorites, favorites]
+    [reports, search, category, onlyFavorites, favorites]
   );
   const open = (report: ReportDefinition) => {
     setSelected(report);
@@ -234,9 +210,10 @@ export default function ReportsPage() {
     });
   };
   if (catalog.isLoading) return <PageSkeleton />;
+  const mainReport = reports[0] ?? fallbackReport;
 
   return (
-    <Box>
+    <Box bg="erp.canvas" minH="100%" color="erp.text" sx={lightReportTokens}>
       <PageHeader
         title="Relatorios"
         description="Visualize, analise e exporte informacoes estrategicas da empresa."
@@ -244,7 +221,7 @@ export default function ReportsPage() {
         actions={
           <Button
             leftIcon={<Sparkles size={16} />}
-            onClick={() => open(reports[0])}
+            onClick={() => open(mainReport)}
           >
             Gerar relatorio
           </Button>
@@ -253,7 +230,11 @@ export default function ReportsPage() {
       <SimpleGrid columns={{ base: 2, md: 3, xl: 6 }} spacing={3} mb={5}>
         {[
           ['Disponiveis', reports.length, FileBarChart],
-          ['Mais utilizados', reports[0].uses, BarChart3],
+          [
+            'Mais utilizados',
+            reports.reduce((max, report) => Math.max(max, report.uses), 0),
+            BarChart3,
+          ],
           ['Exportacoes no mes', history.length, Download],
           [
             'PDFs gerados',
@@ -325,91 +306,102 @@ export default function ReportsPage() {
         </Box>
         <Badge colorScheme="blue">{visible.length} modelos</Badge>
       </Flex>
-      <SimpleGrid columns={{ base: 1, md: 2, xl: 3 }} spacing={4}>
-        {visible.map((report, index) => (
-          <Box
-            as={motion.div}
-            key={report.slug}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={`${0.15 + index * 0.03}s`}
-          >
-            <Surface p={5} interactive minH="230px">
-              <Flex justify="space-between">
-                <Flex
-                  w="40px"
-                  h="40px"
-                  bg="erp.brandSoft"
-                  color="brand.500"
-                  borderRadius="9px"
-                  align="center"
-                  justify="center"
-                >
-                  <Icon as={report.icon} boxSize="19px" />
+      {visible.length > 0 ? (
+        <SimpleGrid columns={{ base: 1, md: 2, xl: 3 }} spacing={4}>
+          {visible.map((report, index) => (
+            <Box
+              as={motion.div}
+              key={report.slug}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={`${0.15 + index * 0.03}s`}
+            >
+              <Surface p={5} interactive minH="230px">
+                <Flex justify="space-between">
+                  <Flex
+                    w="40px"
+                    h="40px"
+                    bg="erp.brandSoft"
+                    color="brand.500"
+                    borderRadius="9px"
+                    align="center"
+                    justify="center"
+                  >
+                    <Icon as={report.icon} boxSize="19px" />
+                  </Flex>
+                  <Tooltip label="Favoritar">
+                    <IconButton
+                      aria-label="Favoritar"
+                      variant="ghost"
+                      icon={
+                        <Star
+                          size={17}
+                          fill={
+                            favorites.includes(report.slug)
+                              ? 'currentColor'
+                              : 'none'
+                          }
+                        />
+                      }
+                      color={
+                        favorites.includes(report.slug)
+                          ? 'brand.500'
+                          : 'erp.textMuted'
+                      }
+                      onClick={() => favorite(report.slug)}
+                    />
+                  </Tooltip>
                 </Flex>
-                <Tooltip label="Favoritar">
-                  <IconButton
-                    aria-label="Favoritar"
-                    variant="ghost"
-                    icon={
-                      <Star
-                        size={17}
-                        fill={
-                          favorites.includes(report.slug)
-                            ? 'currentColor'
-                            : 'none'
-                        }
-                      />
-                    }
-                    color={
-                      favorites.includes(report.slug)
-                        ? 'brand.500'
-                        : 'erp.textMuted'
-                    }
-                    onClick={() => favorite(report.slug)}
-                  />
-                </Tooltip>
-              </Flex>
-              <Badge mt={4} colorScheme="blue" variant="subtle">
-                {report.category}
-              </Badge>
-              <Heading mt={2} fontSize="16px">
-                {report.name}
-              </Heading>
-              <Text
-                mt={1}
-                color="erp.textSecondary"
-                fontSize="13px"
-                minH="40px"
-              >
-                {report.description}
-              </Text>
-              <Flex
-                mt={4}
-                justify="space-between"
-                color="erp.textMuted"
-                fontSize="11px"
-              >
-                <Text>{formatNumber(report.uses)} utilizacoes</Text>
-                <Text>{report.last}</Text>
-              </Flex>
-              <Flex mt={4} gap={2}>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  flex="1"
-                  onClick={() => open(report)}
+                <Badge mt={4} colorScheme="blue" variant="subtle">
+                  {report.category}
+                </Badge>
+                <Heading mt={2} fontSize="16px">
+                  {report.name}
+                </Heading>
+                <Text
+                  mt={1}
+                  color="erp.textSecondary"
+                  fontSize="13px"
+                  minH="40px"
                 >
-                  Visualizar
-                </Button>
-                <Button size="sm" flex="1" onClick={() => open(report)}>
-                  Gerar
-                </Button>
-              </Flex>
-            </Surface>
-          </Box>
-        ))}
-      </SimpleGrid>
+                  {report.description}
+                </Text>
+                <Flex
+                  mt={4}
+                  justify="space-between"
+                  color="erp.textMuted"
+                  fontSize="11px"
+                >
+                  <Text>{formatNumber(report.uses)} registros base</Text>
+                  <Text>
+                    {report.last ? formatDate(report.last) : 'Sem movimento'}
+                  </Text>
+                </Flex>
+                <Flex mt={4} gap={2}>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    flex="1"
+                    onClick={() => open(report)}
+                  >
+                    Visualizar
+                  </Button>
+                  <Button size="sm" flex="1" onClick={() => open(report)}>
+                    Gerar
+                  </Button>
+                </Flex>
+              </Surface>
+            </Box>
+          ))}
+        </SimpleGrid>
+      ) : (
+        <Surface p={8}>
+          <Text fontWeight="700">Nenhum relatorio encontrado</Text>
+          <Text mt={1} color="erp.textSecondary" fontSize="sm">
+            Ajuste a pesquisa ou remova o filtro de favoritos.
+          </Text>
+        </Surface>
+      )}
       {history.length > 0 && (
         <Surface mt={6}>
           <Flex
@@ -453,10 +445,14 @@ export default function ReportsPage() {
         onClose={drawer.onClose}
         size="full"
       >
-        <DrawerOverlay />
-        <DrawerContent bg="erp.page">
+        <DrawerOverlay bg="blackAlpha.700" backdropFilter="blur(2px)" />
+        <DrawerContent bg="erp.canvas" color="erp.text" sx={lightReportTokens}>
           <DrawerCloseButton />
-          <DrawerHeader borderBottom="1px solid" borderColor="erp.border">
+          <DrawerHeader
+            bg="erp.surface"
+            borderBottom="1px solid"
+            borderColor="erp.border"
+          >
             <Flex align="center" gap={3}>
               <Icon as={selected.icon} color="brand.500" />
               <Box>
@@ -467,7 +463,7 @@ export default function ReportsPage() {
               </Box>
             </Flex>
           </DrawerHeader>
-          <DrawerBody p={{ base: 3, lg: 6 }}>
+          <DrawerBody bg="erp.canvas" p={{ base: 3, lg: 6 }}>
             <Grid
               templateColumns={{ base: '1fr', lg: '250px minmax(0,1fr)' }}
               gap={5}
@@ -662,6 +658,13 @@ function ReportView({
                 />
                 <ChartTooltip
                   formatter={value => formatCurrency(Number(value))}
+                  contentStyle={{
+                    background: '#FFFFFF',
+                    border: '1px solid #E2E8F0',
+                    borderRadius: '8px',
+                    color: '#0F172A',
+                    boxShadow: '0 8px 24px rgba(15,23,42,.08)',
+                  }}
                 />
                 <Area
                   type="monotone"
@@ -708,28 +711,46 @@ function ReportView({
           <Heading fontSize="14px">Dados detalhados</Heading>
           <Badge>{data.rows.length} registros</Badge>
         </Flex>
-        <Box overflowX="auto">
-          <Table size="sm">
-            <Thead bg="erp.surfaceSubtle">
-              <Tr>
-                {columns.map(column => (
-                  <Th key={column}>{column.replaceAll('_', ' ')}</Th>
-                ))}
-              </Tr>
-            </Thead>
-            <Tbody>
-              {data.rows.map((row, index) => (
-                <Tr key={index}>
+        {columns.length > 0 ? (
+          <Box overflowX="auto">
+            <Table size="sm">
+              <Thead bg="erp.surfaceSubtle">
+                <Tr>
                   {columns.map(column => (
-                    <Td key={column} whiteSpace="nowrap">
-                      {cell(column, row[column])}
-                    </Td>
+                    <Th key={column}>{column.replaceAll('_', ' ')}</Th>
                   ))}
                 </Tr>
-              ))}
-            </Tbody>
-          </Table>
-        </Box>
+              </Thead>
+              <Tbody>
+                {data.rows.map((row, index) => (
+                  <Tr key={index}>
+                    {columns.map(column => (
+                      <Td key={column} whiteSpace="nowrap">
+                        {cell(column, row[column])}
+                      </Td>
+                    ))}
+                  </Tr>
+                ))}
+              </Tbody>
+            </Table>
+          </Box>
+        ) : (
+          <Box px={5} pb={5}>
+            <Box
+              p={5}
+              bg="erp.surfaceSubtle"
+              border="1px dashed"
+              borderColor="erp.border"
+              borderRadius="10px"
+            >
+              <Text fontWeight="700">Nenhum registro encontrado</Text>
+              <Text mt={1} fontSize="sm" color="erp.textSecondary">
+                Ajuste o periodo ou a filial para visualizar os dados detalhados
+                deste relatorio.
+              </Text>
+            </Box>
+          </Box>
+        )}
       </Surface>
     </Stack>
   );
