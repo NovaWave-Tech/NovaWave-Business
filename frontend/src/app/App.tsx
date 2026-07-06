@@ -56,6 +56,9 @@ const ProductsPage = lazy(
 );
 const FinancePage = lazy(() => import('../modules/finance/pages/FinancePage'));
 const ReportsPage = lazy(() => import('../modules/reports/pages/ReportsPage'));
+const PermissionsPage = lazy(
+  () => import('../modules/permissions/pages/PermissionsPage')
+);
 
 function LoadingPage() {
   return (
@@ -96,11 +99,6 @@ const placeholders = [
     'companies',
     'Empresas',
     'Cadastro e administracao de empresas do ambiente SaaS.',
-  ],
-  [
-    'permissions',
-    'Permissoes',
-    'RBAC com perfis, permissoes e acoes sensiveis auditaveis.',
   ],
   [
     'suppliers',
@@ -173,6 +171,7 @@ export default function App() {
             <Route path="/products" element={<ProductsPage />} />
             <Route path="/finance" element={<FinancePage />} />
             <Route path="/reports" element={<ReportsPage />} />
+            <Route path="/permissions" element={<PermissionsPage />} />
             {placeholders.map(([path, title, description]) => (
               <Route
                 key={path}

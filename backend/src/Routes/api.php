@@ -9,6 +9,7 @@ use App\Modules\Companies\Controllers\CompanyController;
 use App\Modules\Customers\Controllers\CustomerController;
 use App\Modules\Dashboard\Controllers\DashboardController;
 use App\Modules\Finance\Controllers\FinanceController;
+use App\Modules\Permissions\Controllers\PermissionController;
 use App\Modules\Platform\Controllers\PlatformAuthController;
 use App\Modules\Platform\Controllers\PlatformController;
 use App\Modules\Products\Controllers\ProductController;
@@ -96,6 +97,12 @@ $app->group('', function ($group): void {
     $group->post('/finance/{type:revenue|expense}/{id:[0-9]+}/duplicate', FinanceController::class . ':duplicate');
     $group->get('/reports', ReportController::class . ':index');
     $group->get('/reports/{slug:[a-z-]+}', ReportController::class . ':preview');
+    $group->get('/permissions', PermissionController::class . ':index');
+    $group->post('/permissions', PermissionController::class . ':store');
+    $group->get('/permissions/{id:[0-9]+}', PermissionController::class . ':show');
+    $group->put('/permissions/{id:[0-9]+}', PermissionController::class . ':update');
+    $group->patch('/permissions/{id:[0-9]+}/status', PermissionController::class . ':status');
+    $group->post('/permissions/{id:[0-9]+}/duplicate', PermissionController::class . ':duplicate');
 })->add(new JwtAuthMiddleware());
 
 $app->options('/{routes:.+}', function (Request $request, Response $response): Response {
