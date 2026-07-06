@@ -9,6 +9,7 @@ use App\Modules\Companies\Controllers\CompanyController;
 use App\Modules\Customers\Controllers\CustomerController;
 use App\Modules\Dashboard\Controllers\DashboardController;
 use App\Modules\Finance\Controllers\FinanceController;
+use App\Modules\Inventory\Controllers\InventoryController;
 use App\Modules\Permissions\Controllers\PermissionController;
 use App\Modules\Platform\Controllers\PlatformAuthController;
 use App\Modules\Platform\Controllers\PlatformController;
@@ -102,6 +103,7 @@ $app->group('', function ($group): void {
     $group->post('/sales', SalesController::class . ':store');
     $group->get('/sales/{id:[0-9]+}', SalesController::class . ':show');
     $group->patch('/sales/{id:[0-9]+}/status', SalesController::class . ':status');
+    $group->get('/inventory', InventoryController::class . ':index');
     $group->get('/permissions', PermissionController::class . ':index');
     $group->post('/permissions', PermissionController::class . ':store');
     $group->get('/permissions/{id:[0-9]+}', PermissionController::class . ':show');

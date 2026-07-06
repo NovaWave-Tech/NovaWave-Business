@@ -57,6 +57,9 @@ const ProductsPage = lazy(
 const FinancePage = lazy(() => import('../modules/finance/pages/FinancePage'));
 const ReportsPage = lazy(() => import('../modules/reports/pages/ReportsPage'));
 const SalesPage = lazy(() => import('../modules/sales/pages/SalesPage'));
+const InventoryPage = lazy(
+  () => import('../modules/inventory/pages/InventoryPage')
+);
 const PermissionsPage = lazy(
   () => import('../modules/permissions/pages/PermissionsPage')
 );
@@ -105,11 +108,6 @@ const placeholders = [
     'suppliers',
     'Fornecedores',
     'Cadastro de fornecedores e relacionamento com compras.',
-  ],
-  [
-    'inventory',
-    'Estoque',
-    'Saldos, movimentacoes, inventario e alertas de estoque critico.',
   ],
   [
     'purchases',
@@ -172,6 +170,7 @@ export default function App() {
             <Route path="/finance" element={<FinancePage />} />
             <Route path="/reports" element={<ReportsPage />} />
             <Route path="/sales" element={<SalesPage />} />
+            <Route path="/inventory" element={<InventoryPage />} />
             <Route path="/permissions" element={<PermissionsPage />} />
             {placeholders.map(([path, title, description]) => (
               <Route
