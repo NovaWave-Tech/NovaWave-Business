@@ -100,10 +100,15 @@ import {
   BrandSurface,
   EmptyState,
   ErrorState,
+  KpiCard,
   PageHeader,
   Surface,
 } from '../../../shared/ui/ErpUI';
 import { CurrencyInput } from '../../../shared/ui/FormattedInput';
+import {
+  DateRangeField,
+  type DateRange,
+} from '../../../shared/ui/DateRangeField';
 import {
   formatCurrency,
   formatCompactNumber,
@@ -113,6 +118,8 @@ import {
   formatPaymentMethod,
   formatPercent,
   formatShortDate,
+  isoDaysAgo,
+  isoToday,
 } from '../../../shared/utils/formatters';
 import { financeSchema, type FinanceForm } from '../schemas/financeSchema';
 import {
@@ -145,58 +152,6 @@ const defaults: FinanceForm = {
   recorrente: false,
 };
 
-function Kpi({
-  label,
-  value,
-  detail,
-  icon,
-  tone = 'neutral',
-}: {
-  label: string;
-  value: string;
-  detail: string;
-  icon: typeof Wallet;
-  tone?: 'positive' | 'negative' | 'neutral';
-}) {
-  return (
-    <Surface p={4} minH="118px">
-      <Flex justify="space-between">
-        <Box minW={0}>
-          <Text fontSize="10px" color="erp.textMuted" textTransform="uppercase">
-            {label}
-          </Text>
-          <Text mt={1} fontSize="21px" fontWeight="700" noOfLines={1}>
-            {value}
-          </Text>
-          <Text
-            mt={1}
-            fontSize="10px"
-            color={
-              tone === 'positive'
-                ? 'erp.success'
-                : tone === 'negative'
-                  ? 'erp.danger'
-                  : 'erp.textSecondary'
-            }
-          >
-            {detail}
-          </Text>
-        </Box>
-        <Flex
-          w="34px"
-          h="34px"
-          align="center"
-          justify="center"
-          borderRadius="8px"
-          bg="erp.brandSoft"
-          color="erp.brandText"
-        >
-          <Icon as={icon} boxSize="16px" />
-        </Flex>
-      </Flex>
-    </Surface>
-  );
-}
 function Info({ label, value }: { label: string; value?: ReactNode }) {
   return (
     <Flex
@@ -238,7 +193,10 @@ export default function FinancePage() {
   const [formType, setFormType] = useState<FinanceType>('revenue');
   const [editing, setEditing] = useState<number | null>(null);
   const [step, setStep] = useState(0);
-  const [period, setPeriod] = useState('30d');
+  const [range, setRange] = useState<DateRange>({
+    start: isoDaysAgo(30),
+    end: isoToday(),
+  });
   const [filters, setFilters] = useState({
     q: '',
     bank: '',
@@ -254,8 +212,9 @@ export default function FinancePage() {
     defaultValues: defaults,
   });
   const list = useQuery({
-    queryKey: ['finance', period, filters],
-    queryFn: () => financeService.list({ ...filters, period }),
+    queryKey: ['finance', range, filters],
+    queryFn: () =>
+      financeService.list({ ...filters, start: range.start, end: range.end }),
   });
   const detail = useQuery({
     queryKey: ['finance-detail', selected],
@@ -394,56 +353,76 @@ export default function FinancePage() {
         spacing={3}
         mb={5}
       >
-        <Kpi
+        <KpiCard
+          index={0}
           label="Saldo atual"
-          value={formatCurrency(data?.kpis.current_balance)}
+          count={Number(data?.kpis.current_balance)}
+          format={formatCurrency}
           detail="Disponivel consolidado"
           icon={Wallet}
-          tone={
-            (data?.kpis.current_balance || 0) >= 0 ? 'positive' : 'negative'
-          }
+          tone={(data?.kpis.current_balance || 0) >= 0 ? 'success' : 'danger'}
         />
-        <Kpi
+        <KpiCard
+          index={1}
+          tone="success"
           label="Receitas do mes"
-          value={formatCurrency(data?.kpis.month_revenue)}
-          detail={`${revenueChange >= 0 ? '+' : ''}${formatPercent(revenueChange)} vs anterior`}
+          count={Number(data?.kpis.month_revenue)}
+          format={formatCurrency}
+          delta={revenueChange}
+          detail="vs mes anterior"
           icon={TrendingUp}
-          tone="positive"
         />
-        <Kpi
+        <KpiCard
+          index={2}
+          tone="danger"
           label="Despesas do mes"
-          value={formatCurrency(data?.kpis.month_expense)}
-          detail={`${expenseChange >= 0 ? '+' : ''}${formatPercent(expenseChange)} vs anterior`}
+          count={Number(data?.kpis.month_expense)}
+          format={formatCurrency}
+          detail={`${formatPercent(expenseChange)} vs mes anterior`}
           icon={TrendingDown}
-          tone="negative"
         />
-        <Kpi
+        <KpiCard
+          index={3}
+          tone="brand"
           label="Fluxo de caixa"
-          value={formatCurrency(data?.kpis.cash_flow)}
+          count={Number(data?.kpis.cash_flow)}
+          format={formatCurrency}
           detail="Resultado operacional"
           icon={CircleDollarSign}
         />
-        <Kpi
+        <KpiCard
+          index={4}
+          tone="info"
           label="A receber"
-          value={formatCurrency(data?.kpis.receivable)}
+          count={Number(data?.kpis.receivable)}
+          format={formatCurrency}
           detail="Titulos pendentes"
           icon={ArrowDownRight}
         />
-        <Kpi
+        <KpiCard
+          index={5}
+          tone="warning"
           label="A pagar"
-          value={formatCurrency(data?.kpis.payable)}
+          count={Number(data?.kpis.payable)}
+          format={formatCurrency}
           detail="Compromissos pendentes"
           icon={ArrowUpRight}
         />
-        <Kpi
+        <KpiCard
+          index={6}
+          tone="brand"
           label="Saldo bancario"
-          value={formatCurrency(data?.kpis.current_balance)}
+          count={Number(data?.kpis.current_balance)}
+          format={formatCurrency}
           detail={`${data?.banks.length || 0} contas`}
           icon={Landmark}
         />
-        <Kpi
+        <KpiCard
+          index={7}
+          tone="neutral"
           label="Cartoes"
-          value={formatNumber(data?.cards.length)}
+          count={Number(data?.cards.length)}
+          format={formatNumber}
           detail="Cartoes corporativos"
           icon={CreditCard}
         />
@@ -466,17 +445,7 @@ export default function FinancePage() {
               placeholder="Buscar por descricao, categoria, fornecedor, cliente ou documento..."
             />
           </InputGroup>
-          <Select
-            aria-label="Periodo"
-            value={period}
-            onChange={e => setPeriod(e.target.value)}
-          >
-            <option value="today">Hoje</option>
-            <option value="7d">7 dias</option>
-            <option value="30d">30 dias</option>
-            <option value="90d">90 dias</option>
-            <option value="year">Ano</option>
-          </Select>
+          <DateRangeField value={range} onChange={setRange} />
           <Opt
             label="Conta"
             value={filters.bank}

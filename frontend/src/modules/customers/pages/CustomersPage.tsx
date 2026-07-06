@@ -95,9 +95,13 @@ import {
   BrandSurface,
   EmptyState,
   ErrorState,
+  KpiCard,
   PageHeader,
+  SectionHeader,
   Surface,
 } from '../../../shared/ui/ErpUI';
+import { DateRangeField } from '../../../shared/ui/DateRangeField';
+import { Reveal } from '../../../shared/ui/motion';
 import FormattedInput, {
   CurrencyInput,
 } from '../../../shared/ui/FormattedInput';
@@ -148,48 +152,6 @@ const defaults: CustomerForm = {
   permite_venda_prazo: false,
   observacao: '',
 };
-
-function Kpi({
-  label,
-  value,
-  detail,
-  icon,
-}: {
-  label: string;
-  value: string;
-  detail: string;
-  icon: typeof Users;
-}) {
-  return (
-    <Surface p={4} minH="112px">
-      <Flex justify="space-between" gap={3}>
-        <Box minW={0}>
-          <Text fontSize="10px" color="erp.textMuted" textTransform="uppercase">
-            {label}
-          </Text>
-          <Text mt={1} fontSize="23px" fontWeight="700" noOfLines={1}>
-            {value}
-          </Text>
-          <Text mt={1} fontSize="10px" color="erp.textSecondary">
-            {detail}
-          </Text>
-        </Box>
-        <Flex
-          w="34px"
-          h="34px"
-          flexShrink={0}
-          align="center"
-          justify="center"
-          borderRadius="8px"
-          color="erp.brandText"
-          bg="erp.brandSoft"
-        >
-          <Icon as={icon} boxSize="16px" />
-        </Flex>
-      </Flex>
-    </Surface>
-  );
-}
 
 function CustomerBadges({ customer }: { customer: Customer }) {
   const isNew =
@@ -253,8 +215,10 @@ export default function CustomersPage() {
     purchases: '',
     delinquent: '',
     credit: '',
-    last_purchase: '',
-    registered: '',
+    last_purchase_start: '',
+    last_purchase_end: '',
+    registered_start: '',
+    registered_end: '',
   });
   const form = useForm<CustomerForm>({
     resolver: zodResolver(customerSchema) as Resolver<CustomerForm>,
@@ -379,8 +343,10 @@ export default function CustomersPage() {
       purchases: '',
       delinquent: '',
       credit: '',
-      last_purchase: '',
-      registered: '',
+      last_purchase_start: '',
+      last_purchase_end: '',
+      registered_start: '',
+      registered_end: '',
     });
 
   return (
@@ -398,39 +364,57 @@ export default function CustomersPage() {
       />
 
       <SimpleGrid columns={{ base: 1, sm: 2, xl: 6 }} spacing={3} mb={5}>
-        <Kpi
+        <KpiCard
+          index={0}
+          tone="brand"
           label="Total de clientes"
-          value={formatNumber(data?.metrics.total)}
+          count={Number(data?.metrics.total)}
+          format={formatNumber}
           detail="Base cadastrada"
           icon={Users}
         />
-        <Kpi
+        <KpiCard
+          index={1}
+          tone="success"
           label="Clientes ativos"
-          value={formatNumber(data?.metrics.active)}
+          count={Number(data?.metrics.active)}
+          format={formatNumber}
           detail="Relacionamento ativo"
           icon={UserCheck}
         />
-        <Kpi
+        <KpiCard
+          index={2}
+          tone="neutral"
           label="Clientes inativos"
-          value={formatNumber(data?.metrics.inactive)}
+          count={Number(data?.metrics.inactive)}
+          format={formatNumber}
           detail="Sem operacao"
           icon={UserRoundX}
         />
-        <Kpi
+        <KpiCard
+          index={3}
+          tone="info"
           label="Receita gerada"
-          value={formatCurrency(data?.metrics.revenue, { compact: true })}
+          count={Number(data?.metrics.revenue)}
+          format={value => formatCurrency(value, { compact: true })}
           detail="Historico de vendas"
           icon={CircleDollarSign}
         />
-        <Kpi
+        <KpiCard
+          index={4}
+          tone="brand"
           label="Com compras"
-          value={formatNumber(data?.metrics.buyers)}
+          count={Number(data?.metrics.buyers)}
+          format={formatNumber}
           detail="Clientes convertidos"
           icon={ReceiptText}
         />
-        <Kpi
+        <KpiCard
+          index={5}
+          tone="warning"
           label="Inadimplentes"
-          value={formatNumber(data?.metrics.delinquent)}
+          count={Number(data?.metrics.delinquent)}
+          format={formatNumber}
           detail="Precisam de atencao"
           icon={AlertTriangle}
         />
@@ -539,25 +523,48 @@ export default function CustomersPage() {
                   ['without', 'Sem limite'],
                 ]}
               />
-              <FilterSelect
-                label="Ultima compra"
-                value={filters.last_purchase}
-                onChange={value =>
-                  setFilters(v => ({ ...v, last_purchase: value }))
-                }
-                options={[
-                  ['30d', 'Ultimos 30 dias'],
-                  ['never', 'Nunca comprou'],
-                ]}
-              />
-              <FilterSelect
-                label="Cadastro"
-                value={filters.registered}
-                onChange={value =>
-                  setFilters(v => ({ ...v, registered: value }))
-                }
-                options={[['30d', 'Ultimos 30 dias']]}
-              />
+              <Box px={3} py={2}>
+                <Text mb={1} fontSize="10px" color="erp.textMuted">
+                  Ultima compra
+                </Text>
+                <DateRangeField
+                  size="sm"
+                  direction="column"
+                  align="stretch"
+                  value={{
+                    start: filters.last_purchase_start,
+                    end: filters.last_purchase_end,
+                  }}
+                  onChange={next =>
+                    setFilters(v => ({
+                      ...v,
+                      last_purchase_start: next.start,
+                      last_purchase_end: next.end,
+                    }))
+                  }
+                />
+              </Box>
+              <Box px={3} py={2}>
+                <Text mb={1} fontSize="10px" color="erp.textMuted">
+                  Cadastro
+                </Text>
+                <DateRangeField
+                  size="sm"
+                  direction="column"
+                  align="stretch"
+                  value={{
+                    start: filters.registered_start,
+                    end: filters.registered_end,
+                  }}
+                  onChange={next =>
+                    setFilters(v => ({
+                      ...v,
+                      registered_start: next.start,
+                      registered_end: next.end,
+                    }))
+                  }
+                />
+              </Box>
             </MenuList>
           </Menu>
           <Button variant="ghost" onClick={clear}>
@@ -600,89 +607,103 @@ export default function CustomersPage() {
             ))}
           </SimpleGrid>
         ) : (
-          <Surface overflow="hidden">
-            <Box overflowX="auto">
-              <Table variant="simple">
-                <Thead>
-                  <Tr>
-                    <Th>Cliente</Th>
-                    <Th>Documento</Th>
-                    <Th>Tipo</Th>
-                    <Th>Telefone</Th>
-                    <Th>Cidade/UF</Th>
-                    <Th isNumeric>Limite</Th>
-                    <Th isNumeric>Total comprado</Th>
-                    <Th>Ultima compra</Th>
-                    <Th>Status</Th>
-                    <Th w="48px" />
-                  </Tr>
-                </Thead>
-                <Tbody>
-                  {data.customers.map(customer => (
-                    <Tr
-                      key={customer.idcliente}
-                      cursor="pointer"
-                      onClick={() => openDetail(customer)}
-                    >
-                      <Td>
-                        <Flex gap={3} align="center">
-                          <Avatar
-                            size="sm"
-                            name={customer.nome}
-                            bg="brand.700"
-                          />
-                          <Box>
-                            <Text fontWeight="650">{customer.nome}</Text>
-                            <Text fontSize="10px" color="erp.textMuted">
-                              {customer.email || 'Sem e-mail'}
-                            </Text>
-                          </Box>
-                        </Flex>
-                      </Td>
-                      <Td whiteSpace="nowrap">
-                        {formatDocument(customer.documento)}
-                      </Td>
-                      <Td>
-                        <Badge>
-                          {Number(customer.tipo_pessoa) === 1 ? 'PF' : 'PJ'}
-                        </Badge>
-                      </Td>
-                      <Td whiteSpace="nowrap">
-                        {formatPhone(customer.telefone)}
-                      </Td>
-                      <Td whiteSpace="nowrap">
-                        {customer.cidade
-                          ? `${customer.cidade}/${customer.estado}`
-                          : '-'}
-                      </Td>
-                      <Td isNumeric>
-                        {formatCurrency(customer.limite_credito)}
-                      </Td>
-                      <Td isNumeric>{formatCurrency(customer.total_bought)}</Td>
-                      <Td whiteSpace="nowrap">
-                        {formatDate(customer.last_purchase, 'Sem compras')}
-                      </Td>
-                      <Td>
-                        <CustomerBadges customer={customer} />
-                      </Td>
-                      <Td onClick={event => event.stopPropagation()}>
-                        <CustomerMenu
-                          customer={customer}
-                          openDetail={openDetail}
-                          openEdit={openEdit}
-                          openNote={openNote}
-                          setStatus={(id, value) =>
-                            status.mutate({ id, value })
-                          }
-                          navigate={navigate}
-                        />
-                      </Td>
+          <Reveal>
+            <Surface overflow="hidden">
+              <SectionHeader
+                icon={Users}
+                eyebrow="Base de clientes"
+                title="Clientes cadastrados"
+                description={`${formatNumber(data.customers.length)} ${
+                  data.customers.length === 1
+                    ? 'cliente listado'
+                    : 'clientes listados'
+                }`}
+              />
+              <Box overflowX="auto">
+                <Table variant="simple">
+                  <Thead>
+                    <Tr>
+                      <Th>Cliente</Th>
+                      <Th>Documento</Th>
+                      <Th>Tipo</Th>
+                      <Th>Telefone</Th>
+                      <Th>Cidade/UF</Th>
+                      <Th isNumeric>Limite</Th>
+                      <Th isNumeric>Total comprado</Th>
+                      <Th>Ultima compra</Th>
+                      <Th>Status</Th>
+                      <Th w="48px" />
                     </Tr>
-                  ))}
-                </Tbody>
-              </Table>
-            </Box>
-          </Surface>
+                  </Thead>
+                  <Tbody>
+                    {data.customers.map(customer => (
+                      <Tr
+                        key={customer.idcliente}
+                        cursor="pointer"
+                        onClick={() => openDetail(customer)}
+                      >
+                        <Td>
+                          <Flex gap={3} align="center">
+                            <Avatar
+                              size="sm"
+                              name={customer.nome}
+                              bg="brand.700"
+                            />
+                            <Box>
+                              <Text fontWeight="650">{customer.nome}</Text>
+                              <Text fontSize="10px" color="erp.textMuted">
+                                {customer.email || 'Sem e-mail'}
+                              </Text>
+                            </Box>
+                          </Flex>
+                        </Td>
+                        <Td whiteSpace="nowrap">
+                          {formatDocument(customer.documento)}
+                        </Td>
+                        <Td>
+                          <Badge>
+                            {Number(customer.tipo_pessoa) === 1 ? 'PF' : 'PJ'}
+                          </Badge>
+                        </Td>
+                        <Td whiteSpace="nowrap">
+                          {formatPhone(customer.telefone)}
+                        </Td>
+                        <Td whiteSpace="nowrap">
+                          {customer.cidade
+                            ? `${customer.cidade}/${customer.estado}`
+                            : '-'}
+                        </Td>
+                        <Td isNumeric>
+                          {formatCurrency(customer.limite_credito)}
+                        </Td>
+                        <Td isNumeric>
+                          {formatCurrency(customer.total_bought)}
+                        </Td>
+                        <Td whiteSpace="nowrap">
+                          {formatDate(customer.last_purchase, 'Sem compras')}
+                        </Td>
+                        <Td>
+                          <CustomerBadges customer={customer} />
+                        </Td>
+                        <Td onClick={event => event.stopPropagation()}>
+                          <CustomerMenu
+                            customer={customer}
+                            openDetail={openDetail}
+                            openEdit={openEdit}
+                            openNote={openNote}
+                            setStatus={(id, value) =>
+                              status.mutate({ id, value })
+                            }
+                            navigate={navigate}
+                          />
+                        </Td>
+                      </Tr>
+                    ))}
+                  </Tbody>
+                </Table>
+              </Box>
+            </Surface>
+          </Reveal>
         )
       ) : (
         <Surface>

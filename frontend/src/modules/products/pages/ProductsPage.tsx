@@ -96,6 +96,7 @@ import {
   BrandSurface,
   EmptyState,
   ErrorState,
+  KpiCard,
   PageHeader,
   Surface,
 } from '../../../shared/ui/ErpUI';
@@ -162,48 +163,6 @@ const defaults: ProductForm = {
   destaque: false,
   situacao: true,
 };
-
-function Kpi({
-  label,
-  value,
-  detail,
-  icon,
-}: {
-  label: string;
-  value: string;
-  detail: string;
-  icon: typeof Package;
-}) {
-  return (
-    <Surface p={4} minH="112px">
-      <Flex justify="space-between" gap={3}>
-        <Box minW={0}>
-          <Text fontSize="10px" color="erp.textMuted" textTransform="uppercase">
-            {label}
-          </Text>
-          <Text mt={1} fontSize="22px" fontWeight="700" noOfLines={1}>
-            {value}
-          </Text>
-          <Text mt={1} fontSize="10px" color="erp.textSecondary">
-            {detail}
-          </Text>
-        </Box>
-        <Flex
-          w="34px"
-          h="34px"
-          flexShrink={0}
-          align="center"
-          justify="center"
-          borderRadius="8px"
-          color="erp.brandText"
-          bg="erp.brandSoft"
-        >
-          <Icon as={icon} boxSize="16px" />
-        </Flex>
-      </Flex>
-    </Surface>
-  );
-}
 
 function ProductBadges({ product }: { product: Product }) {
   const critical = Number(product.estoque) <= Number(product.estoque_minimo);
@@ -416,43 +375,63 @@ export default function ProductsPage() {
         }
       />
       <SimpleGrid columns={{ base: 1, sm: 2, xl: 7 }} spacing={3} mb={5}>
-        <Kpi
+        <KpiCard
+          index={0}
+          tone="brand"
           label="Produtos"
-          value={formatNumber(data?.metrics.total)}
+          count={Number(data?.metrics.total)}
+          format={formatNumber}
           detail="Itens no catalogo"
           icon={Package}
         />
-        <Kpi
+        <KpiCard
+          index={1}
+          tone="success"
           label="Ativos"
-          value={formatNumber(data?.metrics.active)}
+          count={Number(data?.metrics.active)}
+          format={formatNumber}
           detail="Disponiveis"
           icon={Check}
         />
-        <Kpi
+        <KpiCard
+          index={2}
+          tone="neutral"
           label="Inativos"
-          value={formatNumber(data?.metrics.inactive)}
+          count={Number(data?.metrics.inactive)}
+          format={formatNumber}
           detail="Fora de operacao"
           icon={Ban}
         />
-        <Kpi
+        <KpiCard
+          index={3}
+          tone="warning"
           label="Estoque critico"
-          value={formatNumber(data?.metrics.critical)}
+          count={Number(data?.metrics.critical)}
+          format={formatNumber}
           detail="Precisam de atencao"
           icon={AlertTriangle}
         />
-        <Kpi
+        <KpiCard
+          index={4}
+          tone="info"
           label="Filiais com estoque"
-          value={formatNumber(data?.metrics.branches)}
+          count={Number(data?.metrics.branches)}
+          format={formatNumber}
           detail="Unidades abastecidas"
           icon={Store}
         />
-        <Kpi
+        <KpiCard
+          index={5}
+          tone="brand"
           label="Valor em estoque"
-          value={formatCurrency(data?.metrics.stock_value, { compact: true })}
+          count={Number(data?.metrics.stock_value)}
+          format={value => formatCurrency(value, { compact: true })}
           detail="Pelo custo atual"
           icon={CircleDollarSign}
         />
-        <Kpi
+        <KpiCard
+          index={6}
+          tone="neutral"
           label="Mais vendido"
           value={data?.metrics.best_seller || '-'}
           detail="Lider historico"

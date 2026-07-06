@@ -23,14 +23,22 @@ class DashboardController extends ApiController
         if (!$context->companyId) {
             return $this->error($response, 'Empresa nao identificada', 403);
         }
-        $period = (string) (($request->getQueryParams()['period'] ?? '30d'));
+        $params = $request->getQueryParams();
+        $period = (string) ($params['period'] ?? '30d');
         if (!in_array($period, ['today', '7d', '30d', '90d', 'year'], true)) {
-            return $this->error($response, 'Periodo invalido', 422);
+            $period = '30d';
         }
+        $datePattern = '/^\d{4}-\d{2}-\d{2}$/';
+        $start = isset($params['start']) && preg_match($datePattern, (string) $params['start'])
+            ? (string) $params['start']
+            : null;
+        $end = isset($params['end']) && preg_match($datePattern, (string) $params['end'])
+            ? (string) $params['end']
+            : null;
 
         return $this->success(
             $response,
-            $this->service->get($context->companyId, $period),
+            $this->service->get($context->companyId, $period, $start, $end),
             'Dashboard da matriz carregado'
         );
     }

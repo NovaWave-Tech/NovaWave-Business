@@ -14,7 +14,6 @@ import {
   FormErrorMessage,
   FormLabel,
   Grid,
-  Icon,
   IconButton,
   Input,
   InputGroup,
@@ -71,6 +70,7 @@ import {
   BrandSurface,
   EmptyState,
   ErrorState,
+  KpiCard,
   PageHeader,
   Surface,
 } from '../../../shared/ui/ErpUI';
@@ -99,50 +99,6 @@ const setToPermissions = (selected: Set<string>) =>
     const [modulo, acao] = key.split(':');
     return { modulo, acao };
   });
-
-function Kpi({
-  label,
-  value,
-  detail,
-  icon,
-}: {
-  label: string;
-  value: string | number;
-  detail: string;
-  icon: typeof ShieldCheck;
-}) {
-  return (
-    <Surface p={4} minH="112px">
-      <Flex justify="space-between" align="start">
-        <Box minW={0}>
-          <Text fontSize="11px" color="erp.textMuted" textTransform="uppercase">
-            {label}
-          </Text>
-          <Text mt={1} fontSize="23px" fontWeight="700" noOfLines={1}>
-            {value}
-          </Text>
-          <Text mt={1} fontSize="10px" color="erp.textSecondary">
-            {detail}
-          </Text>
-        </Box>
-        <Flex
-          w="34px"
-          h="34px"
-          flexShrink={0}
-          align="center"
-          justify="center"
-          borderRadius="9px"
-          color="erp.brandText"
-          bg="erp.brandSoft"
-          border="1px solid"
-          borderColor="erp.brandBorder"
-        >
-          <Icon as={icon} boxSize="16px" />
-        </Flex>
-      </Flex>
-    </Surface>
-  );
-}
 
 function ScopeBadge({ escopo }: { escopo: number }) {
   return (
@@ -326,37 +282,54 @@ export default function PermissionsPage() {
       />
 
       <SimpleGrid columns={{ base: 1, sm: 2, xl: 6 }} spacing={3} mb={5}>
-        <Kpi
+        <KpiCard
+          index={0}
+          tone="brand"
           label="Perfis"
-          value={formatNumber(data?.metrics.profiles)}
+          count={Number(data?.metrics.profiles)}
+          format={formatNumber}
           detail="Cadastrados na empresa"
           icon={ShieldCheck}
         />
-        <Kpi
+        <KpiCard
+          index={1}
+          tone="info"
           label="Personalizados"
-          value={formatNumber(data?.metrics.custom_profiles)}
+          count={Number(data?.metrics.custom_profiles)}
+          format={formatNumber}
           detail="Criados pela empresa"
           icon={Settings2}
         />
-        <Kpi
+        <KpiCard
+          index={2}
+          tone="brand"
           label="Usuarios vinculados"
-          value={formatNumber(data?.metrics.linked_users)}
+          count={Number(data?.metrics.linked_users)}
+          format={formatNumber}
           detail="Com perfil atribuido"
           icon={Users}
         />
-        <Kpi
+        <KpiCard
+          index={3}
+          tone="brand"
           label="Permissoes"
-          value={formatNumber(data?.metrics.permissions)}
+          count={Number(data?.metrics.permissions)}
+          format={formatNumber}
           detail="Disponiveis no catalogo"
           icon={KeyRound}
         />
-        <Kpi
+        <KpiCard
+          index={4}
+          tone="info"
           label="Filiais"
-          value={formatNumber(data?.metrics.branches)}
+          count={Number(data?.metrics.branches)}
+          format={formatNumber}
           detail="Com usuarios vinculados"
           icon={GitBranch}
         />
-        <Kpi
+        <KpiCard
+          index={5}
+          tone="neutral"
           label="Perfil mais usado"
           value={data?.metrics.top_profile || '-'}
           detail="Maior numero de usuarios"

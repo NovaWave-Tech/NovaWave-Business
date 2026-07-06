@@ -16,12 +16,17 @@ import {
   AlertCircle,
   ChevronRight,
   Inbox,
+  Minus,
   Plus,
   RefreshCw,
+  TrendingDown,
+  TrendingUp,
   type LucideIcon,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
+import { formatDelta } from '../utils/formatters';
+import { CountUp, Reveal } from './motion';
 
 export function PageHeader({
   title,
@@ -152,22 +157,173 @@ export function BrandSurface({
       position="relative"
       bg="erp.surface"
       border="1px solid"
-      borderColor="erp.brandBorder"
+      borderColor="erp.border"
       borderRadius="12px"
-      boxShadow="0 8px 24px rgba(37,99,255,.08)"
+      boxShadow="0 1px 2px rgba(15,23,42,.04)"
       overflow="hidden"
       _before={{
         content: '""',
         position: 'absolute',
-        insetX: 0,
-        top: 0,
-        h: '3px',
-        bg: 'linear-gradient(90deg, #2F80FF 0%, #2563FF 55%, #4F46E5 100%)',
+        insetY: 0,
+        left: 0,
+        w: '3px',
+        bg: 'brand.500',
       }}
       {...props}
     >
       {children}
     </Box>
+  );
+}
+
+const kpiToneColor: Record<KpiTone, string> = {
+  brand: 'brand.500',
+  success: 'erp.success',
+  warning: 'erp.warning',
+  danger: 'erp.danger',
+  info: 'erp.info',
+  neutral: 'erp.textSecondary',
+};
+
+export type KpiTone =
+  | 'brand'
+  | 'success'
+  | 'warning'
+  | 'danger'
+  | 'info'
+  | 'neutral';
+
+/**
+ * Cartao de indicador clean: superficie solida com borda fina, icone
+ * monocromatico num quadrado sutil, valor tabular forte com contagem
+ * animada e variacao (delta) discreta. Sem gradientes.
+ * Passe `count` (numero) + `format` para animar, ou `value` ja formatado.
+ */
+export function KpiCard({
+  label,
+  value,
+  count,
+  format,
+  icon,
+  tone = 'brand',
+  detail,
+  delta,
+  index = 0,
+  onClick,
+}: {
+  label: string;
+  value?: ReactNode;
+  count?: number;
+  format?: (value: number) => string;
+  icon: LucideIcon;
+  tone?: KpiTone;
+  detail?: string;
+  delta?: number;
+  index?: number;
+  onClick?: () => void;
+}) {
+  const blueChip = tone === 'brand' || tone === 'info' || tone === 'neutral';
+  const chipBg = blueChip ? 'erp.brandSoft' : 'erp.surfaceSubtle';
+  const chipBorder = blueChip ? 'erp.brandBorder' : 'erp.border';
+  const iconColor = blueChip ? 'brand.500' : kpiToneColor[tone];
+  const deltaPositive = (delta ?? 0) >= 0;
+  const deltaZero = delta === 0;
+  const deltaColor = deltaZero
+    ? 'erp.textMuted'
+    : deltaPositive
+      ? 'erp.success'
+      : 'erp.danger';
+  const DeltaIcon = deltaZero
+    ? Minus
+    : deltaPositive
+      ? TrendingUp
+      : TrendingDown;
+
+  return (
+    <Reveal index={index} h="full">
+      <Box
+        h="full"
+        minH="120px"
+        p={5}
+        bg="erp.surface"
+        border="1px solid"
+        borderColor="erp.border"
+        borderRadius="12px"
+        boxShadow="0 1px 2px rgba(15,23,42,.04)"
+        cursor={onClick ? 'pointer' : 'default'}
+        transition="border-color 160ms ease, box-shadow 160ms ease"
+        _hover={
+          onClick
+            ? {
+                borderColor: 'erp.borderStrong',
+                boxShadow: '0 4px 12px rgba(15,23,42,.07)',
+              }
+            : undefined
+        }
+        onClick={onClick}
+      >
+        <Flex justify="space-between" align="center" gap={3}>
+          <Text
+            fontSize="11px"
+            fontWeight="700"
+            color="erp.textMuted"
+            textTransform="uppercase"
+            letterSpacing=".05em"
+            noOfLines={1}
+          >
+            {label}
+          </Text>
+          <Flex
+            w="34px"
+            h="34px"
+            flexShrink={0}
+            align="center"
+            justify="center"
+            borderRadius="9px"
+            bg={chipBg}
+            border="1px solid"
+            borderColor={chipBorder}
+            color={iconColor}
+          >
+            <Icon as={icon} boxSize="17px" />
+          </Flex>
+        </Flex>
+        <Text
+          mt={3}
+          fontSize="28px"
+          lineHeight="1.15"
+          fontWeight="800"
+          color="erp.text"
+          noOfLines={1}
+          sx={{ fontVariantNumeric: 'tabular-nums' }}
+        >
+          {count !== undefined ? (
+            <CountUp value={count} format={format} />
+          ) : (
+            value
+          )}
+        </Text>
+        <Flex mt={2} align="center" gap={2} minH="18px">
+          {delta !== undefined && (
+            <Flex align="center" gap={0.5} color={deltaColor}>
+              <Icon as={DeltaIcon} boxSize="12px" />
+              <Text
+                fontSize="11px"
+                fontWeight="700"
+                sx={{ fontVariantNumeric: 'tabular-nums' }}
+              >
+                {formatDelta(delta)}
+              </Text>
+            </Flex>
+          )}
+          {detail && (
+            <Text fontSize="11px" color="erp.textSecondary" noOfLines={1}>
+              {detail}
+            </Text>
+          )}
+        </Flex>
+      </Box>
+    </Reveal>
   );
 }
 

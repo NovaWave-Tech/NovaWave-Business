@@ -66,9 +66,9 @@ export type MatrixDashboardData = {
   }>;
 };
 
-export async function getDashboard(period: DashboardPeriod) {
+export async function getDashboard(range: { start: string; end: string }) {
   const response = await http.get<{ data: MatrixDashboardData }>('/dashboard', {
-    params: { period },
+    params: { start: range.start, end: range.end },
   });
   return response.data.data;
 }

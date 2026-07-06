@@ -42,12 +42,13 @@ final class UserRepository
             $where[] = '(u.nome ILIKE :q OR u.email ILIKE :q OR u.telefone ILIKE :q OR c.nome ILIKE :q)';
             $params['q'] = '%' . trim((string) $filters['q']) . '%';
         }
-        if (($filters['last_access'] ?? '') === 'never') {
-            $where[] = 'u.ultimo_login IS NULL';
-        } elseif (($filters['last_access'] ?? '') === '7d') {
-            $where[] = "u.ultimo_login >= CURRENT_TIMESTAMP - INTERVAL '7 days'";
-        } elseif (($filters['last_access'] ?? '') === '30d') {
-            $where[] = "u.ultimo_login >= CURRENT_TIMESTAMP - INTERVAL '30 days'";
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) ($filters['last_access_start'] ?? ''))) {
+            $where[] = 'u.ultimo_login::date >= :la_start';
+            $params['la_start'] = $filters['last_access_start'];
+        }
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) ($filters['last_access_end'] ?? ''))) {
+            $where[] = 'u.ultimo_login::date <= :la_end';
+            $params['la_end'] = $filters['last_access_end'];
         }
 
         $users = $this->fetchAll(
