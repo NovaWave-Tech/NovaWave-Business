@@ -86,6 +86,7 @@ import {
 import {
   Controller,
   useForm,
+  type FieldErrors,
   type Resolver,
   type UseFormReturn,
 } from 'react-hook-form';
@@ -1308,8 +1309,48 @@ function CustomerFormDrawer({
   saving: boolean;
   submit: (values: CustomerForm) => void;
 }) {
+  const toast = useToast();
   const watched = form.watch();
   const canAdvance = step !== 1 || Boolean(watched.nome && watched.documento);
+  const stepOfField: Partial<Record<keyof CustomerForm, number>> = {
+    tipo_pessoa: 0,
+    nome: 1,
+    nome_fantasia: 1,
+    rg: 1,
+    inscricao_estadual: 1,
+    data_nascimento_abertura: 1,
+    documento: 1,
+    email: 1,
+    telefone: 1,
+    cep: 2,
+    endereco: 2,
+    numero: 2,
+    complemento: 2,
+    bairro: 2,
+    cidade: 2,
+    estado: 2,
+    limite_credito: 3,
+    observacao: 3,
+  };
+  const goNext = async () => {
+    if (step === 1) {
+      const ok = await form.trigger(['nome', 'documento', 'email', 'telefone']);
+      if (!ok) return;
+    }
+    setStep(step + 1);
+  };
+  const onInvalid = (errors: FieldErrors<CustomerForm>) => {
+    const firstField = Object.keys(errors)[0] as keyof CustomerForm;
+    const message = (errors[firstField] as { message?: string } | undefined)
+      ?.message;
+    setStep(stepOfField[firstField] ?? 1);
+    toast({
+      title: 'Revise os campos destacados',
+      description: message || 'Ha campos invalidos no cadastro.',
+      status: 'error',
+      position: 'top-right',
+    });
+  };
   return (
     <Drawer
       isOpen={disclosure.isOpen}
@@ -1408,7 +1449,7 @@ function CustomerFormDrawer({
             <Button
               rightIcon={<ChevronRight size={15} />}
               isDisabled={!canAdvance}
-              onClick={() => setStep(step + 1)}
+              onClick={() => void goNext()}
             >
               Continuar
             </Button>
@@ -1416,7 +1457,7 @@ function CustomerFormDrawer({
             <Button
               leftIcon={<Check size={15} />}
               isLoading={saving}
-              onClick={form.handleSubmit(submit)}
+              onClick={form.handleSubmit(submit, onInvalid)}
             >
               Salvar cliente
             </Button>
