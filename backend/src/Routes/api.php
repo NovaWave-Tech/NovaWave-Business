@@ -14,6 +14,7 @@ use App\Modules\Platform\Controllers\PlatformAuthController;
 use App\Modules\Platform\Controllers\PlatformController;
 use App\Modules\Products\Controllers\ProductController;
 use App\Modules\Reports\Controllers\ReportController;
+use App\Modules\Sales\Controllers\SalesController;
 use App\Modules\Users\Controllers\UserController;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
@@ -97,6 +98,10 @@ $app->group('', function ($group): void {
     $group->post('/finance/{type:revenue|expense}/{id:[0-9]+}/duplicate', FinanceController::class . ':duplicate');
     $group->get('/reports', ReportController::class . ':index');
     $group->get('/reports/{slug:[a-z-]+}', ReportController::class . ':preview');
+    $group->get('/sales', SalesController::class . ':index');
+    $group->post('/sales', SalesController::class . ':store');
+    $group->get('/sales/{id:[0-9]+}', SalesController::class . ':show');
+    $group->patch('/sales/{id:[0-9]+}/status', SalesController::class . ':status');
     $group->get('/permissions', PermissionController::class . ':index');
     $group->post('/permissions', PermissionController::class . ':store');
     $group->get('/permissions/{id:[0-9]+}', PermissionController::class . ':show');
