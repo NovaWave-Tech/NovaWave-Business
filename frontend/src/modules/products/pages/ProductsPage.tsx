@@ -82,6 +82,7 @@ import {
   Plus,
   Search,
   Store,
+  Tags,
   Trash2,
   Truck,
 } from 'lucide-react';
@@ -101,6 +102,7 @@ import {
   Surface,
 } from '../../../shared/ui/ErpUI';
 import { CurrencyInput } from '../../../shared/ui/FormattedInput';
+import CatalogManager from '../../catalog/components/CatalogManager';
 import {
   formatBarcode,
   formatCurrency,
@@ -209,6 +211,14 @@ export default function ProductsPage() {
   const detailDrawer = useDisclosure();
   const formDrawer = useDisclosure();
   const movementModal = useDisclosure();
+  const catalogModal = useDisclosure();
+  const [catalogTab, setCatalogTab] = useState<'categories' | 'brands'>(
+    'categories'
+  );
+  const openCatalog = (tab: 'categories' | 'brands' = 'categories') => {
+    setCatalogTab(tab);
+    catalogModal.onOpen();
+  };
   const isMobile = useBreakpointValue({ base: true, lg: false });
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -369,9 +379,18 @@ export default function ProductsPage() {
         description="Gerencie produtos, estoque, precos, fornecedores e informacoes comerciais."
         breadcrumbs={[{ label: 'Estoque' }, { label: 'Produtos' }]}
         actions={
-          <Button leftIcon={<Plus size={16} />} onClick={openCreate}>
-            Novo produto
-          </Button>
+          <Flex gap={2} w={{ base: 'full', md: 'auto' }}>
+            <Button
+              variant="outline"
+              leftIcon={<Tags size={16} />}
+              onClick={() => openCatalog('categories')}
+            >
+              Categorias e marcas
+            </Button>
+            <Button leftIcon={<Plus size={16} />} onClick={openCreate}>
+              Novo produto
+            </Button>
+          </Flex>
         }
       />
       <SimpleGrid columns={{ base: 1, sm: 2, xl: 7 }} spacing={3} mb={5}>
@@ -655,6 +674,12 @@ export default function ProductsPage() {
         editing={Boolean(editingId)}
         saving={save.isPending}
         submit={v => save.mutate(v)}
+        onManageCatalog={openCatalog}
+      />
+      <CatalogManager
+        isOpen={catalogModal.isOpen}
+        onClose={catalogModal.onClose}
+        initialTab={catalogTab}
       />
       <Modal isOpen={movementModal.isOpen} onClose={movementModal.onClose}>
         <ModalOverlay />
@@ -1282,6 +1307,7 @@ function ProductFormDrawer({
   editing,
   saving,
   submit,
+  onManageCatalog,
 }: {
   disclosure: ReturnType<typeof useDisclosure>;
   form: UseFormReturn<ProductForm>;
@@ -1291,6 +1317,7 @@ function ProductFormDrawer({
   editing: boolean;
   saving: boolean;
   submit: (v: ProductForm) => void;
+  onManageCatalog: (tab?: 'categories' | 'brands') => void;
 }) {
   const w = form.watch();
   const margin =
@@ -1354,6 +1381,7 @@ function ProductFormDrawer({
                     form={form}
                     options={options}
                     margin={margin}
+                    onManageCatalog={onManageCatalog}
                   />
                 </MotionBox>
               </AnimatePresence>
@@ -1419,11 +1447,13 @@ function ProductStep({
   form,
   options,
   margin,
+  onManageCatalog,
 }: {
   step: number;
   form: UseFormReturn<ProductForm>;
   options?: ProductList['options'];
   margin: number;
+  onManageCatalog: (tab?: 'categories' | 'brands') => void;
 }) {
   const e = form.formState.errors;
   if (step === 0)
@@ -1439,24 +1469,46 @@ function ProductStep({
           <Input inputMode="numeric" {...form.register('codigo_barras')} />
         </Field>
         <Field label="Categoria" error={e.idcategoria?.message} required>
-          <Select {...form.register('idcategoria')}>
-            <option value={0}>Selecione</option>
-            {options?.categories.map(x => (
-              <option key={x.id} value={x.id}>
-                {x.nome}
-              </option>
-            ))}
-          </Select>
+          <Flex gap={2}>
+            <Select {...form.register('idcategoria')}>
+              <option value={0}>Selecione</option>
+              {options?.categories.map(x => (
+                <option key={x.id} value={x.id}>
+                  {x.nome}
+                </option>
+              ))}
+            </Select>
+            <Tooltip label="Gerenciar categorias">
+              <IconButton
+                aria-label="Gerenciar categorias"
+                icon={<Tags size={16} />}
+                variant="outline"
+                flexShrink={0}
+                onClick={() => onManageCatalog('categories')}
+              />
+            </Tooltip>
+          </Flex>
         </Field>
         <Field label="Marca">
-          <Select {...form.register('idmarca')}>
-            <option value="">Sem marca</option>
-            {options?.brands.map(x => (
-              <option key={x.id} value={x.id}>
-                {x.nome}
-              </option>
-            ))}
-          </Select>
+          <Flex gap={2}>
+            <Select {...form.register('idmarca')}>
+              <option value="">Sem marca</option>
+              {options?.brands.map(x => (
+                <option key={x.id} value={x.id}>
+                  {x.nome}
+                </option>
+              ))}
+            </Select>
+            <Tooltip label="Gerenciar marcas">
+              <IconButton
+                aria-label="Gerenciar marcas"
+                icon={<Tags size={16} />}
+                variant="outline"
+                flexShrink={0}
+                onClick={() => onManageCatalog('brands')}
+              />
+            </Tooltip>
+          </Flex>
         </Field>
         <Field label="Unidade">
           <Select {...form.register('unidade')}>

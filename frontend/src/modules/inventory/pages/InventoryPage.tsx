@@ -537,10 +537,10 @@ export default function InventoryPage() {
               </SimpleGrid>
               <FormControl isRequired>
                 <FormLabel>
-                  {movement.tipo === '3' ? 'Novo saldo' : 'Quantidade'}
+                  {movement.tipo === '5' ? 'Novo saldo' : 'Quantidade'}
                 </FormLabel>
                 <NumberInput
-                  min={movement.tipo === '3' ? 0 : 0.001}
+                  min={movement.tipo === '5' ? 0 : 0.001}
                   value={movement.quantidade}
                   onChange={(_, value) =>
                     setMovement(v => ({
