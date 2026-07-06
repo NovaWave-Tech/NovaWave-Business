@@ -67,6 +67,22 @@ export const formatPercent = (
     maximumFractionDigits: fractionDigits,
   }).format((Number(value ?? 0) || 0) / 100);
 
+/**
+ * Variacao ja expressa em pontos percentuais (ex.: 12.5 -> "+12,5%").
+ * Use para deltas/tendencias, nao para uma fracao (0-1).
+ */
+export const formatDelta = (
+  value: string | number | null | undefined,
+  fractionDigits = 1
+) => {
+  const amount = Number(value ?? 0) || 0;
+  const sign = amount > 0 ? '+' : '';
+  return `${sign}${new Intl.NumberFormat(ptBR, {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: fractionDigits,
+  }).format(amount)}%`;
+};
+
 const parseDate = (value: string | Date) => {
   if (value instanceof Date) return value;
   return new Date(

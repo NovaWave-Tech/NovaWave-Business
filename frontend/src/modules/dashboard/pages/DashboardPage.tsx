@@ -35,10 +35,11 @@ import {
 } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import {
+  Area,
   CartesianGrid,
+  ComposedChart,
   Legend,
   Line,
-  LineChart,
   ResponsiveContainer,
   Tooltip as ChartTooltip,
   XAxis,
@@ -53,10 +54,18 @@ import {
   SectionHeader,
   Surface,
 } from '../../../shared/ui/ErpUI';
+import { ChartAreaGradient, PremiumTooltip } from '../../../shared/ui/chart';
+import {
+  chartAnimation,
+  chartColors,
+  useChartTheme,
+} from '../../../shared/ui/chartTheme';
+import { Reveal } from '../../../shared/ui/motion';
 import {
   formatCurrency,
   formatDate,
   formatDateTime,
+  formatDelta,
   formatNumber,
   formatPercent,
 } from '../../../shared/utils/formatters';
@@ -132,8 +141,7 @@ function MetricCell({
         >
           <Icon as={positive ? TrendingUp : TrendingDown} boxSize="11px" />
           <Text fontSize="10px" fontWeight="600">
-            {change >= 0 ? '+' : ''}
-            {change.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%
+            {formatDelta(change)}
           </Text>
         </Flex>
       )}
@@ -176,8 +184,7 @@ function ComparisonRow({
           borderRadius="full"
           textTransform="none"
         >
-          {indicator >= 0 ? '+' : ''}
-          {indicator.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%
+          {formatDelta(indicator)}
         </Badge>
       )}
     </Flex>
@@ -192,6 +199,7 @@ export default function DashboardPage() {
     queryFn: () => getDashboard(period),
     refetchInterval: 60_000,
   });
+  const chartTheme = useChartTheme();
 
   if (dashboard.isLoading) return <PageSkeleton />;
   if (dashboard.isError || !dashboard.data)
@@ -384,415 +392,439 @@ export default function DashboardPage() {
         </BrandSurface>
       </MotionBox>
 
-      <BrandSurface mb={5}>
-        <Flex px={5} py={4} align="center" gap={3}>
-          <Flex
-            w="38px"
-            h="38px"
-            align="center"
-            justify="center"
-            borderRadius="10px"
-            bg="rgba(47,128,255,.08)"
-            color="brand.500"
-          >
-            <Target size={18} />
-          </Flex>
-          <Box>
-            <Text
-              fontSize="10px"
-              color="erp.textMuted"
-              textTransform="uppercase"
+      <Reveal index={1}>
+        <BrandSurface mb={5}>
+          <Flex px={5} py={4} align="center" gap={3}>
+            <Flex
+              w="38px"
+              h="38px"
+              align="center"
+              justify="center"
+              borderRadius="10px"
+              bg="rgba(47,128,255,.08)"
+              color="brand.500"
             >
-              Projecao de venda da rede
-            </Text>
-            <Text fontSize="14px" fontWeight="600">
-              Competencia atual
-            </Text>
-          </Box>
-        </Flex>
-        <Grid
-          templateColumns={{
-            base: '1fr',
-            xl: 'minmax(0,1.4fr) minmax(330px,.6fr)',
-          }}
-          borderTop="1px solid"
-          borderColor="erp.border"
-        >
-          <Box p={{ base: 5, md: 6 }} bg="rgba(47,128,255,.045)">
-            <Text
-              fontSize="10px"
-              color="erp.textMuted"
-              textTransform="uppercase"
-            >
-              Venda realizada no mes
-            </Text>
-            <Text
-              mt={1}
-              fontSize={{ base: '30px', md: '36px' }}
-              fontWeight="700"
-              sx={{ fontVariantNumeric: 'tabular-nums' }}
-            >
-              {formatCurrency(goal.sold)}
-            </Text>
-            <Flex mt={2} gap={2} wrap="wrap">
-              <Badge variant="outline" textTransform="none">
-                {formatPercent(goal.percentage)} da meta
-              </Badge>
-              <Badge variant="outline" colorScheme="blue" textTransform="none">
-                Margem {formatPercent(kpis.profit_margin)}
-              </Badge>
+              <Target size={18} />
             </Flex>
-            <Flex mt={5} justify="space-between" gap={4}>
+            <Box>
               <Text
                 fontSize="10px"
                 color="erp.textMuted"
                 textTransform="uppercase"
               >
-                Projecao de fechamento
+                Projecao de venda da rede
               </Text>
-              <Text fontSize="12px" fontWeight="600">
-                {formatCurrency(goal.projection)}
+              <Text fontSize="14px" fontWeight="600">
+                Competencia atual
               </Text>
-            </Flex>
-            <Progress
-              mt={2}
-              value={Math.min(goal.projection_percentage, 100)}
-              size="sm"
-              colorScheme={goal.projection_percentage >= 100 ? 'green' : 'blue'}
-              borderRadius="full"
-            />
-            <Flex mt={2} justify="space-between" gap={4} wrap="wrap">
-              <Text fontSize="11px" color="erp.textSecondary">
-                {formatPercent(goal.projection_percentage)} da meta projetada
-              </Text>
-              <Text fontSize="11px" color="erp.textSecondary">
-                Faltam {formatCurrency(goal.remaining)}
-              </Text>
-            </Flex>
-            <Flex mt={4} gap={6} wrap="wrap">
-              <Text fontSize="11px" color="erp.textMuted">
-                Media necessaria: {formatCurrency(goal.daily_required)}/dia
-              </Text>
-              <Text fontSize="11px" color="erp.textMuted">
-                {goal.days_remaining} dias restantes
-              </Text>
-            </Flex>
-          </Box>
-          <Box borderLeft={{ xl: '1px solid' }} borderColor="erp.border">
-            <ComparisonRow
-              label="Vs mes anterior"
-              value={formatCurrency(goal.previous_month)}
-              indicator={kpis.revenue_change}
-            />
-            <ComparisonRow
-              label="Vs mesmo mes / ano passado"
-              value={formatCurrency(goal.same_month_last_year)}
-            />
-            <ComparisonRow
-              label="Ritmo esperado no mesmo ponto"
-              value={formatPercent(goal.expected_pace_percentage)}
-              indicator={goal.percentage - goal.expected_pace_percentage}
-            />
-          </Box>
-        </Grid>
-      </BrandSurface>
-
-      <Surface overflow="hidden" mb={5}>
-        <SectionHeader
-          icon={Trophy}
-          eyebrow="Desempenho da rede"
-          title="Ranking por venda"
-          description="Filiais ordenadas pelo valor vendido no mes."
-        />
-        {visibleBranches.length ? (
-          <Box maxH="520px" overflowY="auto" px={{ base: 4, md: 5 }} py={2}>
-            {visibleBranches.map((branch, index) => (
-              <Grid
-                key={branch.id}
-                templateColumns={{
-                  base: '36px minmax(0,1fr)',
-                  md: '42px minmax(0,1fr) 150px 76px',
-                }}
-                gap={3}
-                alignItems="center"
-                py={2.5}
-                pl={index < 3 ? 2 : 0}
-                borderLeft={index < 3 ? '2px solid' : undefined}
-                borderLeftColor={
-                  index === 0
-                    ? 'brand.500'
-                    : index === 1
-                      ? 'brand.300'
-                      : index === 2
-                        ? 'brand.200'
-                        : undefined
-                }
-                bg={index === 0 ? 'erp.brandSoft' : 'transparent'}
-                borderRadius={index === 0 ? '8px' : 0}
+            </Box>
+          </Flex>
+          <Grid
+            templateColumns={{
+              base: '1fr',
+              xl: 'minmax(0,1.4fr) minmax(330px,.6fr)',
+            }}
+            borderTop="1px solid"
+            borderColor="erp.border"
+          >
+            <Box p={{ base: 5, md: 6 }} bg="rgba(47,128,255,.045)">
+              <Text
+                fontSize="10px"
+                color="erp.textMuted"
+                textTransform="uppercase"
               >
+                Venda realizada no mes
+              </Text>
+              <Text
+                mt={1}
+                fontSize={{ base: '30px', md: '36px' }}
+                fontWeight="700"
+                sx={{ fontVariantNumeric: 'tabular-nums' }}
+              >
+                {formatCurrency(goal.sold)}
+              </Text>
+              <Flex mt={2} gap={2} wrap="wrap">
+                <Badge variant="outline" textTransform="none">
+                  {formatPercent(goal.percentage)} da meta
+                </Badge>
+                <Badge
+                  variant="outline"
+                  colorScheme="blue"
+                  textTransform="none"
+                >
+                  Margem {formatPercent(kpis.profit_margin)}
+                </Badge>
+              </Flex>
+              <Flex mt={5} justify="space-between" gap={4}>
                 <Text
-                  fontSize="13px"
-                  color={index < 3 ? 'erp.brandText' : 'erp.textSecondary'}
-                  fontWeight={index < 3 ? '700' : '500'}
+                  fontSize="10px"
+                  color="erp.textMuted"
+                  textTransform="uppercase"
                 >
-                  #{index + 1}
+                  Projecao de fechamento
                 </Text>
-                <Box minW={0}>
-                  <Text fontSize="13px" fontWeight="600" noOfLines={1}>
-                    {branch.name}
-                  </Text>
-                  <Progress
-                    mt={2}
-                    value={(branch.revenue / maxBranchRevenue) * 100}
-                    size="sm"
-                    colorScheme="blue"
-                    borderRadius="full"
-                  />
-                </Box>
-                <Box display={{ base: 'none', md: 'block' }} textAlign="right">
-                  <Text fontSize="13px" fontWeight="700">
-                    {formatCurrency(branch.revenue)}
-                  </Text>
-                  <Text fontSize="10px" color="erp.textMuted">
-                    {branch.target
-                      ? `${formatPercent(branch.target_percentage)} da meta`
-                      : 'Meta nao configurada'}
-                  </Text>
-                </Box>
-                <Text
-                  display={{ base: 'none', md: 'block' }}
-                  textAlign="right"
-                  fontSize="11px"
-                  fontWeight="600"
-                  color={branch.growth >= 0 ? 'erp.success' : 'erp.danger'}
-                >
-                  {branch.growth >= 0 ? '+' : ''}
-                  {branch.growth.toLocaleString('pt-BR', {
-                    maximumFractionDigits: 1,
-                  })}
-                  %
+                <Text fontSize="12px" fontWeight="600">
+                  {formatCurrency(goal.projection)}
                 </Text>
-                <Flex
-                  display={{ base: 'flex', md: 'none' }}
-                  gridColumn="2"
-                  justify="space-between"
-                  gap={3}
-                >
-                  <Text fontSize="11px" fontWeight="600">
-                    {formatCurrency(branch.revenue)}
-                  </Text>
-                  <Text fontSize="10px" color="erp.textMuted">
-                    {branch.target
-                      ? formatPercent(branch.target_percentage)
-                      : 'Sem meta'}
-                  </Text>
-                </Flex>
-              </Grid>
-            ))}
-          </Box>
-        ) : (
-          <EmptyState
-            title="Nenhuma filial encontrada"
-            description="O ranking sera exibido quando houver filiais ativas."
-            icon={Building2}
-          />
-        )}
-      </Surface>
+              </Flex>
+              <Progress
+                mt={2}
+                value={Math.min(goal.projection_percentage, 100)}
+                size="sm"
+                colorScheme={
+                  goal.projection_percentage >= 100 ? 'green' : 'blue'
+                }
+                borderRadius="full"
+              />
+              <Flex mt={2} justify="space-between" gap={4} wrap="wrap">
+                <Text fontSize="11px" color="erp.textSecondary">
+                  {formatPercent(goal.projection_percentage)} da meta projetada
+                </Text>
+                <Text fontSize="11px" color="erp.textSecondary">
+                  Faltam {formatCurrency(goal.remaining)}
+                </Text>
+              </Flex>
+              <Flex mt={4} gap={6} wrap="wrap">
+                <Text fontSize="11px" color="erp.textMuted">
+                  Media necessaria: {formatCurrency(goal.daily_required)}/dia
+                </Text>
+                <Text fontSize="11px" color="erp.textMuted">
+                  {goal.days_remaining} dias restantes
+                </Text>
+              </Flex>
+            </Box>
+            <Box borderLeft={{ xl: '1px solid' }} borderColor="erp.border">
+              <ComparisonRow
+                label="Vs mes anterior"
+                value={formatCurrency(goal.previous_month)}
+                indicator={kpis.revenue_change}
+              />
+              <ComparisonRow
+                label="Vs mesmo mes / ano passado"
+                value={formatCurrency(goal.same_month_last_year)}
+              />
+              <ComparisonRow
+                label="Ritmo esperado no mesmo ponto"
+                value={formatPercent(goal.expected_pace_percentage)}
+                indicator={goal.percentage - goal.expected_pace_percentage}
+              />
+            </Box>
+          </Grid>
+        </BrandSurface>
+      </Reveal>
 
-      <Grid
-        templateColumns={{
-          base: '1fr',
-          xl: 'minmax(0,1.55fr) minmax(300px,.45fr)',
-        }}
-        gap={5}
-        mb={5}
-      >
+      <Reveal index={2} mb={5}>
         <Surface overflow="hidden">
           <SectionHeader
-            icon={Activity}
-            eyebrow="Inteligencia comercial"
-            title="Evolucao das vendas"
-            description={`Periodo atual comparado aos ${periods[period].toLowerCase()} anteriores`}
+            icon={Trophy}
+            eyebrow="Desempenho da rede"
+            title="Ranking por venda"
+            description="Filiais ordenadas pelo valor vendido no mes."
           />
-          {evolution.length ? (
-            <Box h="390px" p={5}>
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart
-                  data={evolution}
-                  margin={{ top: 10, right: 12, left: 4, bottom: 0 }}
+          {visibleBranches.length ? (
+            <Box maxH="520px" overflowY="auto" px={{ base: 4, md: 5 }} py={2}>
+              {visibleBranches.map((branch, index) => (
+                <Grid
+                  key={branch.id}
+                  templateColumns={{
+                    base: '36px minmax(0,1fr)',
+                    md: '42px minmax(0,1fr) 150px 76px',
+                  }}
+                  gap={3}
+                  alignItems="center"
+                  py={2.5}
+                  pl={index < 3 ? 2 : 0}
+                  borderLeft={index < 3 ? '2px solid' : undefined}
+                  borderLeftColor={
+                    index === 0
+                      ? 'brand.500'
+                      : index === 1
+                        ? 'brand.300'
+                        : index === 2
+                          ? 'brand.200'
+                          : undefined
+                  }
+                  bg={index === 0 ? 'erp.brandSoft' : 'transparent'}
+                  borderRadius={index === 0 ? '8px' : 0}
                 >
-                  <CartesianGrid
-                    stroke="var(--chakra-colors-erp-border)"
-                    vertical={false}
-                  />
-                  <XAxis
-                    dataKey="date"
-                    tickFormatter={value => formatDate(String(value))}
-                    axisLine={false}
-                    tickLine={false}
-                    minTickGap={28}
-                    fontSize={11}
-                  />
-                  <YAxis
-                    tickFormatter={value =>
-                      formatCurrency(Number(value), { compact: true })
-                    }
-                    axisLine={false}
-                    tickLine={false}
-                    width={72}
-                    fontSize={11}
-                  />
-                  <ChartTooltip
-                    labelFormatter={value => formatDate(String(value))}
-                    formatter={value => formatCurrency(Number(value))}
-                  />
-                  <Legend wrapperStyle={{ fontSize: 11 }} />
-                  <Line
-                    type="monotone"
-                    dataKey="revenue"
-                    name="Periodo atual"
-                    stroke="#2F80FF"
-                    strokeWidth={2.5}
-                    dot={false}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="previous_revenue"
-                    name="Periodo anterior"
-                    stroke="#94A3B8"
-                    strokeWidth={2}
-                    strokeDasharray="5 5"
-                    dot={false}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
+                  <Text
+                    fontSize="13px"
+                    color={index < 3 ? 'erp.brandText' : 'erp.textSecondary'}
+                    fontWeight={index < 3 ? '700' : '500'}
+                  >
+                    #{index + 1}
+                  </Text>
+                  <Box minW={0}>
+                    <Text fontSize="13px" fontWeight="600" noOfLines={1}>
+                      {branch.name}
+                    </Text>
+                    <Progress
+                      mt={2}
+                      value={(branch.revenue / maxBranchRevenue) * 100}
+                      size="sm"
+                      colorScheme="blue"
+                      borderRadius="full"
+                    />
+                  </Box>
+                  <Box
+                    display={{ base: 'none', md: 'block' }}
+                    textAlign="right"
+                  >
+                    <Text fontSize="13px" fontWeight="700">
+                      {formatCurrency(branch.revenue)}
+                    </Text>
+                    <Text fontSize="10px" color="erp.textMuted">
+                      {branch.target
+                        ? `${formatPercent(branch.target_percentage)} da meta`
+                        : 'Meta nao configurada'}
+                    </Text>
+                  </Box>
+                  <Text
+                    display={{ base: 'none', md: 'block' }}
+                    textAlign="right"
+                    fontSize="11px"
+                    fontWeight="600"
+                    color={branch.growth >= 0 ? 'erp.success' : 'erp.danger'}
+                  >
+                    {formatDelta(branch.growth)}
+                  </Text>
+                  <Flex
+                    display={{ base: 'flex', md: 'none' }}
+                    gridColumn="2"
+                    justify="space-between"
+                    gap={3}
+                  >
+                    <Text fontSize="11px" fontWeight="600">
+                      {formatCurrency(branch.revenue)}
+                    </Text>
+                    <Text fontSize="10px" color="erp.textMuted">
+                      {branch.target
+                        ? formatPercent(branch.target_percentage)
+                        : 'Sem meta'}
+                    </Text>
+                  </Flex>
+                </Grid>
+              ))}
             </Box>
           ) : (
             <EmptyState
-              title="Sem vendas no periodo"
-              description="A evolucao aparecera quando houver movimentacao."
-              icon={TrendingUp}
+              title="Nenhuma filial encontrada"
+              description="O ranking sera exibido quando houver filiais ativas."
+              icon={Building2}
             />
           )}
         </Surface>
+      </Reveal>
 
+      <Reveal index={3}>
+        <Grid
+          templateColumns={{
+            base: '1fr',
+            xl: 'minmax(0,1.55fr) minmax(300px,.45fr)',
+          }}
+          gap={5}
+          mb={5}
+        >
+          <Surface overflow="hidden">
+            <SectionHeader
+              icon={Activity}
+              eyebrow="Inteligencia comercial"
+              title="Evolucao das vendas"
+              description={`Periodo atual comparado aos ${periods[period].toLowerCase()} anteriores`}
+            />
+            {evolution.length ? (
+              <Box h="390px" p={5}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <ComposedChart
+                    data={evolution}
+                    margin={{ top: 10, right: 12, left: 4, bottom: 0 }}
+                  >
+                    <ChartAreaGradient
+                      id="dashRevenue"
+                      color={chartColors.primary}
+                    />
+                    <CartesianGrid stroke={chartTheme.grid} vertical={false} />
+                    <XAxis
+                      dataKey="date"
+                      tickFormatter={value => formatDate(String(value))}
+                      axisLine={false}
+                      tickLine={false}
+                      minTickGap={28}
+                      tick={chartTheme.axisTick}
+                    />
+                    <YAxis
+                      tickFormatter={value =>
+                        formatCurrency(Number(value), { compact: true })
+                      }
+                      axisLine={false}
+                      tickLine={false}
+                      width={72}
+                      tick={chartTheme.axisTick}
+                    />
+                    <ChartTooltip
+                      cursor={{ stroke: chartColors.primary, strokeWidth: 1 }}
+                      content={
+                        <PremiumTooltip
+                          labelFormatter={value => formatDate(String(value))}
+                          valueFormatter={value => formatCurrency(value)}
+                        />
+                      }
+                    />
+                    <Legend wrapperStyle={{ fontSize: 11 }} />
+                    <Area
+                      type="monotone"
+                      dataKey="revenue"
+                      name="Periodo atual"
+                      stroke={chartColors.primary}
+                      strokeWidth={2.5}
+                      fill="url(#dashRevenue)"
+                      dot={false}
+                      activeDot={{ r: 4, strokeWidth: 0 }}
+                      {...chartAnimation}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="previous_revenue"
+                      name="Periodo anterior"
+                      stroke={chartColors.muted}
+                      strokeWidth={2}
+                      strokeDasharray="5 5"
+                      dot={false}
+                      {...chartAnimation}
+                    />
+                  </ComposedChart>
+                </ResponsiveContainer>
+              </Box>
+            ) : (
+              <EmptyState
+                title="Sem vendas no periodo"
+                description="A evolucao aparecera quando houver movimentacao."
+                icon={TrendingUp}
+              />
+            )}
+          </Surface>
+
+          <Surface overflow="hidden">
+            <SectionHeader
+              icon={AlertTriangle}
+              eyebrow="Monitoramento"
+              title="Alertas"
+              description="Pontos que exigem atencao"
+            />
+            {alerts.length ? (
+              <VStack align="stretch" spacing={0}>
+                {alerts.map((alert, index) => (
+                  <Flex
+                    key={`${alert.title}-${index}`}
+                    p={4}
+                    gap={3}
+                    borderBottom={
+                      index < alerts.length - 1 ? '1px solid' : undefined
+                    }
+                    borderColor="erp.border"
+                  >
+                    <Flex
+                      w="31px"
+                      h="31px"
+                      align="center"
+                      justify="center"
+                      borderRadius="8px"
+                      bg="erp.surfaceSubtle"
+                      color={`erp.${alert.type}`}
+                      flexShrink={0}
+                    >
+                      <AlertTriangle size={15} />
+                    </Flex>
+                    <Box>
+                      <Text fontSize="12px" fontWeight="600">
+                        {alert.title}
+                      </Text>
+                      <Text mt={0.5} fontSize="11px" color="erp.textSecondary">
+                        {alert.description}
+                      </Text>
+                      <Text mt={1} fontSize="10px" color="erp.textMuted">
+                        {formatDateTime(alert.occurred_at)}
+                      </Text>
+                    </Box>
+                  </Flex>
+                ))}
+              </VStack>
+            ) : (
+              <EmptyState
+                title="Operacao sob controle"
+                description="Nenhum alerta gerencial identificado."
+                icon={Target}
+              />
+            )}
+          </Surface>
+        </Grid>
+      </Reveal>
+
+      <Reveal index={4}>
         <Surface overflow="hidden">
           <SectionHeader
-            icon={AlertTriangle}
-            eyebrow="Monitoramento"
-            title="Alertas"
-            description="Pontos que exigem atencao"
+            icon={Clock3}
+            eyebrow="Tempo real"
+            title="Atividades recentes"
+            description="Movimentacoes em ordem cronologica"
           />
-          {alerts.length ? (
+          {activities.length ? (
             <VStack align="stretch" spacing={0}>
-              {alerts.map((alert, index) => (
-                <Flex
-                  key={`${alert.title}-${index}`}
-                  p={4}
-                  gap={3}
-                  borderBottom={
-                    index < alerts.length - 1 ? '1px solid' : undefined
-                  }
-                  borderColor="erp.border"
-                >
-                  <Flex
-                    w="31px"
-                    h="31px"
-                    align="center"
-                    justify="center"
-                    borderRadius="8px"
-                    bg="erp.surfaceSubtle"
-                    color={`erp.${alert.type}`}
-                    flexShrink={0}
+              {activities.map((activity, index) => {
+                const ActivityIcon = activityIcons[activity.type] || Building2;
+                return (
+                  <Grid
+                    key={`${activity.type}-${activity.occurred_at}-${index}`}
+                    templateColumns="36px minmax(0,1fr) auto"
+                    gap={3}
+                    alignItems="center"
+                    px={5}
+                    py={3.5}
+                    borderBottom={
+                      index < activities.length - 1 ? '1px solid' : undefined
+                    }
+                    borderColor="erp.border"
                   >
-                    <AlertTriangle size={15} />
-                  </Flex>
-                  <Box>
-                    <Text fontSize="12px" fontWeight="600">
-                      {alert.title}
-                    </Text>
-                    <Text mt={0.5} fontSize="11px" color="erp.textSecondary">
-                      {alert.description}
-                    </Text>
-                    <Text mt={1} fontSize="10px" color="erp.textMuted">
-                      {formatDateTime(alert.occurred_at)}
-                    </Text>
-                  </Box>
-                </Flex>
-              ))}
+                    <Flex
+                      w="32px"
+                      h="32px"
+                      align="center"
+                      justify="center"
+                      borderRadius="8px"
+                      bg="erp.surfaceSubtle"
+                      color="brand.500"
+                    >
+                      <ActivityIcon size={16} />
+                    </Flex>
+                    <Box minW={0}>
+                      <Text fontSize="12px" fontWeight="600">
+                        {activity.title}
+                      </Text>
+                      <Text fontSize="10px" color="erp.textMuted" noOfLines={1}>
+                        {[activity.branch, formatDateTime(activity.occurred_at)]
+                          .filter(Boolean)
+                          .join(' - ')}
+                      </Text>
+                    </Box>
+                    {activity.value !== null &&
+                      activity.value !== undefined && (
+                        <Text fontSize="12px" fontWeight="700">
+                          {formatCurrency(activity.value)}
+                        </Text>
+                      )}
+                  </Grid>
+                );
+              })}
             </VStack>
           ) : (
             <EmptyState
-              title="Operacao sob controle"
-              description="Nenhum alerta gerencial identificado."
-              icon={Target}
+              title="Nenhuma atividade recente"
+              description="As movimentacoes relevantes aparecerao aqui."
+              icon={CircleDollarSign}
             />
           )}
         </Surface>
-      </Grid>
-
-      <Surface overflow="hidden">
-        <SectionHeader
-          icon={Clock3}
-          eyebrow="Tempo real"
-          title="Atividades recentes"
-          description="Movimentacoes em ordem cronologica"
-        />
-        {activities.length ? (
-          <VStack align="stretch" spacing={0}>
-            {activities.map((activity, index) => {
-              const ActivityIcon = activityIcons[activity.type] || Building2;
-              return (
-                <Grid
-                  key={`${activity.type}-${activity.occurred_at}-${index}`}
-                  templateColumns="36px minmax(0,1fr) auto"
-                  gap={3}
-                  alignItems="center"
-                  px={5}
-                  py={3.5}
-                  borderBottom={
-                    index < activities.length - 1 ? '1px solid' : undefined
-                  }
-                  borderColor="erp.border"
-                >
-                  <Flex
-                    w="32px"
-                    h="32px"
-                    align="center"
-                    justify="center"
-                    borderRadius="8px"
-                    bg="erp.surfaceSubtle"
-                    color="brand.500"
-                  >
-                    <ActivityIcon size={16} />
-                  </Flex>
-                  <Box minW={0}>
-                    <Text fontSize="12px" fontWeight="600">
-                      {activity.title}
-                    </Text>
-                    <Text fontSize="10px" color="erp.textMuted" noOfLines={1}>
-                      {[activity.branch, formatDateTime(activity.occurred_at)]
-                        .filter(Boolean)
-                        .join(' - ')}
-                    </Text>
-                  </Box>
-                  {activity.value !== null && activity.value !== undefined && (
-                    <Text fontSize="12px" fontWeight="700">
-                      {formatCurrency(activity.value)}
-                    </Text>
-                  )}
-                </Grid>
-              );
-            })}
-          </VStack>
-        ) : (
-          <EmptyState
-            title="Nenhuma atividade recente"
-            description="As movimentacoes relevantes aparecerao aqui."
-            icon={CircleDollarSign}
-          />
-        )}
-      </Surface>
+      </Reveal>
     </Box>
   );
 }

@@ -10,18 +10,24 @@ import {
   Skeleton,
   SkeletonText,
   Text,
+  useColorModeValue,
   type BoxProps,
 } from '@chakra-ui/react';
 import {
   AlertCircle,
   ChevronRight,
   Inbox,
+  Minus,
   Plus,
   RefreshCw,
+  TrendingDown,
+  TrendingUp,
   type LucideIcon,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
+import { formatDelta } from '../utils/formatters';
+import { CountUp, Reveal } from './motion';
 
 export function PageHeader({
   title,
@@ -153,8 +159,8 @@ export function BrandSurface({
       bg="erp.surface"
       border="1px solid"
       borderColor="erp.brandBorder"
-      borderRadius="12px"
-      boxShadow="0 8px 24px rgba(37,99,255,.08)"
+      borderRadius="14px"
+      boxShadow="0 10px 30px rgba(37,99,255,.10)"
       overflow="hidden"
       _before={{
         content: '""',
@@ -163,11 +169,203 @@ export function BrandSurface({
         top: 0,
         h: '3px',
         bg: 'linear-gradient(90deg, #2F80FF 0%, #2563FF 55%, #4F46E5 100%)',
+        zIndex: 1,
+      }}
+      _after={{
+        content: '""',
+        position: 'absolute',
+        top: '-40%',
+        right: '-10%',
+        w: '55%',
+        h: '150%',
+        bg: 'radial-gradient(circle, rgba(47,128,255,.10) 0%, rgba(47,128,255,0) 70%)',
+        pointerEvents: 'none',
       }}
       {...props}
     >
       {children}
     </Box>
+  );
+}
+
+const kpiTones = {
+  brand: {
+    chip: 'linear-gradient(135deg, #2F80FF 0%, #4F46E5 100%)',
+    glow: 'rgba(47,128,255,.20)',
+  },
+  success: {
+    chip: 'linear-gradient(135deg, #22C55E 0%, #15803D 100%)',
+    glow: 'rgba(34,197,94,.20)',
+  },
+  warning: {
+    chip: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
+    glow: 'rgba(245,158,11,.20)',
+  },
+  danger: {
+    chip: 'linear-gradient(135deg, #FB7185 0%, #E11D48 100%)',
+    glow: 'rgba(251,113,133,.20)',
+  },
+  info: {
+    chip: 'linear-gradient(135deg, #38BDF8 0%, #0EA5E9 100%)',
+    glow: 'rgba(56,189,248,.20)',
+  },
+  neutral: {
+    chip: 'linear-gradient(135deg, #94A3B8 0%, #64748B 100%)',
+    glow: 'rgba(148,163,184,.18)',
+  },
+} as const;
+
+export type KpiTone = keyof typeof kpiTones;
+
+/**
+ * Cartao de indicador premium: chip de icone com gradiente, valor tabular
+ * com contagem animada, brilho sutil e chip de tendencia opcional.
+ * Passe `count` (numero) + `format` para animar, ou `value` ja formatado.
+ */
+export function KpiCard({
+  label,
+  value,
+  count,
+  format,
+  icon,
+  tone = 'brand',
+  detail,
+  delta,
+  index = 0,
+  onClick,
+}: {
+  label: string;
+  value?: ReactNode;
+  count?: number;
+  format?: (value: number) => string;
+  icon: LucideIcon;
+  tone?: KpiTone;
+  detail?: string;
+  delta?: number;
+  index?: number;
+  onClick?: () => void;
+}) {
+  const palette = kpiTones[tone];
+  const deltaPositive = (delta ?? 0) >= 0;
+  const deltaZero = delta === 0;
+  const deltaColor = deltaZero
+    ? 'erp.textMuted'
+    : deltaPositive
+      ? 'erp.success'
+      : 'erp.danger';
+  const deltaBg = useColorModeValue(
+    deltaZero ? '#F1F5F9' : deltaPositive ? '#E9F9F0' : '#FEECEF',
+    'rgba(255,255,255,.05)'
+  );
+  const DeltaIcon = deltaZero
+    ? Minus
+    : deltaPositive
+      ? TrendingUp
+      : TrendingDown;
+
+  return (
+    <Reveal index={index} h="full">
+      <Box
+        position="relative"
+        h="full"
+        minH="120px"
+        p={4}
+        bg="erp.surface"
+        border="1px solid"
+        borderColor="erp.border"
+        borderRadius="14px"
+        boxShadow="0 1px 2px rgba(15,23,42,.04)"
+        overflow="hidden"
+        cursor={onClick ? 'pointer' : 'default'}
+        transition="border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease"
+        _hover={{
+          borderColor: 'erp.borderStrong',
+          boxShadow: '0 12px 28px rgba(15,23,42,.10)',
+          transform: 'translateY(-2px)',
+        }}
+        onClick={onClick}
+        _before={{
+          content: '""',
+          position: 'absolute',
+          top: '-60%',
+          right: '-20%',
+          w: '70%',
+          h: '180%',
+          bg: `radial-gradient(circle, ${palette.glow} 0%, rgba(0,0,0,0) 70%)`,
+          pointerEvents: 'none',
+        }}
+      >
+        <Flex justify="space-between" align="start" gap={3} position="relative">
+          <Box minW={0}>
+            <Text
+              fontSize="10px"
+              fontWeight="600"
+              color="erp.textMuted"
+              textTransform="uppercase"
+              letterSpacing=".04em"
+              noOfLines={1}
+            >
+              {label}
+            </Text>
+            <Text
+              mt={2}
+              fontSize="26px"
+              lineHeight="1.1"
+              fontWeight="800"
+              color="erp.text"
+              noOfLines={1}
+              sx={{ fontVariantNumeric: 'tabular-nums' }}
+            >
+              {count !== undefined ? (
+                <CountUp value={count} format={format} />
+              ) : (
+                value
+              )}
+            </Text>
+          </Box>
+          <Flex
+            w="40px"
+            h="40px"
+            flexShrink={0}
+            align="center"
+            justify="center"
+            borderRadius="11px"
+            bg={palette.chip}
+            color="white"
+            boxShadow="0 6px 16px rgba(15,23,42,.16)"
+          >
+            <Icon as={icon} boxSize="19px" />
+          </Flex>
+        </Flex>
+        <Flex mt={3} align="center" gap={2} position="relative" minH="20px">
+          {delta !== undefined && (
+            <Flex
+              align="center"
+              gap={1}
+              px={1.5}
+              py={0.5}
+              borderRadius="full"
+              bg={deltaBg}
+              color={deltaColor}
+            >
+              <Icon as={DeltaIcon} boxSize="11px" />
+              <Text
+                fontSize="10px"
+                fontWeight="700"
+                sx={{ fontVariantNumeric: 'tabular-nums' }}
+              >
+                {formatDelta(delta)}
+              </Text>
+            </Flex>
+          )}
+          {detail && (
+            <Text fontSize="10px" color="erp.textSecondary" noOfLines={1}>
+              {detail}
+            </Text>
+          )}
+        </Flex>
+      </Box>
+    </Reveal>
   );
 }
 

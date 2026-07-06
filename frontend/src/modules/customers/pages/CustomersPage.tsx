@@ -95,6 +95,7 @@ import {
   BrandSurface,
   EmptyState,
   ErrorState,
+  KpiCard,
   PageHeader,
   Surface,
 } from '../../../shared/ui/ErpUI';
@@ -148,48 +149,6 @@ const defaults: CustomerForm = {
   permite_venda_prazo: false,
   observacao: '',
 };
-
-function Kpi({
-  label,
-  value,
-  detail,
-  icon,
-}: {
-  label: string;
-  value: string;
-  detail: string;
-  icon: typeof Users;
-}) {
-  return (
-    <Surface p={4} minH="112px">
-      <Flex justify="space-between" gap={3}>
-        <Box minW={0}>
-          <Text fontSize="10px" color="erp.textMuted" textTransform="uppercase">
-            {label}
-          </Text>
-          <Text mt={1} fontSize="23px" fontWeight="700" noOfLines={1}>
-            {value}
-          </Text>
-          <Text mt={1} fontSize="10px" color="erp.textSecondary">
-            {detail}
-          </Text>
-        </Box>
-        <Flex
-          w="34px"
-          h="34px"
-          flexShrink={0}
-          align="center"
-          justify="center"
-          borderRadius="8px"
-          color="erp.brandText"
-          bg="erp.brandSoft"
-        >
-          <Icon as={icon} boxSize="16px" />
-        </Flex>
-      </Flex>
-    </Surface>
-  );
-}
 
 function CustomerBadges({ customer }: { customer: Customer }) {
   const isNew =
@@ -398,39 +357,57 @@ export default function CustomersPage() {
       />
 
       <SimpleGrid columns={{ base: 1, sm: 2, xl: 6 }} spacing={3} mb={5}>
-        <Kpi
+        <KpiCard
+          index={0}
+          tone="brand"
           label="Total de clientes"
-          value={formatNumber(data?.metrics.total)}
+          count={Number(data?.metrics.total)}
+          format={formatNumber}
           detail="Base cadastrada"
           icon={Users}
         />
-        <Kpi
+        <KpiCard
+          index={1}
+          tone="success"
           label="Clientes ativos"
-          value={formatNumber(data?.metrics.active)}
+          count={Number(data?.metrics.active)}
+          format={formatNumber}
           detail="Relacionamento ativo"
           icon={UserCheck}
         />
-        <Kpi
+        <KpiCard
+          index={2}
+          tone="neutral"
           label="Clientes inativos"
-          value={formatNumber(data?.metrics.inactive)}
+          count={Number(data?.metrics.inactive)}
+          format={formatNumber}
           detail="Sem operacao"
           icon={UserRoundX}
         />
-        <Kpi
+        <KpiCard
+          index={3}
+          tone="info"
           label="Receita gerada"
-          value={formatCurrency(data?.metrics.revenue, { compact: true })}
+          count={Number(data?.metrics.revenue)}
+          format={value => formatCurrency(value, { compact: true })}
           detail="Historico de vendas"
           icon={CircleDollarSign}
         />
-        <Kpi
+        <KpiCard
+          index={4}
+          tone="brand"
           label="Com compras"
-          value={formatNumber(data?.metrics.buyers)}
+          count={Number(data?.metrics.buyers)}
+          format={formatNumber}
           detail="Clientes convertidos"
           icon={ReceiptText}
         />
-        <Kpi
+        <KpiCard
+          index={5}
+          tone="warning"
           label="Inadimplentes"
-          value={formatNumber(data?.metrics.delinquent)}
+          count={Number(data?.metrics.delinquent)}
+          format={formatNumber}
           detail="Precisam de atencao"
           icon={AlertTriangle}
         />
