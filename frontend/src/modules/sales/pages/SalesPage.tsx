@@ -1,0 +1,975 @@
+import {
+  Badge,
+  Box,
+  Button,
+  Drawer,
+  DrawerBody,
+  DrawerCloseButton,
+  DrawerContent,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerOverlay,
+  Flex,
+  FormControl,
+  FormLabel,
+  Grid,
+  Icon,
+  IconButton,
+  Input,
+  InputGroup,
+  InputLeftElement,
+  Menu,
+  MenuButton,
+  MenuDivider,
+  MenuItem,
+  MenuList,
+  NumberDecrementStepper,
+  NumberIncrementStepper,
+  NumberInput,
+  NumberInputField,
+  NumberInputStepper,
+  Select,
+  SimpleGrid,
+  Table,
+  Tbody,
+  Td,
+  Text,
+  Th,
+  Thead,
+  Tooltip,
+  Tr,
+  VStack,
+  useDisclosure,
+  useToast,
+} from '@chakra-ui/react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  Ban,
+  CircleDollarSign,
+  Eye,
+  MoreHorizontal,
+  Package,
+  Plus,
+  Receipt,
+  Search,
+  ShoppingCart,
+  Ticket,
+  Trash2,
+  TrendingUp,
+  XCircle,
+} from 'lucide-react';
+import { useMemo, useState } from 'react';
+import {
+  BrandSurface,
+  EmptyState,
+  ErrorState,
+  KpiCard,
+  PageHeader,
+  SectionHeader,
+  Surface,
+} from '../../../shared/ui/ErpUI';
+import {
+  DateRangeField,
+  type DateRange,
+} from '../../../shared/ui/DateRangeField';
+import { CurrencyInput } from '../../../shared/ui/FormattedInput';
+import {
+  formatCurrency,
+  formatDate,
+  formatDateTime,
+  formatNumber,
+  isoDaysAgo,
+  isoToday,
+} from '../../../shared/utils/formatters';
+import { saleService } from '../services/saleService';
+import {
+  SALE_STATUS,
+  type ProductOption,
+  type SaleDetail,
+  type SaleListData,
+  type SaleRow,
+} from '../types/saleTypes';
+
+type CartLine = {
+  idproduto: number;
+  nome: string;
+  unidade: string;
+  estoque: number;
+  quantidade: number;
+  valor_unitario: number;
+};
+
+function StatusBadge({ status }: { status: number }) {
+  const meta = SALE_STATUS[status] ?? { label: 'Outro', scheme: 'gray' };
+  return (
+    <Badge colorScheme={meta.scheme} textTransform="none">
+      {meta.label}
+    </Badge>
+  );
+}
+
+export default function SalesPage() {
+  const toast = useToast();
+  const client = useQueryClient();
+  const detailDrawer = useDisclosure();
+  const saleDrawer = useDisclosure();
+  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [range, setRange] = useState<DateRange>({
+    start: isoDaysAgo(30),
+    end: isoToday(),
+  });
+  const [filters, setFilters] = useState({ q: '', branch: '', status: '' });
+
+  const [branchId, setBranchId] = useState('');
+  const [customerId, setCustomerId] = useState('');
+  const [discount, setDiscount] = useState(0);
+  const [productSearch, setProductSearch] = useState('');
+  const [cart, setCart] = useState<CartLine[]>([]);
+
+  const list = useQuery({
+    queryKey: ['sales', range, filters],
+    queryFn: () =>
+      saleService.list({ ...filters, start: range.start, end: range.end }),
+  });
+  const detail = useQuery({
+    queryKey: ['sale', selectedId],
+    queryFn: () => saleService.detail(selectedId as number),
+    enabled: selectedId !== null && detailDrawer.isOpen,
+  });
+  const data: SaleListData | undefined = list.data;
+  const options = data?.options;
+
+  const notifyError = (error: unknown) =>
+    toast({
+      title: 'Nao foi possivel concluir a acao',
+      description: error instanceof Error ? error.message : 'Tente novamente.',
+      status: 'error',
+      position: 'top-right',
+    });
+  const refresh = async () => {
+    await client.invalidateQueries({ queryKey: ['sales'] });
+    if (selectedId)
+      await client.invalidateQueries({ queryKey: ['sale', selectedId] });
+  };
+
+  const subtotal = cart.reduce(
+    (sum, line) => sum + line.quantidade * line.valor_unitario,
+    0
+  );
+  const total = Math.max(0, subtotal - discount);
+
+  const create = useMutation({
+    mutationFn: () =>
+      saleService.create({
+        idfilial: Number(branchId),
+        idcliente: customerId ? Number(customerId) : null,
+        valor_desconto: discount,
+        items: cart.map(line => ({
+          idproduto: line.idproduto,
+          quantidade: line.quantidade,
+          valor_unitario: line.valor_unitario,
+        })),
+      }),
+    onSuccess: async () => {
+      await refresh();
+      saleDrawer.onClose();
+      resetSale();
+      toast({ title: 'Venda registrada com sucesso', status: 'success' });
+    },
+    onError: notifyError,
+  });
+  const cancel = useMutation({
+    mutationFn: (id: number) => saleService.setStatus(id, 4),
+    onSuccess: async () => {
+      await refresh();
+      toast({ title: 'Venda cancelada', status: 'success' });
+    },
+    onError: notifyError,
+  });
+
+  const resetSale = () => {
+    setCart([]);
+    setDiscount(0);
+    setCustomerId('');
+    setProductSearch('');
+  };
+  const openSale = () => {
+    resetSale();
+    setBranchId(String(options?.branches[0]?.id ?? ''));
+    saleDrawer.onOpen();
+  };
+  const openDetail = (sale: SaleRow) => {
+    setSelectedId(sale.idvenda);
+    detailDrawer.onOpen();
+  };
+  const addProduct = (product: ProductOption) => {
+    setCart(current => {
+      const existing = current.find(line => line.idproduto === product.id);
+      if (existing) {
+        return current.map(line =>
+          line.idproduto === product.id
+            ? { ...line, quantidade: line.quantidade + 1 }
+            : line
+        );
+      }
+      return [
+        ...current,
+        {
+          idproduto: product.id,
+          nome: product.nome,
+          unidade: product.unidade,
+          estoque: product.estoque,
+          quantidade: 1,
+          valor_unitario: product.preco_venda,
+        },
+      ];
+    });
+    setProductSearch('');
+  };
+  const updateLine = (idproduto: number, patch: Partial<CartLine>) =>
+    setCart(current =>
+      current.map(line =>
+        line.idproduto === idproduto ? { ...line, ...patch } : line
+      )
+    );
+  const removeLine = (idproduto: number) =>
+    setCart(current => current.filter(line => line.idproduto !== idproduto));
+
+  const productResults = useMemo(() => {
+    const query = productSearch.trim().toLowerCase();
+    if (!query) return [];
+    return (options?.products ?? [])
+      .filter(product =>
+        `${product.nome} ${product.sku ?? ''} ${product.codigo_barras ?? ''}`
+          .toLowerCase()
+          .includes(query)
+      )
+      .slice(0, 8);
+  }, [options?.products, productSearch]);
+
+  return (
+    <Box>
+      <PageHeader
+        icon={ShoppingCart}
+        title="Vendas"
+        description="Registre vendas, acompanhe o faturamento e gerencie o historico comercial."
+        breadcrumbs={[{ label: 'Operacao' }, { label: 'Vendas' }]}
+        actions={
+          <Button leftIcon={<Plus size={16} />} onClick={openSale}>
+            Nova venda
+          </Button>
+        }
+      />
+
+      <SimpleGrid columns={{ base: 1, sm: 2, xl: 6 }} spacing={3} mb={5}>
+        <KpiCard
+          index={0}
+          tone="brand"
+          label="Vendas"
+          count={Number(data?.metrics.sales)}
+          format={formatNumber}
+          detail="Concluidas no periodo"
+          icon={ShoppingCart}
+        />
+        <KpiCard
+          index={1}
+          tone="success"
+          label="Faturamento"
+          count={Number(data?.metrics.revenue)}
+          format={value => formatCurrency(value, { compact: true })}
+          detail="Receita das vendas"
+          icon={CircleDollarSign}
+        />
+        <KpiCard
+          index={2}
+          tone="info"
+          label="Ticket medio"
+          count={Number(data?.metrics.average_ticket)}
+          format={formatCurrency}
+          detail="Por venda"
+          icon={Ticket}
+        />
+        <KpiCard
+          index={3}
+          tone="brand"
+          label="Itens vendidos"
+          count={Number(data?.metrics.items_sold)}
+          format={formatNumber}
+          detail="Unidades no periodo"
+          icon={Package}
+        />
+        <KpiCard
+          index={4}
+          tone="neutral"
+          label="Descontos"
+          count={Number(data?.metrics.discount)}
+          format={value => formatCurrency(value, { compact: true })}
+          detail="Concedidos no periodo"
+          icon={TrendingUp}
+        />
+        <KpiCard
+          index={5}
+          tone="danger"
+          label="Canceladas"
+          count={Number(data?.metrics.cancelled)}
+          format={formatNumber}
+          detail="No periodo"
+          icon={XCircle}
+        />
+      </SimpleGrid>
+
+      <BrandSurface mb={4} p={4}>
+        <Grid
+          templateColumns={{
+            base: '1fr',
+            xl: 'minmax(240px,1fr) minmax(300px,auto) minmax(150px,.5fr) minmax(150px,.5fr) auto',
+          }}
+          gap={3}
+          alignItems="center"
+        >
+          <InputGroup>
+            <InputLeftElement pointerEvents="none">
+              <Search size={16} />
+            </InputLeftElement>
+            <Input
+              value={filters.q}
+              onChange={event =>
+                setFilters(v => ({ ...v, q: event.target.value }))
+              }
+              placeholder="Buscar por cliente ou numero da venda..."
+            />
+          </InputGroup>
+          <DateRangeField value={range} onChange={setRange} />
+          <Select
+            aria-label="Filial"
+            value={filters.branch}
+            onChange={event =>
+              setFilters(v => ({ ...v, branch: event.target.value }))
+            }
+          >
+            <option value="">Todas as filiais</option>
+            {options?.branches.map(branch => (
+              <option key={branch.id} value={branch.id}>
+                {branch.nome}
+              </option>
+            ))}
+          </Select>
+          <Select
+            aria-label="Situacao"
+            value={filters.status}
+            onChange={event =>
+              setFilters(v => ({ ...v, status: event.target.value }))
+            }
+          >
+            <option value="">Situacoes</option>
+            <option value="1">Concluidas</option>
+            <option value="4">Canceladas</option>
+          </Select>
+          <Button
+            variant="ghost"
+            onClick={() => setFilters({ q: '', branch: '', status: '' })}
+          >
+            Limpar
+          </Button>
+        </Grid>
+      </BrandSurface>
+
+      {list.isError ? (
+        <Surface>
+          <ErrorState retry={() => void list.refetch()} />
+        </Surface>
+      ) : list.isLoading ? (
+        <Surface p={6}>
+          <VStack spacing={4}>
+            {Array.from({ length: 6 }).map((_, index) => (
+              <Box
+                key={index}
+                h="52px"
+                w="full"
+                bg="erp.surfaceSubtle"
+                borderRadius="8px"
+              />
+            ))}
+          </VStack>
+        </Surface>
+      ) : data?.sales.length ? (
+        <Surface overflow="hidden">
+          <SectionHeader
+            icon={Receipt}
+            eyebrow="Historico comercial"
+            title="Vendas registradas"
+            description={`${formatNumber(data.sales.length)} ${
+              data.sales.length === 1 ? 'venda listada' : 'vendas listadas'
+            }`}
+          />
+          <Box overflowX="auto">
+            <Table variant="simple">
+              <Thead>
+                <Tr>
+                  <Th>Venda</Th>
+                  <Th>Cliente</Th>
+                  <Th>Filial</Th>
+                  <Th isNumeric>Itens</Th>
+                  <Th isNumeric>Desconto</Th>
+                  <Th isNumeric>Total</Th>
+                  <Th>Situacao</Th>
+                  <Th>Data</Th>
+                  <Th w="48px" />
+                </Tr>
+              </Thead>
+              <Tbody>
+                {data.sales.map(sale => (
+                  <Tr
+                    key={sale.idvenda}
+                    cursor="pointer"
+                    onClick={() => openDetail(sale)}
+                  >
+                    <Td fontWeight="700">#{sale.idvenda}</Td>
+                    <Td>{sale.cliente}</Td>
+                    <Td>{sale.filial}</Td>
+                    <Td isNumeric>{formatNumber(sale.itens)}</Td>
+                    <Td isNumeric>{formatCurrency(sale.valor_desconto)}</Td>
+                    <Td isNumeric fontWeight="700">
+                      {formatCurrency(sale.valor_total)}
+                    </Td>
+                    <Td>
+                      <StatusBadge status={sale.situacao} />
+                    </Td>
+                    <Td whiteSpace="nowrap">
+                      {formatDateTime(sale.data_venda)}
+                    </Td>
+                    <Td onClick={event => event.stopPropagation()}>
+                      <Menu>
+                        <Tooltip label="Acoes">
+                          <MenuButton
+                            as={IconButton}
+                            aria-label="Acoes da venda"
+                            icon={<MoreHorizontal size={17} />}
+                            variant="ghost"
+                            size="sm"
+                          />
+                        </Tooltip>
+                        <MenuList>
+                          <MenuItem
+                            icon={<Eye size={15} />}
+                            onClick={() => openDetail(sale)}
+                          >
+                            Visualizar
+                          </MenuItem>
+                          {sale.situacao === 1 && (
+                            <>
+                              <MenuDivider />
+                              <MenuItem
+                                icon={<Ban size={15} />}
+                                color="erp.danger"
+                                onClick={() => cancel.mutate(sale.idvenda)}
+                              >
+                                Cancelar venda
+                              </MenuItem>
+                            </>
+                          )}
+                        </MenuList>
+                      </Menu>
+                    </Td>
+                  </Tr>
+                ))}
+              </Tbody>
+            </Table>
+          </Box>
+        </Surface>
+      ) : (
+        <Surface>
+          <EmptyState
+            title={
+              Object.values(filters).some(Boolean)
+                ? 'Nenhuma venda encontrada'
+                : 'Nenhuma venda registrada'
+            }
+            description="Ajuste os filtros ou registre a primeira venda da empresa."
+            icon={ShoppingCart}
+            action={openSale}
+            actionLabel="Nova venda"
+          />
+        </Surface>
+      )}
+
+      <SaleDetailDrawer
+        disclosure={detailDrawer}
+        detail={detail.data}
+        loading={detail.isLoading}
+        onCancel={id => cancel.mutate(id)}
+        cancelling={cancel.isPending}
+      />
+
+      <Drawer
+        isOpen={saleDrawer.isOpen}
+        placement="right"
+        size="xl"
+        onClose={saleDrawer.onClose}
+      >
+        <DrawerOverlay />
+        <DrawerContent>
+          <DrawerCloseButton />
+          <DrawerHeader>
+            Nova venda
+            <Text
+              mt={1}
+              fontSize="12px"
+              fontWeight="400"
+              color="erp.textSecondary"
+            >
+              Selecione a filial, o cliente e adicione os produtos.
+            </Text>
+          </DrawerHeader>
+          <DrawerBody>
+            <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
+              <FormControl isRequired>
+                <FormLabel>Filial</FormLabel>
+                <Select
+                  value={branchId}
+                  onChange={event => setBranchId(event.target.value)}
+                >
+                  <option value="">Selecione</option>
+                  {options?.branches.map(branch => (
+                    <option key={branch.id} value={branch.id}>
+                      {branch.nome}
+                    </option>
+                  ))}
+                </Select>
+              </FormControl>
+              <FormControl>
+                <FormLabel>Cliente</FormLabel>
+                <Select
+                  value={customerId}
+                  onChange={event => setCustomerId(event.target.value)}
+                >
+                  <option value="">Consumidor final</option>
+                  {options?.customers.map(customer => (
+                    <option key={customer.id} value={customer.id}>
+                      {customer.nome}
+                    </option>
+                  ))}
+                </Select>
+              </FormControl>
+            </SimpleGrid>
+
+            <Box mt={5} position="relative">
+              <FormLabel>Adicionar produtos</FormLabel>
+              <InputGroup>
+                <InputLeftElement pointerEvents="none">
+                  <Search size={16} />
+                </InputLeftElement>
+                <Input
+                  value={productSearch}
+                  onChange={event => setProductSearch(event.target.value)}
+                  placeholder="Buscar produto por nome, SKU ou codigo de barras..."
+                />
+              </InputGroup>
+              {productResults.length > 0 && (
+                <Surface
+                  position="absolute"
+                  zIndex={2}
+                  mt={1}
+                  w="full"
+                  maxH="260px"
+                  overflowY="auto"
+                  p={1}
+                >
+                  {productResults.map(product => (
+                    <Flex
+                      key={product.id}
+                      align="center"
+                      justify="space-between"
+                      px={3}
+                      py={2}
+                      borderRadius="8px"
+                      cursor="pointer"
+                      _hover={{ bg: 'erp.hover' }}
+                      onClick={() => addProduct(product)}
+                    >
+                      <Box minW={0}>
+                        <Text fontSize="13px" fontWeight="600" noOfLines={1}>
+                          {product.nome}
+                        </Text>
+                        <Text fontSize="10px" color="erp.textMuted">
+                          {product.sku || 'Sem SKU'} · Estoque{' '}
+                          {formatNumber(product.estoque)} {product.unidade}
+                        </Text>
+                      </Box>
+                      <Flex align="center" gap={3} flexShrink={0}>
+                        <Text fontSize="13px" fontWeight="700">
+                          {formatCurrency(product.preco_venda)}
+                        </Text>
+                        <Icon as={Plus} boxSize="15px" color="brand.500" />
+                      </Flex>
+                    </Flex>
+                  ))}
+                </Surface>
+              )}
+            </Box>
+
+            <Box mt={5}>
+              {cart.length ? (
+                <Box
+                  border="1px solid"
+                  borderColor="erp.border"
+                  borderRadius="10px"
+                  overflow="hidden"
+                >
+                  <Table size="sm" variant="simple">
+                    <Thead>
+                      <Tr>
+                        <Th>Produto</Th>
+                        <Th w="120px">Qtd</Th>
+                        <Th w="150px">Preco</Th>
+                        <Th isNumeric>Subtotal</Th>
+                        <Th w="44px" />
+                      </Tr>
+                    </Thead>
+                    <Tbody>
+                      {cart.map(line => (
+                        <Tr key={line.idproduto}>
+                          <Td>
+                            <Text
+                              fontSize="12px"
+                              fontWeight="600"
+                              noOfLines={1}
+                            >
+                              {line.nome}
+                            </Text>
+                            <Text fontSize="10px" color="erp.textMuted">
+                              Estoque {formatNumber(line.estoque)}{' '}
+                              {line.unidade}
+                            </Text>
+                          </Td>
+                          <Td>
+                            <NumberInput
+                              size="sm"
+                              min={0.001}
+                              value={line.quantidade}
+                              onChange={(_, value) =>
+                                updateLine(line.idproduto, {
+                                  quantidade: Number.isFinite(value)
+                                    ? value
+                                    : 0,
+                                })
+                              }
+                            >
+                              <NumberInputField />
+                              <NumberInputStepper>
+                                <NumberIncrementStepper />
+                                <NumberDecrementStepper />
+                              </NumberInputStepper>
+                            </NumberInput>
+                          </Td>
+                          <Td>
+                            <CurrencyInput
+                              size="sm"
+                              value={String(line.valor_unitario || '')}
+                              onValueChange={value =>
+                                updateLine(line.idproduto, {
+                                  valor_unitario: Number(value) || 0,
+                                })
+                              }
+                            />
+                          </Td>
+                          <Td isNumeric fontWeight="700">
+                            {formatCurrency(
+                              line.quantidade * line.valor_unitario
+                            )}
+                          </Td>
+                          <Td>
+                            <IconButton
+                              aria-label="Remover"
+                              icon={<Trash2 size={15} />}
+                              size="sm"
+                              variant="ghost"
+                              color="erp.danger"
+                              onClick={() => removeLine(line.idproduto)}
+                            />
+                          </Td>
+                        </Tr>
+                      ))}
+                    </Tbody>
+                  </Table>
+                </Box>
+              ) : (
+                <Flex
+                  align="center"
+                  justify="center"
+                  direction="column"
+                  gap={2}
+                  py={10}
+                  border="1px dashed"
+                  borderColor="erp.border"
+                  borderRadius="10px"
+                  color="erp.textMuted"
+                >
+                  <ShoppingCart size={22} />
+                  <Text fontSize="13px">
+                    Busque e adicione produtos a venda.
+                  </Text>
+                </Flex>
+              )}
+            </Box>
+          </DrawerBody>
+          <DrawerFooter borderTop="1px solid" borderColor="erp.border">
+            <Grid templateColumns="1fr auto" gap={4} w="full" alignItems="end">
+              <Box>
+                <Flex justify="space-between" fontSize="12px" mb={1}>
+                  <Text color="erp.textSecondary">Subtotal</Text>
+                  <Text fontWeight="600">{formatCurrency(subtotal)}</Text>
+                </Flex>
+                <Flex justify="space-between" align="center" gap={3} mb={1}>
+                  <Text fontSize="12px" color="erp.textSecondary">
+                    Desconto
+                  </Text>
+                  <Box w="130px">
+                    <CurrencyInput
+                      size="sm"
+                      value={String(discount || '')}
+                      onValueChange={value => setDiscount(Number(value) || 0)}
+                    />
+                  </Box>
+                </Flex>
+                <Flex justify="space-between" align="baseline">
+                  <Text fontSize="13px" fontWeight="700">
+                    Total
+                  </Text>
+                  <Text
+                    fontSize="20px"
+                    fontWeight="800"
+                    sx={{ fontVariantNumeric: 'tabular-nums' }}
+                  >
+                    {formatCurrency(total)}
+                  </Text>
+                </Flex>
+              </Box>
+              <Flex gap={2}>
+                <Button variant="ghost" onClick={saleDrawer.onClose}>
+                  Cancelar
+                </Button>
+                <Button
+                  leftIcon={<CircleDollarSign size={16} />}
+                  isDisabled={!branchId || cart.length === 0}
+                  isLoading={create.isPending}
+                  onClick={() => create.mutate()}
+                >
+                  Finalizar venda
+                </Button>
+              </Flex>
+            </Grid>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
+    </Box>
+  );
+}
+
+function DetailRow({
+  label,
+  value,
+}: {
+  label: string;
+  value?: string | number | null;
+}) {
+  return (
+    <Flex
+      py={2.5}
+      justify="space-between"
+      gap={4}
+      borderBottom="1px solid"
+      borderColor="erp.border"
+    >
+      <Text fontSize="12px" color="erp.textMuted">
+        {label}
+      </Text>
+      <Text fontSize="12px" fontWeight="600" textAlign="right">
+        {value ?? '-'}
+      </Text>
+    </Flex>
+  );
+}
+
+function SaleDetailDrawer({
+  disclosure,
+  detail,
+  loading,
+  onCancel,
+  cancelling,
+}: {
+  disclosure: ReturnType<typeof useDisclosure>;
+  detail?: SaleDetail;
+  loading: boolean;
+  onCancel: (id: number) => void;
+  cancelling: boolean;
+}) {
+  return (
+    <Drawer
+      isOpen={disclosure.isOpen}
+      placement="right"
+      size="lg"
+      onClose={disclosure.onClose}
+    >
+      <DrawerOverlay />
+      <DrawerContent>
+        <DrawerCloseButton />
+        <DrawerHeader>
+          {detail ? `Venda #${detail.idvenda}` : 'Detalhes da venda'}
+          {detail && (
+            <Flex align="center" gap={2} mt={1}>
+              <StatusBadge status={detail.situacao} />
+              <Text fontSize="12px" color="erp.textSecondary">
+                {formatDateTime(detail.data_venda)}
+              </Text>
+            </Flex>
+          )}
+        </DrawerHeader>
+        <DrawerBody>
+          {loading || !detail ? (
+            <VStack spacing={4}>
+              {Array.from({ length: 6 }).map((_, index) => (
+                <Box
+                  key={index}
+                  h="48px"
+                  w="full"
+                  bg="erp.surfaceSubtle"
+                  borderRadius="8px"
+                />
+              ))}
+            </VStack>
+          ) : (
+            <>
+              <DetailRow label="Cliente" value={detail.cliente} />
+              <DetailRow label="Filial" value={detail.filial} />
+              <DetailRow label="Operador" value={detail.usuario} />
+              <DetailRow
+                label="Itens"
+                value={`${formatNumber(detail.items.length)} (${formatNumber(detail.quantidade)} un)`}
+              />
+              <Box
+                mt={5}
+                border="1px solid"
+                borderColor="erp.border"
+                borderRadius="10px"
+                overflow="hidden"
+              >
+                <Table size="sm" variant="simple">
+                  <Thead>
+                    <Tr>
+                      <Th>Produto</Th>
+                      <Th isNumeric>Qtd</Th>
+                      <Th isNumeric>Preco</Th>
+                      <Th isNumeric>Total</Th>
+                    </Tr>
+                  </Thead>
+                  <Tbody>
+                    {detail.items.map(item => (
+                      <Tr key={item.idvenda_item}>
+                        <Td>
+                          <Text fontSize="12px" fontWeight="600">
+                            {item.produto}
+                          </Text>
+                          <Text fontSize="10px" color="erp.textMuted">
+                            {item.sku || 'Sem SKU'}
+                          </Text>
+                        </Td>
+                        <Td isNumeric>
+                          {formatNumber(item.quantidade)} {item.unidade}
+                        </Td>
+                        <Td isNumeric>{formatCurrency(item.valor_unitario)}</Td>
+                        <Td isNumeric fontWeight="700">
+                          {formatCurrency(item.valor_total)}
+                        </Td>
+                      </Tr>
+                    ))}
+                  </Tbody>
+                </Table>
+              </Box>
+              <VStack align="stretch" spacing={0} mt={4}>
+                <Flex justify="space-between" py={1}>
+                  <Text fontSize="12px" color="erp.textSecondary">
+                    Subtotal
+                  </Text>
+                  <Text fontSize="12px" fontWeight="600">
+                    {formatCurrency(detail.valor_bruto)}
+                  </Text>
+                </Flex>
+                <Flex justify="space-between" py={1}>
+                  <Text fontSize="12px" color="erp.textSecondary">
+                    Desconto
+                  </Text>
+                  <Text fontSize="12px" fontWeight="600">
+                    {formatCurrency(detail.valor_desconto)}
+                  </Text>
+                </Flex>
+                <Flex
+                  justify="space-between"
+                  align="baseline"
+                  pt={2}
+                  mt={1}
+                  borderTop="1px solid"
+                  borderColor="erp.border"
+                >
+                  <Text fontSize="14px" fontWeight="700">
+                    Total
+                  </Text>
+                  <Text
+                    fontSize="20px"
+                    fontWeight="800"
+                    sx={{ fontVariantNumeric: 'tabular-nums' }}
+                  >
+                    {formatCurrency(detail.valor_total)}
+                  </Text>
+                </Flex>
+              </VStack>
+              {detail.history.length > 0 && (
+                <Box mt={6}>
+                  <Text
+                    fontSize="10px"
+                    fontWeight="700"
+                    color="erp.textMuted"
+                    textTransform="uppercase"
+                    mb={2}
+                  >
+                    Historico
+                  </Text>
+                  {detail.history.map(item => (
+                    <Flex key={item.idauditoria} justify="space-between" py={1}>
+                      <Text
+                        fontSize="11px"
+                        textTransform="capitalize"
+                        color="erp.textSecondary"
+                      >
+                        {item.acao.replaceAll('_', ' ')} · {item.usuario}
+                      </Text>
+                      <Text fontSize="11px" color="erp.textMuted">
+                        {formatDate(item.criado_em)}
+                      </Text>
+                    </Flex>
+                  ))}
+                </Box>
+              )}
+            </>
+          )}
+        </DrawerBody>
+        <DrawerFooter borderTop="1px solid" borderColor="erp.border" gap={3}>
+          {detail?.situacao === 1 && (
+            <Button
+              variant="outline"
+              colorScheme="red"
+              leftIcon={<Ban size={15} />}
+              isLoading={cancelling}
+              onClick={() => onCancel(detail.idvenda)}
+            >
+              Cancelar venda
+            </Button>
+          )}
+          <Button variant="ghost" onClick={disclosure.onClose}>
+            Fechar
+          </Button>
+        </DrawerFooter>
+      </DrawerContent>
+    </Drawer>
+  );
+}
