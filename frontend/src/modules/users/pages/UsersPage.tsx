@@ -87,9 +87,11 @@ import {
   BrandSurface,
   EmptyState,
   ErrorState,
+  KpiCard,
   PageHeader,
   Surface,
 } from '../../../shared/ui/ErpUI';
+import { DateRangeField } from '../../../shared/ui/DateRangeField';
 import FormattedInput from '../../../shared/ui/FormattedInput';
 import {
   formatDate,
@@ -137,49 +139,6 @@ const defaultForm: UserFormData = {
   force_password_change: true,
   two_factor_enabled: false,
 };
-
-function Kpi({
-  label,
-  value,
-  detail,
-  icon,
-}: {
-  label: string;
-  value: string | number;
-  detail: string;
-  icon: typeof Users;
-}) {
-  return (
-    <Surface p={4} minH="112px">
-      <Flex justify="space-between" align="start">
-        <Box>
-          <Text fontSize="11px" color="erp.textMuted" textTransform="uppercase">
-            {label}
-          </Text>
-          <Text mt={1} fontSize="25px" fontWeight="700">
-            {value}
-          </Text>
-          <Text mt={1} fontSize="10px" color="erp.textSecondary">
-            {detail}
-          </Text>
-        </Box>
-        <Flex
-          w="34px"
-          h="34px"
-          align="center"
-          justify="center"
-          borderRadius="9px"
-          color="erp.brandText"
-          bg="erp.brandSoft"
-          border="1px solid"
-          borderColor="erp.brandBorder"
-        >
-          <Icon as={icon} boxSize="16px" />
-        </Flex>
-      </Flex>
-    </Surface>
-  );
-}
 
 function StatusBadge({ status }: { status: number }) {
   return (
@@ -233,7 +192,8 @@ export default function UsersPage() {
     role: '',
     profile: '',
     status: '',
-    last_access: '',
+    last_access_start: '',
+    last_access_end: '',
   });
   const form = useForm<UserFormData>({
     resolver: zodResolver(userSchema) as Resolver<UserFormData>,
@@ -403,7 +363,8 @@ export default function UsersPage() {
       role: '',
       profile: '',
       status: '',
-      last_access: '',
+      last_access_start: '',
+      last_access_end: '',
     });
 
   const canAdvance = () => {
@@ -431,33 +392,48 @@ export default function UsersPage() {
       />
 
       <SimpleGrid columns={{ base: 1, sm: 2, xl: 5 }} spacing={3} mb={5}>
-        <Kpi
+        <KpiCard
+          index={0}
+          tone="brand"
           label="Usuarios"
-          value={formatNumber(data?.metrics.total)}
+          count={Number(data?.metrics.total)}
+          format={formatNumber}
           detail="Acessos cadastrados"
           icon={Users}
         />
-        <Kpi
+        <KpiCard
+          index={1}
+          tone="success"
           label="Ativos"
-          value={formatNumber(data?.metrics.active)}
+          count={Number(data?.metrics.active)}
+          format={formatNumber}
           detail="Acesso liberado"
           icon={UserCheck}
         />
-        <Kpi
+        <KpiCard
+          index={2}
+          tone="neutral"
           label="Inativos"
-          value={formatNumber(data?.metrics.inactive)}
+          count={Number(data?.metrics.inactive)}
+          format={formatNumber}
           detail="Sem acesso"
           icon={UserRoundX}
         />
-        <Kpi
+        <KpiCard
+          index={3}
+          tone="info"
           label="Administradores"
-          value={formatNumber(data?.metrics.admins)}
+          count={Number(data?.metrics.admins)}
+          format={formatNumber}
           detail="Acesso administrativo"
           icon={ShieldCheck}
         />
-        <Kpi
+        <KpiCard
+          index={4}
+          tone="brand"
           label="Filiais"
-          value={formatNumber(data?.metrics.branches)}
+          count={Number(data?.metrics.branches)}
+          format={formatNumber}
           detail="Com usuarios vinculados"
           icon={Building2}
         />
@@ -467,7 +443,7 @@ export default function UsersPage() {
         <Grid
           templateColumns={{
             base: '1fr',
-            xl: 'minmax(260px,1fr) repeat(6,minmax(120px,.42fr)) auto',
+            xl: 'minmax(220px,1fr) repeat(5,minmax(110px,.4fr)) minmax(300px,1fr) auto',
           }}
           gap={3}
           alignItems="center"
@@ -551,18 +527,20 @@ export default function UsersPage() {
             <option value="1">Ativos</option>
             <option value="0">Bloqueados</option>
           </Select>
-          <Select
-            aria-label="Ultimo acesso"
-            value={filters.last_access}
-            onChange={event =>
-              setFilters(v => ({ ...v, last_access: event.target.value }))
+          <DateRangeField
+            size="sm"
+            value={{
+              start: filters.last_access_start,
+              end: filters.last_access_end,
+            }}
+            onChange={next =>
+              setFilters(v => ({
+                ...v,
+                last_access_start: next.start,
+                last_access_end: next.end,
+              }))
             }
-          >
-            <option value="">Ultimo acesso</option>
-            <option value="7d">Ultimos 7 dias</option>
-            <option value="30d">Ultimos 30 dias</option>
-            <option value="never">Nunca acessou</option>
-          </Select>
+          />
           <Button variant="ghost" onClick={clearFilters}>
             Limpar
           </Button>

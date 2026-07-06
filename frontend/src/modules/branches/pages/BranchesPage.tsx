@@ -75,6 +75,7 @@ import {
   BrandSurface,
   EmptyState,
   ErrorState,
+  KpiCard,
   PageHeader,
   Surface,
 } from '../../../shared/ui/ErpUI';
@@ -134,48 +135,6 @@ const defaults: BranchForm = {
   meta_ticket: undefined,
   meta_clientes: undefined,
 };
-
-function Kpi({
-  label,
-  value,
-  detail,
-  icon,
-}: {
-  label: string;
-  value: string;
-  detail: string;
-  icon: typeof Store;
-}) {
-  return (
-    <Surface p={4} minH="112px">
-      <Flex justify="space-between" gap={3}>
-        <Box minW={0}>
-          <Text fontSize="10px" color="erp.textMuted" textTransform="uppercase">
-            {label}
-          </Text>
-          <Text mt={1} fontSize="23px" fontWeight="700" noOfLines={1}>
-            {value}
-          </Text>
-          <Text mt={1} fontSize="10px" color="erp.textSecondary">
-            {detail}
-          </Text>
-        </Box>
-        <Flex
-          w="34px"
-          h="34px"
-          flexShrink={0}
-          align="center"
-          justify="center"
-          borderRadius="8px"
-          color="erp.brandText"
-          bg="erp.brandSoft"
-        >
-          <Icon as={icon} boxSize="16px" />
-        </Flex>
-      </Flex>
-    </Surface>
-  );
-}
 
 function BranchBadges({ branch }: { branch: Branch }) {
   return (
@@ -358,39 +317,56 @@ export default function BranchesPage() {
       />
 
       <SimpleGrid columns={{ base: 1, sm: 2, xl: 6 }} spacing={3} mb={5}>
-        <Kpi
+        <KpiCard
+          index={0}
+          tone="brand"
           label="Total de filiais"
-          value={formatNumber(data?.metrics.total)}
+          count={Number(data?.metrics.total)}
+          format={formatNumber}
           detail="Unidades cadastradas"
           icon={Store}
         />
-        <Kpi
+        <KpiCard
+          index={1}
+          tone="success"
           label="Filiais ativas"
-          value={formatNumber(data?.metrics.active)}
+          count={Number(data?.metrics.active)}
+          format={formatNumber}
           detail="Em operacao"
           icon={Activity}
         />
-        <Kpi
+        <KpiCard
+          index={2}
+          tone="neutral"
           label="Filiais inativas"
-          value={formatNumber(data?.metrics.inactive)}
+          count={Number(data?.metrics.inactive)}
+          format={formatNumber}
           detail="Operacao suspensa"
           icon={Ban}
         />
-        <Kpi
+        <KpiCard
+          index={3}
+          tone="info"
           label="Matriz"
           value={data?.metrics.matrix || '-'}
           detail="Unidade principal"
           icon={Star}
         />
-        <Kpi
+        <KpiCard
+          index={4}
+          tone="brand"
           label="Usuarios"
-          value={formatNumber(data?.metrics.users)}
+          count={Number(data?.metrics.users)}
+          format={formatNumber}
           detail="Vinculados a rede"
           icon={Users}
         />
-        <Kpi
+        <KpiCard
+          index={5}
+          tone="brand"
           label="Receita do mes"
-          value={formatCurrency(data?.metrics.revenue, { compact: true })}
+          count={Number(data?.metrics.revenue)}
+          format={value => formatCurrency(value, { compact: true })}
           detail="Venda consolidada"
           icon={CircleDollarSign}
         />

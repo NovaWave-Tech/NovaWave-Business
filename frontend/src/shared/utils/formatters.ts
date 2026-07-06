@@ -67,6 +67,22 @@ export const formatPercent = (
     maximumFractionDigits: fractionDigits,
   }).format((Number(value ?? 0) || 0) / 100);
 
+/**
+ * Variacao ja expressa em pontos percentuais (ex.: 12.5 -> "+12,5%").
+ * Use para deltas/tendencias, nao para uma fracao (0-1).
+ */
+export const formatDelta = (
+  value: string | number | null | undefined,
+  fractionDigits = 1
+) => {
+  const amount = Number(value ?? 0) || 0;
+  const sign = amount > 0 ? '+' : '';
+  return `${sign}${new Intl.NumberFormat(ptBR, {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: fractionDigits,
+  }).format(amount)}%`;
+};
+
 const parseDate = (value: string | Date) => {
   if (value instanceof Date) return value;
   return new Date(
@@ -102,6 +118,41 @@ export const formatShortDate = (
   return Number.isNaN(date.getTime())
     ? fallback
     : date.toLocaleDateString(ptBR, { day: '2-digit', month: '2-digit' });
+};
+
+/** Data local no formato ISO (YYYY-MM-DD), sem deslocamento de fuso. */
+export const toISODate = (date: Date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+/** ISO de hoje. */
+export const isoToday = () => toISODate(new Date());
+
+/** ISO de N dias atras a partir de hoje. */
+export const isoDaysAgo = (days: number) => {
+  const date = new Date();
+  date.setDate(date.getDate() - days);
+  return toISODate(date);
+};
+
+/** Rotulo curto de um intervalo, ex.: "01/07 a 06/07/2026". */
+export const formatDateRange = (start?: string, end?: string) => {
+  if (!start || !end) return '-';
+  return `${formatShortDate(start)} a ${formatDate(end)}`;
+};
+
+/** Competencia por extenso, ex.: "Julho de 2026". Sem valor usa o mes atual. */
+export const formatMonthYear = (value?: string | Date | null) => {
+  const date = value ? parseDate(value) : new Date();
+  if (Number.isNaN(date.getTime())) return '';
+  const label = date.toLocaleDateString(ptBR, {
+    month: 'long',
+    year: 'numeric',
+  });
+  return label.charAt(0).toUpperCase() + label.slice(1);
 };
 
 export const formatCnpj = (value?: string | null) => {

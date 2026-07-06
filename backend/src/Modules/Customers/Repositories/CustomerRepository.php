@@ -22,9 +22,11 @@ final class CustomerRepository
         if (($filters['delinquent'] ?? '') === '1') $where[] = 'COALESCE(r.overdue,0)>0';
         if (($filters['credit'] ?? '') === 'with') $where[] = 'c.limite_credito>0';
         if (($filters['credit'] ?? '') === 'without') $where[] = 'c.limite_credito=0';
-        if (($filters['last_purchase'] ?? '') === '30d') $where[] = "v.last_purchase>=CURRENT_DATE-INTERVAL '30 days'";
-        if (($filters['last_purchase'] ?? '') === 'never') $where[] = 'v.last_purchase IS NULL';
-        if (($filters['registered'] ?? '') === '30d') $where[] = "c.criado_em>=CURRENT_DATE-INTERVAL '30 days'";
+        $datePattern = '/^\d{4}-\d{2}-\d{2}$/';
+        if (preg_match($datePattern, (string) ($filters['last_purchase_start'] ?? ''))) { $where[] = 'v.last_purchase>=:lp_start'; $params['lp_start'] = $filters['last_purchase_start']; }
+        if (preg_match($datePattern, (string) ($filters['last_purchase_end'] ?? ''))) { $where[] = 'v.last_purchase<=:lp_end'; $params['lp_end'] = $filters['last_purchase_end']; }
+        if (preg_match($datePattern, (string) ($filters['registered_start'] ?? ''))) { $where[] = 'c.criado_em::date>=:reg_start'; $params['reg_start'] = $filters['registered_start']; }
+        if (preg_match($datePattern, (string) ($filters['registered_end'] ?? ''))) { $where[] = 'c.criado_em::date<=:reg_end'; $params['reg_end'] = $filters['registered_end']; }
 
         $base = " FROM cliente c LEFT JOIN (SELECT idempresa,idcliente,COUNT(*) FILTER(WHERE situacao=1) purchases,COALESCE(SUM(valor_total) FILTER(WHERE situacao=1),0) total_bought,COALESCE(AVG(valor_total) FILTER(WHERE situacao=1),0) average_ticket,MAX(data_venda) FILTER(WHERE situacao=1) last_purchase FROM venda GROUP BY idempresa,idcliente) v ON v.idempresa=c.idempresa AND v.idcliente=c.idcliente LEFT JOIN (SELECT idempresa,idcliente,COUNT(*) FILTER(WHERE situacao=1 AND data_vencimento<CURRENT_DATE) overdue,COALESCE(SUM(valor) FILTER(WHERE situacao=1),0) open_balance FROM conta_receber GROUP BY idempresa,idcliente) r ON r.idempresa=c.idempresa AND r.idcliente=c.idcliente";
         $customers = $this->all('SELECT c.*,COALESCE(v.purchases,0) purchases,COALESCE(v.total_bought,0) total_bought,COALESCE(v.average_ticket,0) average_ticket,v.last_purchase,COALESCE(r.overdue,0) overdue,COALESCE(r.open_balance,0) open_balance' . $base . ' WHERE ' . implode(' AND ', $where) . ' ORDER BY c.nome', $params);

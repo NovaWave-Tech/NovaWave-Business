@@ -14,9 +14,11 @@ final class DashboardRepository
         $this->pdo = Database::getInstance();
     }
 
-    public function get(int $companyId, string $period): array
+    public function get(int $companyId, string $period, ?string $start = null, ?string $end = null): array
     {
-        $range = $this->periodRange($period);
+        $range = ($start !== null && $end !== null)
+            ? $this->customRange($start, $end)
+            : $this->periodRange($period);
         $params = [
             'company_id' => $companyId,
             'start_date' => $range['start'],
@@ -201,6 +203,24 @@ final class DashboardRepository
              ) activity ORDER BY occurred_at DESC LIMIT 12",
             ['company_id' => $companyId]
         );
+    }
+
+    private function customRange(string $start, string $end): array
+    {
+        $startDate = new \DateTimeImmutable($start . ' 00:00:00');
+        $endDate = (new \DateTimeImmutable($end . ' 00:00:00'))->modify('+1 day');
+        if ($endDate <= $startDate) {
+            $endDate = $startDate->modify('+1 day');
+        }
+        $days = max(1, (int) $startDate->diff($endDate)->days);
+        $previousEnd = $startDate;
+        $previousStart = $previousEnd->modify('-' . $days . ' days');
+        return [
+            'start' => $startDate->format('Y-m-d H:i:s'),
+            'end' => $endDate->format('Y-m-d H:i:s'),
+            'previous_start' => $previousStart->format('Y-m-d H:i:s'),
+            'previous_end' => $previousEnd->format('Y-m-d H:i:s'),
+        ];
     }
 
     private function periodRange(string $period): array

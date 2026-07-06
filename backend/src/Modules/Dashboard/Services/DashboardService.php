@@ -10,9 +10,9 @@ final class DashboardService
     {
     }
 
-    public function get(int $companyId, string $period): array
+    public function get(int $companyId, string $period, ?string $start = null, ?string $end = null): array
     {
-        $data = $this->repository->get($companyId, $period);
+        $data = $this->repository->get($companyId, $period, $start, $end);
         $kpis = $data['kpis'];
         $revenueMonth = (float) ($kpis['receita_mes'] ?? 0);
         $profitMonth = (float) ($kpis['lucro_mes'] ?? 0);

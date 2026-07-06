@@ -23,9 +23,6 @@ import {
   SimpleGrid,
   Skeleton,
   Stack,
-  Stat,
-  StatLabel,
-  StatNumber,
   Table,
   Tbody,
   Td,
@@ -72,7 +69,18 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import { PageHeader, PageSkeleton, Surface } from '../../../shared/ui/ErpUI';
+import { ChartAreaGradient, PremiumTooltip } from '../../../shared/ui/chart';
+import {
+  chartAnimation,
+  chartColors,
+  useChartTheme,
+} from '../../../shared/ui/chartTheme';
+import {
+  KpiCard,
+  PageHeader,
+  PageSkeleton,
+  Surface,
+} from '../../../shared/ui/ErpUI';
 import {
   formatCompactNumber,
   formatCurrency,
@@ -228,43 +236,40 @@ export default function ReportsPage() {
         }
       />
       <SimpleGrid columns={{ base: 2, md: 3, xl: 6 }} spacing={3} mb={5}>
-        {[
-          ['Disponiveis', reports.length, FileBarChart],
+        {(
           [
-            'Mais utilizados',
-            reports.reduce((max, report) => Math.max(max, report.uses), 0),
-            BarChart3,
-          ],
-          ['Exportacoes no mes', history.length, Download],
-          [
-            'PDFs gerados',
-            history.filter(x => x.format === 'PDF').length,
-            FileText,
-          ],
-          [
-            'Excels gerados',
-            history.filter(x => x.format === 'Excel').length,
-            FileSpreadsheet,
-          ],
-          ['Favoritos', favorites.length, Heart],
-        ].map(([label, value, KpiIcon]) => (
-          <Surface key={String(label)} p={4}>
-            <Flex justify="space-between">
-              <Stat>
-                <StatLabel color="erp.textSecondary" fontSize="11px">
-                  {String(label)}
-                </StatLabel>
-                <StatNumber fontSize="24px">
-                  {formatNumber(Number(value))}
-                </StatNumber>
-              </Stat>
-              <Icon
-                as={KpiIcon as typeof FileBarChart}
-                color="brand.500"
-                boxSize="18px"
-              />
-            </Flex>
-          </Surface>
+            ['Disponiveis', reports.length, FileBarChart, 'brand'],
+            [
+              'Mais utilizados',
+              reports.reduce((max, report) => Math.max(max, report.uses), 0),
+              BarChart3,
+              'info',
+            ],
+            ['Exportacoes no mes', history.length, Download, 'brand'],
+            [
+              'PDFs gerados',
+              history.filter(x => x.format === 'PDF').length,
+              FileText,
+              'info',
+            ],
+            [
+              'Excels gerados',
+              history.filter(x => x.format === 'Excel').length,
+              FileSpreadsheet,
+              'success',
+            ],
+            ['Favoritos', favorites.length, Heart, 'neutral'],
+          ] as const
+        ).map(([label, value, KpiIcon, tone], index) => (
+          <KpiCard
+            key={label}
+            index={index}
+            tone={tone}
+            label={label}
+            count={Number(value)}
+            format={formatNumber}
+            icon={KpiIcon}
+          />
         ))}
       </SimpleGrid>
       <Surface p={4} mb={5}>
@@ -590,6 +595,7 @@ function ReportView({
   title: string;
   data: Awaited<ReturnType<typeof getReportPreview>>;
 }) {
+  const chartTheme = useChartTheme();
   const columns = Object.keys(data.rows[0] ?? {});
   return (
     <Stack spacing={5}>
@@ -640,38 +646,42 @@ function ReportView({
           <Box h="250px">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={data.chart}>
-                <defs>
-                  <linearGradient id="reportArea" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0" stopColor="#2563FF" stopOpacity={0.25} />
-                    <stop offset="1" stopColor="#2563FF" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <ChartAreaGradient
+                  id="reportArea"
+                  color={chartColors.primary}
+                />
+                <CartesianGrid stroke={chartTheme.grid} vertical={false} />
                 <XAxis
                   dataKey="date"
                   tickFormatter={value => formatShortDate(String(value))}
-                  fontSize={10}
+                  axisLine={false}
+                  tickLine={false}
+                  tick={chartTheme.axisTick}
                 />
                 <YAxis
                   tickFormatter={value => formatCompactNumber(Number(value))}
-                  fontSize={10}
+                  axisLine={false}
+                  tickLine={false}
+                  tick={chartTheme.axisTick}
                 />
                 <ChartTooltip
-                  formatter={value => formatCurrency(Number(value))}
-                  contentStyle={{
-                    background: '#FFFFFF',
-                    border: '1px solid #E2E8F0',
-                    borderRadius: '8px',
-                    color: '#0F172A',
-                    boxShadow: '0 8px 24px rgba(15,23,42,.08)',
-                  }}
+                  cursor={{ stroke: chartColors.primary, strokeWidth: 1 }}
+                  content={
+                    <PremiumTooltip
+                      labelFormatter={value => formatShortDate(String(value))}
+                      valueFormatter={value => formatCurrency(value)}
+                    />
+                  }
                 />
                 <Area
                   type="monotone"
                   dataKey="value"
-                  stroke="#2563FF"
+                  stroke={chartColors.primary}
                   fill="url(#reportArea)"
-                  strokeWidth={2}
+                  strokeWidth={2.5}
+                  dot={false}
+                  activeDot={{ r: 4, strokeWidth: 0 }}
+                  {...chartAnimation}
                 />
               </AreaChart>
             </ResponsiveContainer>
