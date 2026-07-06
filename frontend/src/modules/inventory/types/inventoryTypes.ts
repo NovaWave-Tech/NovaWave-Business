@@ -89,7 +89,7 @@ export type MovementPayload = {
 export const MOVEMENT_TYPES: Record<number, string> = {
   1: 'Entrada',
   2: 'Saida',
-  3: 'Ajuste',
+  5: 'Ajuste',
 };
 
 export const INVENTORY_STATUS: Record<
