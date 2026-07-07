@@ -11,7 +11,12 @@ use Throwable;
 
 final class ReportController extends ApiController
 {
-    public function __construct(private readonly ReportService $service = new ReportService()) {}
+    private readonly ReportService $service;
+
+    public function __construct(?ReportService $service = null)
+    {
+        $this->service = $service ?? new ReportService();
+    }
 
     public function index(Request $request, Response $response): Response
     {

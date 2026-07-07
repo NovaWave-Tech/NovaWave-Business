@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Modules\Companies\Controllers;
+namespace App\Modules\Settings\Controllers;
 
-use App\Modules\Companies\Services\CompanyService;
+use App\Modules\Settings\Services\SettingsService;
 use App\Shared\Http\ApiController;
 use App\Shared\Support\RequestContext;
 use InvalidArgumentException;
@@ -10,28 +10,36 @@ use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use Throwable;
 
-class CompanyController extends ApiController
+final class SettingsController extends ApiController
 {
-    private readonly CompanyService $service;
+    private readonly SettingsService $service;
 
-    public function __construct(?CompanyService $service = null)
+    public function __construct(?SettingsService $service = null)
     {
-        $this->service = $service ?? new CompanyService();
+        $this->service = $service ?? new SettingsService();
     }
 
     public function index(Request $request, Response $response): Response
     {
         return $this->run($request, $response, fn (RequestContext $context) =>
-            $this->service->show($context->companyId)
+            $this->service->index($context->companyId, $context->userId)
         );
     }
 
-    public function update(Request $request, Response $response): Response
+    public function savePreferences(Request $request, Response $response): Response
     {
         return $this->run($request, $response, function (RequestContext $context) use ($request) {
-            $this->service->update($context->companyId, $context->userId, $this->body($request), $context->ipAddress, $context->userAgent);
+            $this->service->savePreferences($context->companyId, $context->userId, $this->body($request));
             return [];
-        }, 200, 'Dados da empresa atualizados');
+        }, 200, 'Preferencias salvas');
+    }
+
+    public function saveFinance(Request $request, Response $response): Response
+    {
+        return $this->run($request, $response, function (RequestContext $context) use ($request) {
+            $this->service->saveFinance($context->companyId, $context->userId, $this->body($request), $context->ipAddress, $context->userAgent);
+            return [];
+        }, 200, 'Configuracao financeira salva');
     }
 
     private function run(Request $request, Response $response, callable $callback, int $status = 200, string $message = 'OK'): Response

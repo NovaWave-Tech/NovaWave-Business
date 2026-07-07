@@ -148,6 +148,8 @@ export default function SalesPage() {
     });
   const refresh = async () => {
     await client.invalidateQueries({ queryKey: ['sales'] });
+    await client.invalidateQueries({ queryKey: ['inventory'] });
+    await client.invalidateQueries({ queryKey: ['products'] });
     if (selectedId)
       await client.invalidateQueries({ queryKey: ['sale', selectedId] });
   };
