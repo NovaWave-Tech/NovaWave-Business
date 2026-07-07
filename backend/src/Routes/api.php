@@ -15,6 +15,7 @@ use App\Modules\Permissions\Controllers\PermissionController;
 use App\Modules\Platform\Controllers\PlatformAuthController;
 use App\Modules\Platform\Controllers\PlatformController;
 use App\Modules\Products\Controllers\ProductController;
+use App\Modules\Purchases\Controllers\PurchasesController;
 use App\Modules\Reports\Controllers\ReportController;
 use App\Modules\Sales\Controllers\SalesController;
 use App\Modules\Users\Controllers\UserController;
@@ -112,6 +113,10 @@ $app->group('', function ($group): void {
     $group->get('/sales/{id:[0-9]+}', SalesController::class . ':show');
     $group->patch('/sales/{id:[0-9]+}/status', SalesController::class . ':status');
     $group->get('/inventory', InventoryController::class . ':index');
+    $group->get('/purchases', PurchasesController::class . ':index');
+    $group->post('/purchases', PurchasesController::class . ':store');
+    $group->get('/purchases/{id:[0-9]+}', PurchasesController::class . ':show');
+    $group->patch('/purchases/{id:[0-9]+}/status', PurchasesController::class . ':status');
     $group->get('/permissions', PermissionController::class . ':index');
     $group->post('/permissions', PermissionController::class . ':store');
     $group->get('/permissions/{id:[0-9]+}', PermissionController::class . ':show');
