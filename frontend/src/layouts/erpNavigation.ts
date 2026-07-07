@@ -45,7 +45,7 @@ export const erpNavigation: ErpNavGroup[] = [
   {
     label: 'Gestao',
     items: [
-      { label: 'Empresas', path: '/companies', icon: Building2 },
+      { label: 'Empresa', path: '/companies', icon: Building2 },
       { label: 'Filiais', path: '/branches', icon: GitBranch },
       { label: 'Usuarios', path: '/users', icon: Users },
       { label: 'Permissoes', path: '/permissions', icon: ShieldCheck },

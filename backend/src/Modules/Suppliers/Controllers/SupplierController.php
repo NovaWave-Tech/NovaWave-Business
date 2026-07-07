@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Modules\Permissions\Controllers;
+namespace App\Modules\Suppliers\Controllers;
 
-use App\Modules\Permissions\Services\PermissionService;
+use App\Modules\Suppliers\Services\SupplierService;
 use App\Shared\Http\ApiController;
 use App\Shared\Support\RequestContext;
 use InvalidArgumentException;
@@ -10,13 +10,13 @@ use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use Throwable;
 
-final class PermissionController extends ApiController
+final class SupplierController extends ApiController
 {
-    private readonly PermissionService $service;
+    private readonly SupplierService $service;
 
-    public function __construct(?PermissionService $service = null)
+    public function __construct(?SupplierService $service = null)
     {
-        $this->service = $service ?? new PermissionService();
+        $this->service = $service ?? new SupplierService();
     }
 
     public function index(Request $request, Response $response): Response
@@ -36,65 +36,33 @@ final class PermissionController extends ApiController
     public function store(Request $request, Response $response): Response
     {
         return $this->run($request, $response, fn (RequestContext $context) => [
-            'idperfil' => $this->service->create(
-                $context->companyId,
-                $context->userId,
-                $this->body($request),
-                $context->ipAddress,
-                $context->userAgent
-            ),
-        ], 201, 'Perfil criado com sucesso');
+            'idfornecedor' => $this->service->create($context->companyId, $context->userId, $this->body($request), $context->ipAddress, $context->userAgent),
+        ], 201, 'Fornecedor criado com sucesso');
     }
 
     public function update(Request $request, Response $response, array $args): Response
     {
         return $this->run($request, $response, function (RequestContext $context) use ($request, $args) {
-            $this->service->update(
-                $context->companyId,
-                $context->userId,
-                (int) $args['id'],
-                $this->body($request),
-                $context->ipAddress,
-                $context->userAgent
-            );
+            $this->service->update($context->companyId, $context->userId, (int) $args['id'], $this->body($request), $context->ipAddress, $context->userAgent);
             return [];
-        }, 200, 'Perfil atualizado com sucesso');
-    }
-
-    public function duplicate(Request $request, Response $response, array $args): Response
-    {
-        return $this->run($request, $response, fn (RequestContext $context) => [
-            'idperfil' => $this->service->duplicate(
-                $context->companyId,
-                $context->userId,
-                (int) $args['id'],
-                $this->body($request),
-                $context->ipAddress,
-                $context->userAgent
-            ),
-        ], 201, 'Perfil duplicado com sucesso');
+        }, 200, 'Fornecedor atualizado');
     }
 
     public function status(Request $request, Response $response, array $args): Response
     {
         return $this->run($request, $response, function (RequestContext $context) use ($request, $args) {
-            $this->service->setStatus(
-                $context->companyId,
-                $context->userId,
-                (int) $args['id'],
-                (int) ($this->body($request)['situacao'] ?? -1),
-                $context->ipAddress,
-                $context->userAgent
-            );
+            $this->service->setStatus($context->companyId, $context->userId, (int) $args['id'], (int) ($this->body($request)['situacao'] ?? -1), $context->ipAddress, $context->userAgent);
             return [];
-        }, 200, 'Situacao do perfil atualizada');
+        }, 200, 'Situacao do fornecedor atualizada');
     }
 
     private function run(Request $request, Response $response, callable $callback, int $status = 200, string $message = 'OK'): Response
     {
         try {
             $context = RequestContext::fromRequest($request);
-            if (!$context->companyId || !$context->userId) return $this->error($response, 'Contexto de autenticacao invalido', 403);
+            if (!$context->companyId || !$context->userId) {
+                return $this->error($response, 'Contexto de autenticacao invalido', 403);
+            }
             return $this->success($response, $callback($context), $message, $status);
         } catch (InvalidArgumentException $exception) {
             return $this->error($response, $exception->getMessage(), 422);

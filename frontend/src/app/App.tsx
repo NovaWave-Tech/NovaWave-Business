@@ -10,7 +10,6 @@ import AppLayout from '../layouts/AppLayout';
 import LoginPage from '../modules/auth/pages/LoginPage';
 import DashboardPage from '../modules/dashboard/pages/DashboardPage';
 import { AuthProvider } from '../shared/auth/AuthContext';
-import ModulePlaceholderPage from '../shared/pages/ModulePlaceholderPage';
 import { getToken, isTokenValid } from '../shared/services/http';
 import { PlatformAuthProvider } from '../modules/platform/auth/PlatformAuthContext';
 import { platformSession } from '../modules/platform/services/platformApi';
@@ -66,6 +65,16 @@ const InventoryPage = lazy(
 const PermissionsPage = lazy(
   () => import('../modules/permissions/pages/PermissionsPage')
 );
+const SuppliersPage = lazy(
+  () => import('../modules/suppliers/pages/SuppliersPage')
+);
+const CashierPage = lazy(() => import('../modules/cashier/pages/CashierPage'));
+const ErpCompanyPage = lazy(
+  () => import('../modules/companies/pages/CompaniesPage')
+);
+const ErpSettingsPage = lazy(
+  () => import('../modules/settings/pages/SettingsPage')
+);
 
 function LoadingPage() {
   return (
@@ -100,29 +109,6 @@ function ProtectedPlatformRoutes() {
     </PlatformAuthProvider>
   );
 }
-
-const placeholders = [
-  [
-    'companies',
-    'Empresas',
-    'Cadastro e administracao de empresas do ambiente SaaS.',
-  ],
-  [
-    'suppliers',
-    'Fornecedores',
-    'Cadastro de fornecedores e relacionamento com compras.',
-  ],
-  [
-    'cashier',
-    'Caixa',
-    'Abertura, fechamento e movimentacoes de caixa por filial.',
-  ],
-  [
-    'settings',
-    'Configuracoes',
-    'Preferencias gerais, integracoes e parametros do ERP.',
-  ],
-] as const;
 
 export default function App() {
   return (
@@ -171,18 +157,10 @@ export default function App() {
             <Route path="/purchases" element={<PurchasesPage />} />
             <Route path="/inventory" element={<InventoryPage />} />
             <Route path="/permissions" element={<PermissionsPage />} />
-            {placeholders.map(([path, title, description]) => (
-              <Route
-                key={path}
-                path={`/${path}`}
-                element={
-                  <ModulePlaceholderPage
-                    title={title}
-                    description={description}
-                  />
-                }
-              />
-            ))}
+            <Route path="/suppliers" element={<SuppliersPage />} />
+            <Route path="/cashier" element={<CashierPage />} />
+            <Route path="/companies" element={<ErpCompanyPage />} />
+            <Route path="/settings" element={<ErpSettingsPage />} />
           </Route>
         </Routes>
       </Suspense>
