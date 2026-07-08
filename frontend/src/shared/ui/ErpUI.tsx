@@ -1,4 +1,5 @@
 import {
+  Badge,
   Box,
   Breadcrumb,
   BreadcrumbItem,
@@ -7,10 +8,12 @@ import {
   Flex,
   Heading,
   Icon,
+  SimpleGrid,
   Skeleton,
   SkeletonText,
   Text,
   type BoxProps,
+  type SimpleGridProps,
 } from '@chakra-ui/react';
 import {
   AlertCircle,
@@ -89,14 +92,7 @@ export function PageHeader({
             </Flex>
           )}
           <Box>
-            <Heading
-              as="h1"
-              fontSize="28px"
-              lineHeight="36px"
-              fontWeight="700"
-              letterSpacing="0"
-              color="erp.text"
-            >
+            <Heading as="h1" textStyle="h1" color="erp.text">
               {title}
             </Heading>
             {description && (
@@ -226,24 +222,12 @@ export function KpiCard({
   const chipBg = blueChip ? 'erp.brandSoft' : 'erp.surfaceSubtle';
   const chipBorder = blueChip ? 'erp.brandBorder' : 'erp.border';
   const iconColor = blueChip ? 'brand.500' : kpiToneColor[tone];
-  const deltaPositive = (delta ?? 0) >= 0;
-  const deltaZero = delta === 0;
-  const deltaColor = deltaZero
-    ? 'erp.textMuted'
-    : deltaPositive
-      ? 'erp.success'
-      : 'erp.danger';
-  const DeltaIcon = deltaZero
-    ? Minus
-    : deltaPositive
-      ? TrendingUp
-      : TrendingDown;
 
   return (
     <Reveal index={index} h="full">
       <Box
         h="full"
-        minH="120px"
+        minH="128px"
         p={5}
         bg="erp.surface"
         border="1px solid"
@@ -251,35 +235,42 @@ export function KpiCard({
         borderRadius="12px"
         boxShadow="0 1px 2px rgba(15,23,42,.04)"
         cursor={onClick ? 'pointer' : 'default'}
-        transition="border-color 160ms ease, box-shadow 160ms ease"
-        _hover={
-          onClick
-            ? {
-                borderColor: 'erp.borderStrong',
-                boxShadow: '0 4px 12px rgba(15,23,42,.07)',
-              }
-            : undefined
-        }
+        transition="border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease"
+        _hover={{
+          borderColor: 'erp.borderStrong',
+          boxShadow: '0 6px 16px rgba(15,23,42,.08)',
+          ...(onClick ? { transform: 'translateY(-2px)' } : {}),
+        }}
         onClick={onClick}
       >
-        <Flex justify="space-between" align="center" gap={3}>
-          <Text
-            fontSize="11px"
-            fontWeight="700"
-            color="erp.textMuted"
-            textTransform="uppercase"
-            letterSpacing=".05em"
-            noOfLines={1}
-          >
-            {label}
-          </Text>
+        <Flex justify="space-between" align="start" gap={3}>
+          <Box minW={0}>
+            <Text textStyle="overline" color="erp.textMuted" noOfLines={1}>
+              {label}
+            </Text>
+            <Text
+              mt={2.5}
+              textStyle="numeric"
+              fontSize="26px"
+              lineHeight="1.1"
+              fontWeight="600"
+              color="erp.text"
+              noOfLines={1}
+            >
+              {count !== undefined ? (
+                <CountUp value={count} format={format} />
+              ) : (
+                value
+              )}
+            </Text>
+          </Box>
           <Flex
-            w="34px"
-            h="34px"
+            w="36px"
+            h="36px"
             flexShrink={0}
             align="center"
             justify="center"
-            borderRadius="9px"
+            borderRadius="10px"
             bg={chipBg}
             border="1px solid"
             borderColor={chipBorder}
@@ -288,42 +279,137 @@ export function KpiCard({
             <Icon as={icon} boxSize="17px" />
           </Flex>
         </Flex>
-        <Text
-          mt={3}
-          fontSize="28px"
-          lineHeight="1.15"
-          fontWeight="800"
-          color="erp.text"
-          noOfLines={1}
-          sx={{ fontVariantNumeric: 'tabular-nums' }}
-        >
-          {count !== undefined ? (
-            <CountUp value={count} format={format} />
-          ) : (
-            value
-          )}
-        </Text>
-        <Flex mt={2} align="center" gap={2} minH="18px">
-          {delta !== undefined && (
-            <Flex align="center" gap={0.5} color={deltaColor}>
-              <Icon as={DeltaIcon} boxSize="12px" />
-              <Text
-                fontSize="11px"
-                fontWeight="700"
-                sx={{ fontVariantNumeric: 'tabular-nums' }}
-              >
-                {formatDelta(delta)}
-              </Text>
-            </Flex>
-          )}
+        <Flex mt={3.5} align="center" gap={2} minH="22px">
+          {delta !== undefined && <DeltaPill delta={delta} />}
           {detail && (
-            <Text fontSize="11px" color="erp.textSecondary" noOfLines={1}>
+            <Text textStyle="caption" color="erp.textSecondary" noOfLines={1}>
               {detail}
             </Text>
           )}
         </Flex>
       </Box>
     </Reveal>
+  );
+}
+
+/**
+ * Variacao percentual em pill com fundo suave, no padrao dos KPIs.
+ * Verde para alta, vermelho para queda, neutro para estabilidade.
+ */
+export function DeltaPill({ delta }: { delta: number }) {
+  const zero = delta === 0;
+  const positive = delta > 0;
+  const DeltaIcon = zero ? Minus : positive ? TrendingUp : TrendingDown;
+  return (
+    <Badge
+      colorScheme={zero ? 'gray' : positive ? 'green' : 'red'}
+      variant="subtle"
+      borderRadius="full"
+      textTransform="none"
+      px={2}
+      py={0.5}
+      display="inline-flex"
+      alignItems="center"
+      gap={1}
+      flexShrink={0}
+    >
+      <Icon as={DeltaIcon} boxSize="11px" />
+      <Box
+        as="span"
+        fontSize="11px"
+        fontWeight="600"
+        sx={{ fontVariantNumeric: 'tabular-nums' }}
+      >
+        {formatDelta(delta)}
+      </Box>
+    </Badge>
+  );
+}
+
+export type StatItem = {
+  label: string;
+  count?: number;
+  value?: ReactNode;
+  format?: (value: number) => string;
+  icon?: LucideIcon;
+  tone?: KpiTone;
+  /** Cor do numero (ex.: erp.danger para saldo negativo). Padrao erp.text. */
+  valueColor?: string;
+  delta?: number;
+  detail?: string;
+};
+
+/**
+ * Painel de indicadores para leitura densa de numeros: uma unica superficie
+ * com celulas divididas por linhas, rotulo em overline, valor grande em
+ * fonte mono/tabular e variacao em pill. Preferir ao KpiCard quando ha
+ * muitos numeros lado a lado (ex.: Financeiro).
+ */
+export function StatGroup({
+  items,
+  columns = { base: 1, sm: 2, xl: 4 },
+  ...props
+}: BoxProps & {
+  items: StatItem[];
+  columns?: SimpleGridProps['columns'];
+}) {
+  return (
+    <Surface overflow="hidden" {...props}>
+      <SimpleGrid columns={columns} spacing={0} mr="-1px" mb="-1px">
+        {items.map((item, index) => (
+          <Box
+            key={`${item.label}-${index}`}
+            px={5}
+            py={4}
+            borderRight="1px solid"
+            borderBottom="1px solid"
+            borderColor="erp.border"
+            transition="background 140ms ease"
+            _hover={{ bg: 'erp.hover' }}
+          >
+            <Flex align="center" justify="space-between" gap={2}>
+              <Text textStyle="overline" color="erp.textMuted" noOfLines={1}>
+                {item.label}
+              </Text>
+              {item.icon && (
+                <Icon
+                  as={item.icon}
+                  boxSize="15px"
+                  color={item.tone ? kpiToneColor[item.tone] : 'erp.textMuted'}
+                />
+              )}
+            </Flex>
+            <Text
+              mt={2}
+              textStyle="numeric"
+              fontSize="24px"
+              lineHeight="1.15"
+              fontWeight="600"
+              color={item.valueColor ?? 'erp.text'}
+              noOfLines={1}
+            >
+              {item.count !== undefined ? (
+                <CountUp value={item.count} format={item.format} />
+              ) : (
+                item.value
+              )}
+            </Text>
+            <Flex mt={1.5} align="center" gap={2} minH="20px">
+              {item.delta !== undefined && <DeltaPill delta={item.delta} />}
+              {item.detail && (
+                <Text
+                  textStyle="caption"
+                  color="erp.textSecondary"
+                  noOfLines={1}
+                >
+                  {item.detail}
+                </Text>
+              )}
+            </Flex>
+          </Box>
+        ))}
+      </SimpleGrid>
+    </Surface>
   );
 }
 
@@ -370,15 +456,15 @@ export function SectionHeader({
         <Box>
           {eyebrow && (
             <Text
+              textStyle="overline"
+              fontSize="10px"
               color="erp.brandText"
-              fontSize="9px"
-              fontWeight="700"
-              textTransform="uppercase"
+              noOfLines={1}
             >
               {eyebrow}
             </Text>
           )}
-          <Text color="erp.text" fontSize="sm" fontWeight="650">
+          <Text color="erp.text" textStyle="h6">
             {title}
           </Text>
           {description && (

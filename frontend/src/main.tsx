@@ -1,5 +1,7 @@
 import { createRoot } from 'react-dom/client';
 import { ChakraProvider } from '@chakra-ui/react';
+import '@fontsource-variable/inter/index.css';
+import '@fontsource-variable/jetbrains-mono/index.css';
 import theme from './theme';
 import './index.css';
 import App from './app/App';

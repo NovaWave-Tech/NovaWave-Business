@@ -17,6 +17,8 @@
     "@chakra-ui/react": "^2",
     "@emotion/react": "^11",
     "@emotion/styled": "^11",
+    "@fontsource-variable/inter": "^5.2.8",
+    "@fontsource-variable/jetbrains-mono": "^5.2.8",
     "@hookform/resolvers": "^5.4.0",
     "@tanstack/react-query": "^5.101.2",
     "axios": "^1.13.2",

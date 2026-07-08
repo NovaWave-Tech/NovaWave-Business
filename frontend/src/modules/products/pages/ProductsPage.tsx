@@ -35,6 +35,7 @@ import {
   ModalFooter,
   ModalHeader,
   ModalOverlay,
+  Portal,
   Select,
   SimpleGrid,
   Skeleton,
@@ -101,6 +102,7 @@ import {
   PageHeader,
   Surface,
 } from '../../../shared/ui/ErpUI';
+import { FilterSelect } from '../../../shared/ui/FilterSelect';
 import { CurrencyInput } from '../../../shared/ui/FormattedInput';
 import CatalogManager from '../../catalog/components/CatalogManager';
 import {
@@ -499,48 +501,52 @@ export default function ProductsPage() {
             items={data?.options.branches}
             change={value => setFilters(v => ({ ...v, branch: value }))}
           />
-          <Select
-            aria-label="Estoque"
+          <FilterSelect
+            label="Estoque"
             value={filters.stock}
-            onChange={e => setFilters(v => ({ ...v, stock: e.target.value }))}
-          >
-            <option value="">Estoque</option>
-            <option value="with">Com estoque</option>
-            <option value="without">Sem estoque</option>
-            <option value="critical">Estoque critico</option>
-          </Select>
-          <Select
-            aria-label="Situacao"
+            onChange={v => setFilters(x => ({ ...x, stock: v }))}
+            options={[
+              { value: '', label: 'Estoque' },
+              { value: 'with', label: 'Com estoque' },
+              { value: 'without', label: 'Sem estoque' },
+              { value: 'critical', label: 'Estoque critico' },
+            ]}
+          />
+          <FilterSelect
+            label="Situacao"
             value={filters.status}
-            onChange={e => setFilters(v => ({ ...v, status: e.target.value }))}
-          >
-            <option value="">Situacao</option>
-            <option value="1">Ativos</option>
-            <option value="0">Inativos</option>
-          </Select>
+            onChange={v => setFilters(x => ({ ...x, status: v }))}
+            options={[
+              { value: '', label: 'Situacao' },
+              { value: '1', label: 'Ativos' },
+              { value: '0', label: 'Inativos' },
+            ]}
+          />
           <Menu>
             <MenuButton as={Button} variant="outline">
               Mais
             </MenuButton>
-            <MenuList>
-              <MenuItem
-                onClick={() => setFilters(v => ({ ...v, price: 'low' }))}
-              >
-                Preco abaixo de R$ 100
-              </MenuItem>
-              <MenuItem
-                onClick={() => setFilters(v => ({ ...v, price: 'high' }))}
-              >
-                Preco acima de R$ 100
-              </MenuItem>
-              <MenuItem
-                onClick={() => setFilters(v => ({ ...v, best_sellers: '1' }))}
-              >
-                Mais vendidos primeiro
-              </MenuItem>
-              <MenuDivider />
-              <MenuItem onClick={clear}>Limpar filtros</MenuItem>
-            </MenuList>
+            <Portal>
+              <MenuList zIndex={1500}>
+                <MenuItem
+                  onClick={() => setFilters(v => ({ ...v, price: 'low' }))}
+                >
+                  Preco abaixo de R$ 100
+                </MenuItem>
+                <MenuItem
+                  onClick={() => setFilters(v => ({ ...v, price: 'high' }))}
+                >
+                  Preco acima de R$ 100
+                </MenuItem>
+                <MenuItem
+                  onClick={() => setFilters(v => ({ ...v, best_sellers: '1' }))}
+                >
+                  Mais vendidos primeiro
+                </MenuItem>
+                <MenuDivider />
+                <MenuItem onClick={clear}>Limpar filtros</MenuItem>
+              </MenuList>
+            </Portal>
           </Menu>
         </Grid>
       </BrandSurface>
@@ -778,18 +784,15 @@ function Filter({
   change: (value: string) => void;
 }) {
   return (
-    <Select
-      aria-label={label}
+    <FilterSelect
+      label={label}
       value={value}
-      onChange={e => change(e.target.value)}
-    >
-      <option value="">{label}</option>
-      {items?.map(x => (
-        <option key={x.id} value={x.id}>
-          {x.nome}
-        </option>
-      ))}
-    </Select>
+      onChange={change}
+      options={[
+        { value: '', label },
+        ...(items?.map(x => ({ value: String(x.id), label: x.nome })) ?? []),
+      ]}
+    />
   );
 }
 function ProductImage({ product }: { product: Product }) {

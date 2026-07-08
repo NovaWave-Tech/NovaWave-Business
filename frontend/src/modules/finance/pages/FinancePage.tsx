@@ -100,10 +100,11 @@ import {
   BrandSurface,
   EmptyState,
   ErrorState,
-  KpiCard,
   PageHeader,
+  StatGroup,
   Surface,
 } from '../../../shared/ui/ErpUI';
+import { FilterSelect } from '../../../shared/ui/FilterSelect';
 import { CurrencyInput } from '../../../shared/ui/FormattedInput';
 import {
   DateRangeField,
@@ -348,85 +349,81 @@ export default function FinancePage() {
           </>
         }
       />
-      <SimpleGrid
-        columns={{ base: 1, sm: 2, xl: 4, '2xl': 8 }}
-        spacing={3}
+      <StatGroup
         mb={5}
-      >
-        <KpiCard
-          index={0}
-          label="Saldo atual"
-          count={Number(data?.kpis.current_balance)}
-          format={formatCurrency}
-          detail="Disponivel consolidado"
-          icon={Wallet}
-          tone={(data?.kpis.current_balance || 0) >= 0 ? 'success' : 'danger'}
-        />
-        <KpiCard
-          index={1}
-          tone="success"
-          label="Receitas do mes"
-          count={Number(data?.kpis.month_revenue)}
-          format={formatCurrency}
-          delta={revenueChange}
-          detail="vs mes anterior"
-          icon={TrendingUp}
-        />
-        <KpiCard
-          index={2}
-          tone="danger"
-          label="Despesas do mes"
-          count={Number(data?.kpis.month_expense)}
-          format={formatCurrency}
-          detail={`${formatPercent(expenseChange)} vs mes anterior`}
-          icon={TrendingDown}
-        />
-        <KpiCard
-          index={3}
-          tone="brand"
-          label="Fluxo de caixa"
-          count={Number(data?.kpis.cash_flow)}
-          format={formatCurrency}
-          detail="Resultado operacional"
-          icon={CircleDollarSign}
-        />
-        <KpiCard
-          index={4}
-          tone="info"
-          label="A receber"
-          count={Number(data?.kpis.receivable)}
-          format={formatCurrency}
-          detail="Titulos pendentes"
-          icon={ArrowDownRight}
-        />
-        <KpiCard
-          index={5}
-          tone="warning"
-          label="A pagar"
-          count={Number(data?.kpis.payable)}
-          format={formatCurrency}
-          detail="Compromissos pendentes"
-          icon={ArrowUpRight}
-        />
-        <KpiCard
-          index={6}
-          tone="brand"
-          label="Saldo bancario"
-          count={Number(data?.kpis.current_balance)}
-          format={formatCurrency}
-          detail={`${data?.banks.length || 0} contas`}
-          icon={Landmark}
-        />
-        <KpiCard
-          index={7}
-          tone="neutral"
-          label="Cartoes"
-          count={Number(data?.cards.length)}
-          format={formatNumber}
-          detail="Cartoes corporativos"
-          icon={CreditCard}
-        />
-      </SimpleGrid>
+        columns={{ base: 1, sm: 2, xl: 4 }}
+        items={[
+          {
+            label: 'Saldo atual',
+            count: Number(data?.kpis.current_balance),
+            format: formatCurrency,
+            detail: 'Disponivel consolidado',
+            icon: Wallet,
+            tone: (data?.kpis.current_balance || 0) >= 0 ? 'success' : 'danger',
+            valueColor:
+              (data?.kpis.current_balance || 0) < 0 ? 'erp.danger' : undefined,
+          },
+          {
+            label: 'Receitas do mes',
+            count: Number(data?.kpis.month_revenue),
+            format: formatCurrency,
+            delta: revenueChange,
+            detail: 'vs mes anterior',
+            icon: TrendingUp,
+            tone: 'success',
+          },
+          {
+            label: 'Despesas do mes',
+            count: Number(data?.kpis.month_expense),
+            format: formatCurrency,
+            detail: `${formatPercent(expenseChange)} vs mes anterior`,
+            icon: TrendingDown,
+            tone: 'danger',
+          },
+          {
+            label: 'Fluxo de caixa',
+            count: Number(data?.kpis.cash_flow),
+            format: formatCurrency,
+            detail: 'Resultado operacional',
+            icon: CircleDollarSign,
+            tone: 'brand',
+            valueColor:
+              (data?.kpis.cash_flow || 0) < 0 ? 'erp.danger' : undefined,
+          },
+          {
+            label: 'A receber',
+            count: Number(data?.kpis.receivable),
+            format: formatCurrency,
+            detail: 'Titulos pendentes',
+            icon: ArrowDownRight,
+            tone: 'info',
+          },
+          {
+            label: 'A pagar',
+            count: Number(data?.kpis.payable),
+            format: formatCurrency,
+            detail: 'Compromissos pendentes',
+            icon: ArrowUpRight,
+            tone: 'warning',
+          },
+          {
+            label: 'Saldo bancario',
+            count: Number(data?.kpis.current_balance),
+            format: formatCurrency,
+            detail: `${data?.banks.length || 0} contas`,
+            icon: Landmark,
+            tone: 'brand',
+          },
+          {
+            label: 'Cartoes',
+            count: Number(data?.cards.length),
+            format: formatNumber,
+            detail: 'Cartoes corporativos',
+            icon: CreditCard,
+            tone: 'neutral',
+          },
+        ]}
+      />
       <BrandSurface p={4} mb={4}>
         <Grid
           templateColumns={{
@@ -470,37 +467,40 @@ export default function FinancePage() {
             items={data?.options.branches}
             change={v => setFilters(x => ({ ...x, branch: v }))}
           />
-          <Select
-            aria-label="Tipo"
+          <FilterSelect
+            label="Tipo"
             value={filters.type}
-            onChange={e => setFilters(v => ({ ...v, type: e.target.value }))}
-          >
-            <option value="">Tipo</option>
-            <option value="revenue">Receita</option>
-            <option value="expense">Despesa</option>
-          </Select>
-          <Select
-            aria-label="Forma de pagamento"
+            onChange={v => setFilters(x => ({ ...x, type: v }))}
+            options={[
+              { value: '', label: 'Tipo' },
+              { value: 'revenue', label: 'Receita' },
+              { value: 'expense', label: 'Despesa' },
+            ]}
+          />
+          <FilterSelect
+            label="Forma de pagamento"
             value={filters.payment}
-            onChange={e => setFilters(v => ({ ...v, payment: e.target.value }))}
-          >
-            <option value="">Pagamento</option>
-            <option value="pix">PIX</option>
-            <option value="boleto">Boleto</option>
-            <option value="transferencia">Transferencia</option>
-            <option value="dinheiro">Dinheiro</option>
-            <option value="cartao">Cartao</option>
-          </Select>
-          <Select
-            aria-label="Situacao"
+            onChange={v => setFilters(x => ({ ...x, payment: v }))}
+            options={[
+              { value: '', label: 'Pagamento' },
+              { value: 'pix', label: 'PIX' },
+              { value: 'boleto', label: 'Boleto' },
+              { value: 'transferencia', label: 'Transferencia' },
+              { value: 'dinheiro', label: 'Dinheiro' },
+              { value: 'cartao', label: 'Cartao' },
+            ]}
+          />
+          <FilterSelect
+            label="Situacao"
             value={filters.status}
-            onChange={e => setFilters(v => ({ ...v, status: e.target.value }))}
-          >
-            <option value="">Situacao</option>
-            <option value="1">Pendente</option>
-            <option value="2">Pago / recebido</option>
-            <option value="3">Cancelado</option>
-          </Select>
+            onChange={v => setFilters(x => ({ ...x, status: v }))}
+            options={[
+              { value: '', label: 'Situacao' },
+              { value: '1', label: 'Pendente' },
+              { value: '2', label: 'Pago / recebido' },
+              { value: '3', label: 'Cancelado' },
+            ]}
+          />
           <Button variant="ghost" onClick={clear}>
             Limpar
           </Button>
@@ -880,18 +880,15 @@ function Opt({
   change: (v: string) => void;
 }) {
   return (
-    <Select
-      aria-label={label}
+    <FilterSelect
+      label={label}
       value={value}
-      onChange={e => change(e.target.value)}
-    >
-      <option value="">{label}</option>
-      {items?.map(x => (
-        <option key={x.id} value={x.id}>
-          {x.nome}
-        </option>
-      ))}
-    </Select>
+      onChange={change}
+      options={[
+        { value: '', label },
+        ...(items?.map(x => ({ value: String(x.id), label: x.nome })) ?? []),
+      ]}
+    />
   );
 }
 function change(current?: number, previous?: number) {

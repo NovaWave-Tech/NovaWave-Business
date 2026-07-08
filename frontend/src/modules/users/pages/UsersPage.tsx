@@ -92,6 +92,7 @@ import {
   Surface,
 } from '../../../shared/ui/ErpUI';
 import { DateRangeField } from '../../../shared/ui/DateRangeField';
+import { FilterSelect } from '../../../shared/ui/FilterSelect';
 import FormattedInput from '../../../shared/ui/FormattedInput';
 import {
   formatDate,
@@ -460,73 +461,64 @@ export default function UsersPage() {
               placeholder="Buscar por nome, e-mail, telefone ou cargo..."
             />
           </InputGroup>
-          <Select
-            aria-label="Filial"
+          <FilterSelect
+            label="Filial"
             value={filters.branch}
-            onChange={event =>
-              setFilters(v => ({ ...v, branch: event.target.value }))
-            }
-          >
-            <option value="">Todas as filiais</option>
-            {options?.branches.map(item => (
-              <option key={item.id} value={item.id}>
-                {item.nome}
-              </option>
-            ))}
-          </Select>
-          <Select
-            aria-label="Departamento"
+            onChange={v => setFilters(x => ({ ...x, branch: v }))}
+            options={[
+              { value: '', label: 'Todas as filiais' },
+              ...(options?.branches.map(item => ({
+                value: String(item.id),
+                label: item.nome,
+              })) ?? []),
+            ]}
+          />
+          <FilterSelect
+            label="Departamento"
             value={filters.department}
-            onChange={event =>
-              setFilters(v => ({ ...v, department: event.target.value }))
-            }
-          >
-            <option value="">Departamentos</option>
-            {options?.departments.map(item => (
-              <option key={item.id} value={item.id}>
-                {item.nome}
-              </option>
-            ))}
-          </Select>
-          <Select
-            aria-label="Cargo"
+            onChange={v => setFilters(x => ({ ...x, department: v }))}
+            options={[
+              { value: '', label: 'Departamentos' },
+              ...(options?.departments.map(item => ({
+                value: String(item.id),
+                label: item.nome,
+              })) ?? []),
+            ]}
+          />
+          <FilterSelect
+            label="Cargo"
             value={filters.role}
-            onChange={event =>
-              setFilters(v => ({ ...v, role: event.target.value }))
-            }
-          >
-            <option value="">Cargos</option>
-            {options?.roles.map(item => (
-              <option key={item.id} value={item.id}>
-                {item.nome}
-              </option>
-            ))}
-          </Select>
-          <Select
-            aria-label="Perfil"
+            onChange={v => setFilters(x => ({ ...x, role: v }))}
+            options={[
+              { value: '', label: 'Cargos' },
+              ...(options?.roles.map(item => ({
+                value: String(item.id),
+                label: item.nome,
+              })) ?? []),
+            ]}
+          />
+          <FilterSelect
+            label="Perfil"
             value={filters.profile}
-            onChange={event =>
-              setFilters(v => ({ ...v, profile: event.target.value }))
-            }
-          >
-            <option value="">Perfis</option>
-            {options?.profiles.map(item => (
-              <option key={item.id} value={item.id}>
-                {item.nome}
-              </option>
-            ))}
-          </Select>
-          <Select
-            aria-label="Situacao"
+            onChange={v => setFilters(x => ({ ...x, profile: v }))}
+            options={[
+              { value: '', label: 'Perfis' },
+              ...(options?.profiles.map(item => ({
+                value: String(item.id),
+                label: item.nome,
+              })) ?? []),
+            ]}
+          />
+          <FilterSelect
+            label="Situacao"
             value={filters.status}
-            onChange={event =>
-              setFilters(v => ({ ...v, status: event.target.value }))
-            }
-          >
-            <option value="">Situacoes</option>
-            <option value="1">Ativos</option>
-            <option value="0">Bloqueados</option>
-          </Select>
+            onChange={v => setFilters(x => ({ ...x, status: v }))}
+            options={[
+              { value: '', label: 'Situacoes' },
+              { value: '1', label: 'Ativos' },
+              { value: '0', label: 'Bloqueados' },
+            ]}
+          />
           <DateRangeField
             size="sm"
             value={{

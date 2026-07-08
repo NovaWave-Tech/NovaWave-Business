@@ -71,6 +71,7 @@ import {
   SectionHeader,
   Surface,
 } from '../../../shared/ui/ErpUI';
+import { FilterSelect } from '../../../shared/ui/FilterSelect';
 import {
   formatCurrency,
   formatDateTime,
@@ -286,46 +287,41 @@ export default function InventoryPage() {
               placeholder="Buscar por produto, SKU ou codigo de barras..."
             />
           </InputGroup>
-          <Select
-            aria-label="Filial"
+          <FilterSelect
+            label="Filial"
             value={filters.branch}
-            onChange={event =>
-              setFilters(v => ({ ...v, branch: event.target.value }))
-            }
-          >
-            <option value="">Todas as filiais</option>
-            {options?.branches.map(branch => (
-              <option key={branch.id} value={branch.id}>
-                {branch.nome}
-              </option>
-            ))}
-          </Select>
-          <Select
-            aria-label="Categoria"
+            onChange={v => setFilters(x => ({ ...x, branch: v }))}
+            options={[
+              { value: '', label: 'Todas as filiais' },
+              ...(options?.branches.map(branch => ({
+                value: String(branch.id),
+                label: branch.nome,
+              })) ?? []),
+            ]}
+          />
+          <FilterSelect
+            label="Categoria"
             value={filters.category}
-            onChange={event =>
-              setFilters(v => ({ ...v, category: event.target.value }))
-            }
-          >
-            <option value="">Categorias</option>
-            {options?.categories.map(category => (
-              <option key={category.id} value={category.id}>
-                {category.nome}
-              </option>
-            ))}
-          </Select>
-          <Select
-            aria-label="Situacao"
+            onChange={v => setFilters(x => ({ ...x, category: v }))}
+            options={[
+              { value: '', label: 'Categorias' },
+              ...(options?.categories.map(category => ({
+                value: String(category.id),
+                label: category.nome,
+              })) ?? []),
+            ]}
+          />
+          <FilterSelect
+            label="Situacao"
             value={filters.status}
-            onChange={event =>
-              setFilters(v => ({ ...v, status: event.target.value }))
-            }
-          >
-            <option value="">Situacoes</option>
-            <option value="ok">Disponivel</option>
-            <option value="critical">Critico</option>
-            <option value="zero">Ruptura</option>
-          </Select>
+            onChange={v => setFilters(x => ({ ...x, status: v }))}
+            options={[
+              { value: '', label: 'Situacoes' },
+              { value: 'ok', label: 'Disponivel' },
+              { value: 'critical', label: 'Critico' },
+              { value: 'zero', label: 'Ruptura' },
+            ]}
+          />
           <Button
             variant="ghost"
             onClick={() =>
