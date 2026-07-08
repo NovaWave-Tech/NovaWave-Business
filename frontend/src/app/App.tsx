@@ -1,5 +1,6 @@
 import {
   Navigate,
+  Outlet,
   Route,
   BrowserRouter as Router,
   Routes,
@@ -56,6 +57,9 @@ const ProductsPage = lazy(
 const FinancePage = lazy(() => import('../modules/finance/pages/FinancePage'));
 const ReportsPage = lazy(() => import('../modules/reports/pages/ReportsPage'));
 const SalesPage = lazy(() => import('../modules/sales/pages/SalesPage'));
+const SaleReceiptPage = lazy(
+  () => import('../modules/sales/pages/SaleReceiptPage')
+);
 const PurchasesPage = lazy(
   () => import('../modules/purchases/pages/PurchasesPage')
 );
@@ -94,6 +98,20 @@ function ProtectedRoutes() {
   return (
     <AuthProvider>
       <AppLayout />
+    </AuthProvider>
+  );
+}
+
+function ProtectedBareRoutes() {
+  const isAuthenticated = Boolean(getToken() && isTokenValid());
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return (
+    <AuthProvider>
+      <Outlet />
     </AuthProvider>
   );
 }
@@ -161,6 +179,9 @@ export default function App() {
             <Route path="/cashier" element={<CashierPage />} />
             <Route path="/companies" element={<ErpCompanyPage />} />
             <Route path="/settings" element={<ErpSettingsPage />} />
+          </Route>
+          <Route element={<ProtectedBareRoutes />}>
+            <Route path="/sales/:id/receipt" element={<SaleReceiptPage />} />
           </Route>
         </Routes>
       </Suspense>

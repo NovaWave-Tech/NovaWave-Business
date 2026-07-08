@@ -127,6 +127,7 @@ $app->group('', function ($group): void {
     $group->get('/sales', SalesController::class . ':index');
     $group->post('/sales', SalesController::class . ':store');
     $group->get('/sales/{id:[0-9]+}', SalesController::class . ':show');
+    $group->get('/sales/{id:[0-9]+}/receipt', SalesController::class . ':receipt');
     $group->patch('/sales/{id:[0-9]+}/status', SalesController::class . ':status');
     $group->get('/inventory', InventoryController::class . ':index');
     $group->get('/purchases', PurchasesController::class . ':index');

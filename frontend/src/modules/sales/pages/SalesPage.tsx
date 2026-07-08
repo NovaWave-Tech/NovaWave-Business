@@ -23,6 +23,12 @@ import {
   MenuDivider,
   MenuItem,
   MenuList,
+  Modal,
+  ModalBody,
+  ModalCloseButton,
+  ModalContent,
+  ModalFooter,
+  ModalOverlay,
   NumberDecrementStepper,
   NumberIncrementStepper,
   NumberInput,
@@ -45,11 +51,13 @@ import {
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Ban,
+  CheckCircle2,
   CircleDollarSign,
   Eye,
   MoreHorizontal,
   Package,
   Plus,
+  Printer,
   Receipt,
   Search,
   ShoppingCart,
@@ -59,6 +67,7 @@ import {
   XCircle,
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   BrandSurface,
   EmptyState,
@@ -111,9 +120,12 @@ function StatusBadge({ status }: { status: number }) {
 
 export default function SalesPage() {
   const toast = useToast();
+  const navigate = useNavigate();
   const client = useQueryClient();
   const detailDrawer = useDisclosure();
   const saleDrawer = useDisclosure();
+  const successModal = useDisclosure();
+  const [lastSaleId, setLastSaleId] = useState<number | null>(null);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [range, setRange] = useState<DateRange>({
     start: isoDaysAgo(30),
@@ -173,11 +185,12 @@ export default function SalesPage() {
           valor_unitario: line.valor_unitario,
         })),
       }),
-    onSuccess: async () => {
+    onSuccess: async result => {
       await refresh();
       saleDrawer.onClose();
       resetSale();
-      toast({ title: 'Venda registrada com sucesso', status: 'success' });
+      setLastSaleId(result.data.idvenda);
+      successModal.onOpen();
     },
     onError: notifyError,
   });
@@ -456,6 +469,14 @@ export default function SalesPage() {
                           >
                             Visualizar
                           </MenuItem>
+                          <MenuItem
+                            icon={<Printer size={15} />}
+                            onClick={() =>
+                              navigate(`/sales/${sale.idvenda}/receipt`)
+                            }
+                          >
+                            Comprovante
+                          </MenuItem>
                           {sale.situacao === 1 && (
                             <>
                               <MenuDivider />
@@ -499,6 +520,7 @@ export default function SalesPage() {
         loading={detail.isLoading}
         onCancel={id => cancel.mutate(id)}
         cancelling={cancel.isPending}
+        onReceipt={id => navigate(`/sales/${id}/receipt`)}
       />
 
       <Drawer
@@ -762,6 +784,51 @@ export default function SalesPage() {
           </DrawerFooter>
         </DrawerContent>
       </Drawer>
+
+      <Modal
+        isOpen={successModal.isOpen}
+        onClose={successModal.onClose}
+        isCentered
+      >
+        <ModalOverlay />
+        <ModalContent>
+          <ModalCloseButton />
+          <ModalBody pt={10} pb={4} textAlign="center">
+            <Flex
+              w="56px"
+              h="56px"
+              mx="auto"
+              align="center"
+              justify="center"
+              borderRadius="full"
+              bg="erp.brandSoft"
+              color="erp.success"
+            >
+              <CheckCircle2 size={30} />
+            </Flex>
+            <Text mt={4} fontSize="18px" fontWeight="800">
+              Venda #{lastSaleId} registrada!
+            </Text>
+            <Text mt={1} fontSize="13px" color="erp.textSecondary">
+              Deseja imprimir ou encaminhar o comprovante para o cliente?
+            </Text>
+          </ModalBody>
+          <ModalFooter justifyContent="center" gap={3} pb={8}>
+            <Button variant="ghost" onClick={successModal.onClose}>
+              Agora nao
+            </Button>
+            <Button
+              leftIcon={<Printer size={16} />}
+              onClick={() => {
+                successModal.onClose();
+                navigate(`/sales/${lastSaleId}/receipt`);
+              }}
+            >
+              Ver comprovante
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
     </Box>
   );
 }
@@ -797,12 +864,14 @@ function SaleDetailDrawer({
   loading,
   onCancel,
   cancelling,
+  onReceipt,
 }: {
   disclosure: ReturnType<typeof useDisclosure>;
   detail?: SaleDetail;
   loading: boolean;
   onCancel: (id: number) => void;
   cancelling: boolean;
+  onReceipt: (id: number) => void;
 }) {
   return (
     <Drawer
@@ -963,6 +1032,14 @@ function SaleDetailDrawer({
               onClick={() => onCancel(detail.idvenda)}
             >
               Cancelar venda
+            </Button>
+          )}
+          {detail && (
+            <Button
+              leftIcon={<Printer size={15} />}
+              onClick={() => onReceipt(detail.idvenda)}
+            >
+              Comprovante
             </Button>
           )}
           <Button variant="ghost" onClick={disclosure.onClose}>
