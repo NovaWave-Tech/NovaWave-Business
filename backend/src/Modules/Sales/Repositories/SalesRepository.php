@@ -109,6 +109,38 @@ final class SalesRepository
         ];
     }
 
+    public function receipt(int $companyId, int $saleId): ?array
+    {
+        $sale = $this->show($companyId, $saleId);
+        if (!$sale) {
+            return null;
+        }
+        $company = $this->one(
+            'SELECT razao_social, nome_fantasia, cnpj, email, telefone, endereco, numero, bairro, cidade, estado, cep
+             FROM empresa WHERE idempresa = :company_id',
+            ['company_id' => $companyId]
+        );
+        $branch = $this->one(
+            'SELECT idfilial, nome, codigo, cnpj, matriz, email, telefone, endereco, numero, bairro, cidade, estado, cep
+             FROM filial WHERE idempresa = :company_id AND idfilial = :branch',
+            ['company_id' => $companyId, 'branch' => (int) $sale['idfilial']]
+        );
+        $customer = null;
+        if (!empty($sale['idcliente'])) {
+            $customer = $this->one(
+                'SELECT nome, documento, email, telefone FROM cliente WHERE idempresa = :company_id AND idcliente = :customer',
+                ['company_id' => $companyId, 'customer' => (int) $sale['idcliente']]
+            ) ?: null;
+        }
+        return [
+            'sale' => $sale,
+            'company' => $company,
+            'branch' => $branch ? [...$branch, 'idfilial' => (int) $branch['idfilial'], 'matriz' => (bool) $branch['matriz']] : null,
+            'customer' => $customer,
+            'issued_at' => date(DATE_ATOM),
+        ];
+    }
+
     public function create(int $companyId, int $actorId, array $data, ?string $ip, ?string $agent): int
     {
         return $this->transaction(function () use ($companyId, $actorId, $data, $ip, $agent) {

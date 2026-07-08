@@ -81,6 +81,40 @@ export type SalePayload = {
   }>;
 };
 
+export type ReceiptParty = {
+  razao_social?: string | null;
+  nome_fantasia?: string | null;
+  cnpj?: string | null;
+  email?: string | null;
+  telefone?: string | null;
+  endereco?: string | null;
+  numero?: string | null;
+  bairro?: string | null;
+  cidade?: string | null;
+  estado?: string | null;
+  cep?: string | null;
+};
+
+export type SaleReceiptData = {
+  sale: SaleDetail;
+  company: ReceiptParty;
+  branch:
+    | (ReceiptParty & {
+        idfilial: number;
+        nome: string;
+        codigo?: string | null;
+        matriz: boolean;
+      })
+    | null;
+  customer: {
+    nome: string;
+    documento?: string | null;
+    email?: string | null;
+    telefone?: string | null;
+  } | null;
+  issued_at: string;
+};
+
 export const SALE_STATUS: Record<number, { label: string; scheme: string }> = {
   1: { label: 'Concluida', scheme: 'green' },
   2: { label: 'Pendente', scheme: 'yellow' },

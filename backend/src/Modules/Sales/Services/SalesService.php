@@ -23,6 +23,15 @@ final class SalesService
         return $sale;
     }
 
+    public function receipt(int $companyId, int $saleId): array
+    {
+        $receipt = $this->repository->receipt($companyId, $saleId);
+        if (!$receipt) {
+            throw new InvalidArgumentException('Venda nao encontrada');
+        }
+        return $receipt;
+    }
+
     public function create(int $companyId, int $actorId, array $data, ?string $ip, ?string $agent): int
     {
         if ((int) ($data['idfilial'] ?? 0) <= 0) {

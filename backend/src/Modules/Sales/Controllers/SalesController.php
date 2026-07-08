@@ -33,6 +33,13 @@ final class SalesController extends ApiController
         );
     }
 
+    public function receipt(Request $request, Response $response, array $args): Response
+    {
+        return $this->run($request, $response, fn (RequestContext $context) =>
+            $this->service->receipt($context->companyId, (int) $args['id'])
+        );
+    }
+
     public function store(Request $request, Response $response): Response
     {
         return $this->run($request, $response, fn (RequestContext $context) => [
