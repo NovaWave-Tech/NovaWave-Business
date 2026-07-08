@@ -34,6 +34,7 @@ import {
   ModalFooter,
   ModalHeader,
   ModalOverlay,
+  Portal,
   Select,
   SimpleGrid,
   Skeleton,
@@ -101,6 +102,7 @@ import {
   SectionHeader,
   Surface,
 } from '../../../shared/ui/ErpUI';
+import { FilterSelect } from '../../../shared/ui/FilterSelect';
 import { DateRangeField } from '../../../shared/ui/DateRangeField';
 import { Reveal } from '../../../shared/ui/motion';
 import FormattedInput, {
@@ -441,63 +443,60 @@ export default function CustomersPage() {
               placeholder="Buscar por nome, CPF, CNPJ, telefone, e-mail ou cidade..."
             />
           </InputGroup>
-          <Select
-            aria-label="Tipo de pessoa"
+          <FilterSelect
+            label="Tipo de pessoa"
             value={filters.type}
-            onChange={event =>
-              setFilters(v => ({ ...v, type: event.target.value }))
-            }
-          >
-            <option value="">Tipo</option>
-            <option value="1">Pessoa fisica</option>
-            <option value="2">Pessoa juridica</option>
-          </Select>
-          <Select
-            aria-label="Situacao"
+            onChange={v => setFilters(x => ({ ...x, type: v }))}
+            options={[
+              { value: '', label: 'Tipo' },
+              { value: '1', label: 'Pessoa fisica' },
+              { value: '2', label: 'Pessoa juridica' },
+            ]}
+          />
+          <FilterSelect
+            label="Situacao"
             value={filters.status}
-            onChange={event =>
-              setFilters(v => ({ ...v, status: event.target.value }))
-            }
-          >
-            <option value="">Situacao</option>
-            <option value="1">Ativos</option>
-            <option value="0">Inativos</option>
-          </Select>
-          <Select
-            aria-label="Cidade"
+            onChange={v => setFilters(x => ({ ...x, status: v }))}
+            options={[
+              { value: '', label: 'Situacao' },
+              { value: '1', label: 'Ativos' },
+              { value: '0', label: 'Inativos' },
+            ]}
+          />
+          <FilterSelect
+            label="Cidade"
             value={filters.city}
-            onChange={event =>
-              setFilters(v => ({ ...v, city: event.target.value }))
-            }
-          >
-            <option value="">Cidade</option>
-            {data?.options.cities.map(item => (
-              <option key={item.nome}>{item.nome}</option>
-            ))}
-          </Select>
-          <Select
-            aria-label="Estado"
+            onChange={v => setFilters(x => ({ ...x, city: v }))}
+            options={[
+              { value: '', label: 'Cidade' },
+              ...(data?.options.cities.map(item => ({
+                value: item.nome,
+                label: item.nome,
+              })) ?? []),
+            ]}
+          />
+          <FilterSelect
+            label="Estado"
             value={filters.state}
-            onChange={event =>
-              setFilters(v => ({ ...v, state: event.target.value }))
-            }
-          >
-            <option value="">Estado</option>
-            {data?.options.states.map(item => (
-              <option key={item.nome}>{item.nome}</option>
-            ))}
-          </Select>
-          <Select
-            aria-label="Compras"
+            onChange={v => setFilters(x => ({ ...x, state: v }))}
+            options={[
+              { value: '', label: 'Estado' },
+              ...(data?.options.states.map(item => ({
+                value: item.nome,
+                label: item.nome,
+              })) ?? []),
+            ]}
+          />
+          <FilterSelect
+            label="Compras"
             value={filters.purchases}
-            onChange={event =>
-              setFilters(v => ({ ...v, purchases: event.target.value }))
-            }
-          >
-            <option value="">Compras</option>
-            <option value="with">Com compras</option>
-            <option value="without">Sem compras</option>
-          </Select>
+            onChange={v => setFilters(x => ({ ...x, purchases: v }))}
+            options={[
+              { value: '', label: 'Compras' },
+              { value: 'with', label: 'Com compras' },
+              { value: 'without', label: 'Sem compras' },
+            ]}
+          />
           <Menu closeOnSelect={false}>
             <MenuButton
               as={Button}
@@ -506,67 +505,69 @@ export default function CustomersPage() {
             >
               Mais filtros
             </MenuButton>
-            <MenuList minW="260px">
-              <FilterSelect
-                label="Financeiro"
-                value={filters.delinquent}
-                onChange={value =>
-                  setFilters(v => ({ ...v, delinquent: value }))
-                }
-                options={[['1', 'Inadimplentes']]}
-              />
-              <FilterSelect
-                label="Limite de credito"
-                value={filters.credit}
-                onChange={value => setFilters(v => ({ ...v, credit: value }))}
-                options={[
-                  ['with', 'Com limite'],
-                  ['without', 'Sem limite'],
-                ]}
-              />
-              <Box px={3} py={2}>
-                <Text mb={1} fontSize="10px" color="erp.textMuted">
-                  Ultima compra
-                </Text>
-                <DateRangeField
-                  size="sm"
-                  direction="column"
-                  align="stretch"
-                  value={{
-                    start: filters.last_purchase_start,
-                    end: filters.last_purchase_end,
-                  }}
-                  onChange={next =>
-                    setFilters(v => ({
-                      ...v,
-                      last_purchase_start: next.start,
-                      last_purchase_end: next.end,
-                    }))
+            <Portal>
+              <MenuList minW="260px" zIndex={1500}>
+                <MenuFilterOption
+                  label="Financeiro"
+                  value={filters.delinquent}
+                  onChange={value =>
+                    setFilters(v => ({ ...v, delinquent: value }))
                   }
+                  options={[['1', 'Inadimplentes']]}
                 />
-              </Box>
-              <Box px={3} py={2}>
-                <Text mb={1} fontSize="10px" color="erp.textMuted">
-                  Cadastro
-                </Text>
-                <DateRangeField
-                  size="sm"
-                  direction="column"
-                  align="stretch"
-                  value={{
-                    start: filters.registered_start,
-                    end: filters.registered_end,
-                  }}
-                  onChange={next =>
-                    setFilters(v => ({
-                      ...v,
-                      registered_start: next.start,
-                      registered_end: next.end,
-                    }))
-                  }
+                <MenuFilterOption
+                  label="Limite de credito"
+                  value={filters.credit}
+                  onChange={value => setFilters(v => ({ ...v, credit: value }))}
+                  options={[
+                    ['with', 'Com limite'],
+                    ['without', 'Sem limite'],
+                  ]}
                 />
-              </Box>
-            </MenuList>
+                <Box px={3} py={2}>
+                  <Text mb={1} fontSize="10px" color="erp.textMuted">
+                    Ultima compra
+                  </Text>
+                  <DateRangeField
+                    size="sm"
+                    direction="column"
+                    align="stretch"
+                    value={{
+                      start: filters.last_purchase_start,
+                      end: filters.last_purchase_end,
+                    }}
+                    onChange={next =>
+                      setFilters(v => ({
+                        ...v,
+                        last_purchase_start: next.start,
+                        last_purchase_end: next.end,
+                      }))
+                    }
+                  />
+                </Box>
+                <Box px={3} py={2}>
+                  <Text mb={1} fontSize="10px" color="erp.textMuted">
+                    Cadastro
+                  </Text>
+                  <DateRangeField
+                    size="sm"
+                    direction="column"
+                    align="stretch"
+                    value={{
+                      start: filters.registered_start,
+                      end: filters.registered_end,
+                    }}
+                    onChange={next =>
+                      setFilters(v => ({
+                        ...v,
+                        registered_start: next.start,
+                        registered_end: next.end,
+                      }))
+                    }
+                  />
+                </Box>
+              </MenuList>
+            </Portal>
           </Menu>
           <Button variant="ghost" onClick={clear}>
             Limpar
@@ -772,7 +773,7 @@ export default function CustomersPage() {
   );
 }
 
-function FilterSelect({
+function MenuFilterOption({
   label,
   value,
   onChange,

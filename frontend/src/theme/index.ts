@@ -58,8 +58,62 @@ const theme = extendTheme({
   },
   fonts: {
     heading:
-      'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-    body: 'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+      '"Inter Variable", Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    body: '"Inter Variable", Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    mono: '"JetBrains Mono Variable", ui-monospace, "Cascadia Mono", "SF Mono", Menlo, Consolas, monospace',
+  },
+  // Escala tipografica oficial do produto. Use via textStyle="..." em vez de
+  // repetir fontSize/fontWeight/letterSpacing nas paginas.
+  textStyles: {
+    h1: {
+      fontSize: '28px',
+      fontWeight: 600,
+      letterSpacing: '-0.6px',
+      lineHeight: 1.2,
+    },
+    h2: {
+      fontSize: '24px',
+      fontWeight: 600,
+      letterSpacing: '-0.5px',
+      lineHeight: 1.2,
+    },
+    h3: {
+      fontSize: '20px',
+      fontWeight: 600,
+      letterSpacing: '-0.3px',
+      lineHeight: 1.25,
+    },
+    h4: {
+      fontSize: '18px',
+      fontWeight: 600,
+      letterSpacing: '-0.2px',
+      lineHeight: 1.3,
+    },
+    h5: {
+      fontSize: '16px',
+      fontWeight: 600,
+      letterSpacing: '-0.1px',
+      lineHeight: 1.35,
+    },
+    h6: { fontSize: '14px', fontWeight: 600, lineHeight: 1.4 },
+    subtitle1: { fontSize: '14px', fontWeight: 500, lineHeight: 1.5 },
+    subtitle2: { fontSize: '13px', fontWeight: 500, lineHeight: 1.5 },
+    body1: { fontSize: '14px', fontWeight: 400, lineHeight: 1.55 },
+    body2: { fontSize: '13px', fontWeight: 400, lineHeight: 1.55 },
+    caption: { fontSize: '12px', fontWeight: 400, lineHeight: 1.5 },
+    overline: {
+      fontSize: '11px',
+      fontWeight: 600,
+      letterSpacing: '0.8px',
+      textTransform: 'uppercase',
+      lineHeight: 1.4,
+    },
+    // Numeros financeiros e metricas: fonte mono + algarismos tabulares.
+    numeric: {
+      fontFamily: 'mono',
+      fontVariantNumeric: 'tabular-nums',
+      letterSpacing: '-0.3px',
+    },
   },
   radii: brand.radii,
   shadows: {
@@ -74,6 +128,8 @@ const theme = extendTheme({
       body: {
         bg: 'erp.canvas',
         color: 'erp.text',
+        fontSize: '14px',
+        lineHeight: 1.55,
       },
       '::selection': {
         bg: 'brand.500',
@@ -86,9 +142,14 @@ const theme = extendTheme({
       defaultProps: {
         colorScheme: 'brand',
       },
+      sizes: {
+        sm: { fontSize: '12px' },
+        md: { fontSize: '13px' },
+      },
       baseStyle: {
         borderRadius: 'md',
-        fontWeight: '650',
+        fontWeight: '600',
+        letterSpacing: '0.1px',
         transition:
           'background-color 160ms ease, border-color 160ms ease, color 160ms ease, box-shadow 160ms ease, transform 160ms ease',
         _focusVisible: { boxShadow: '0 0 0 3px rgba(37,99,255,.18)' },
@@ -135,8 +196,8 @@ const theme = extendTheme({
     },
     Heading: {
       baseStyle: {
-        fontWeight: '800',
-        letterSpacing: '0',
+        fontWeight: '600',
+        letterSpacing: '-0.02em',
       },
     },
     FormLabel: {

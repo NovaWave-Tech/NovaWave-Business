@@ -22,7 +22,6 @@ import {
   MenuDivider,
   MenuItem,
   MenuList,
-  Select,
   SimpleGrid,
   Table,
   Tbody,
@@ -61,6 +60,7 @@ import {
   SectionHeader,
   Surface,
 } from '../../../shared/ui/ErpUI';
+import { FilterSelect } from '../../../shared/ui/FilterSelect';
 import FormattedInput from '../../../shared/ui/FormattedInput';
 import {
   formatCurrency,
@@ -283,17 +283,16 @@ export default function SuppliersPage() {
               placeholder="Buscar por razao social, fantasia, documento, e-mail ou cidade..."
             />
           </InputGroup>
-          <Select
-            aria-label="Situacao"
+          <FilterSelect
+            label="Situacao"
             value={filters.status}
-            onChange={event =>
-              setFilters(v => ({ ...v, status: event.target.value }))
-            }
-          >
-            <option value="">Situacoes</option>
-            <option value="1">Ativos</option>
-            <option value="0">Inativos</option>
-          </Select>
+            onChange={v => setFilters(x => ({ ...x, status: v }))}
+            options={[
+              { value: '', label: 'Situacoes' },
+              { value: '1', label: 'Ativos' },
+              { value: '0', label: 'Inativos' },
+            ]}
+          />
           <Button
             variant="ghost"
             onClick={() => setFilters({ q: '', status: '' })}

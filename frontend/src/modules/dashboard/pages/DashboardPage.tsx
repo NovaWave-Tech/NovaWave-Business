@@ -1,12 +1,10 @@
 import {
-  Badge,
   Box,
   Flex,
   Grid,
   Icon,
   IconButton,
   Progress,
-  Select,
   SimpleGrid,
   Text,
   Tooltip,
@@ -16,13 +14,11 @@ import { useQuery } from '@tanstack/react-query';
 import {
   Activity,
   AlertTriangle,
-  Banknote,
   Building2,
   CircleDollarSign,
   Clock3,
   HelpCircle,
   LineChart,
-  PackagePlus,
   ReceiptText,
   RefreshCw,
   ShoppingCart,
@@ -30,11 +26,9 @@ import {
   Target,
   TrendingUp,
   Trophy,
-  UserPlus,
-  WalletCards,
   type LucideIcon,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import {
   Area,
   CartesianGrid,
@@ -47,6 +41,7 @@ import {
   YAxis,
 } from 'recharts';
 import {
+  DeltaPill,
   EmptyState,
   ErrorState,
   KpiCard,
@@ -65,13 +60,13 @@ import {
   DateRangeField,
   type DateRange,
 } from '../../../shared/ui/DateRangeField';
+import { FilterSelect } from '../../../shared/ui/FilterSelect';
 import { Reveal } from '../../../shared/ui/motion';
 import {
   formatCurrency,
   formatDate,
   formatDateRange,
   formatDateTime,
-  formatDelta,
   formatMonthYear,
   formatNumber,
   formatPercent,
@@ -80,16 +75,47 @@ import {
 } from '../../../shared/utils/formatters';
 import { getDashboard } from '../services/dashboardService';
 
+function MetaPill({
+  icon,
+  dotColor,
+  children,
+}: {
+  icon?: LucideIcon;
+  dotColor?: string;
+  children: ReactNode;
+}) {
+  return (
+    <Flex
+      align="center"
+      gap={1.5}
+      px={2.5}
+      py={1}
+      border="1px solid"
+      borderColor="erp.border"
+      borderRadius="full"
+      bg="erp.surface"
+      flexShrink={0}
+    >
+      {icon && <Icon as={icon} boxSize="12px" color="erp.textSecondary" />}
+      {dotColor && (
+        <Box w="6px" h="6px" borderRadius="full" bg={dotColor} flexShrink={0} />
+      )}
+      <Text
+        fontSize="12px"
+        fontWeight="500"
+        color="erp.textSecondary"
+        sx={{ fontVariantNumeric: 'tabular-nums' }}
+      >
+        {children}
+      </Text>
+    </Flex>
+  );
+}
+
 function HelpLabel({ label, hint }: { label: string; hint?: string }) {
   return (
     <Flex align="center" gap={1.5}>
-      <Text
-        fontSize="10px"
-        fontWeight="700"
-        color="erp.textMuted"
-        textTransform="uppercase"
-        letterSpacing=".05em"
-      >
+      <Text textStyle="overline" fontSize="10px" color="erp.textMuted">
         {label}
       </Text>
       {hint && (
@@ -119,37 +145,19 @@ function CompareRow({
       align="center"
       justify="space-between"
       gap={4}
-      px={4}
-      py={3.5}
-      bg="erp.surface"
-      border="1px solid"
-      borderColor="erp.border"
-      borderRadius="10px"
+      px={5}
+      py={4}
+      transition="background 140ms ease"
+      _hover={{ bg: 'erp.hover' }}
+      _notLast={{ borderBottom: '1px solid', borderColor: 'erp.border' }}
     >
       <Box minW={0}>
         <HelpLabel label={label} hint={hint} />
-        <Text
-          mt={1}
-          fontSize="15px"
-          fontWeight="700"
-          sx={{ fontVariantNumeric: 'tabular-nums' }}
-        >
+        <Text mt={1} textStyle="numeric" fontSize="15px" fontWeight="600">
           {value}
         </Text>
       </Box>
-      {delta !== undefined && (
-        <Badge
-          colorScheme={delta >= 0 ? 'green' : 'red'}
-          variant="subtle"
-          borderRadius="full"
-          textTransform="none"
-          px={2.5}
-          py={1}
-          flexShrink={0}
-        >
-          {formatDelta(delta)}
-        </Badge>
-      )}
+      {delta !== undefined && <DeltaPill delta={delta} />}
     </Flex>
   );
 }
@@ -171,8 +179,7 @@ export default function DashboardPage() {
   if (dashboard.isError || !dashboard.data)
     return <ErrorState retry={() => void dashboard.refetch()} />;
 
-  const { summary, kpis, goal, branches, evolution, alerts, activities } =
-    dashboard.data;
+  const { summary, kpis, goal, branches, evolution, alerts } = dashboard.data;
   const visibleBranches =
     branchFilter === 'all'
       ? branches
@@ -186,12 +193,27 @@ export default function DashboardPage() {
       ? ((goal.sold - goal.same_month_last_year) / goal.same_month_last_year) *
         100
       : undefined;
-  const activityIcons: Record<string, LucideIcon> = {
-    sale: ShoppingCart,
-    purchase: WalletCards,
-    customer: UserPlus,
-    product: PackagePlus,
-    cash: Banknote,
+  const totalNetworkRevenue = branches.reduce(
+    (sum, branch) => sum + Number(branch.revenue),
+    0
+  );
+  const periodTotal = evolution.reduce(
+    (sum, point) => sum + Number(point.revenue),
+    0
+  );
+  const previousTotal = evolution.reduce(
+    (sum, point) => sum + Number(point.previous_revenue),
+    0
+  );
+  const evolutionDelta =
+    previousTotal > 0
+      ? ((periodTotal - previousTotal) / previousTotal) * 100
+      : undefined;
+  const alertTint: Record<string, string> = {
+    warning: 'rgba(253,176,34,.14)',
+    danger: 'rgba(249,112,102,.14)',
+    info: 'rgba(56,189,248,.14)',
+    success: 'rgba(50,213,131,.14)',
   };
 
   return (
@@ -202,26 +224,35 @@ export default function DashboardPage() {
         description="Visao analitica da empresa, com desempenho consolidado por filial."
         breadcrumbs={[{ label: 'Visao geral' }, { label: 'Dashboard' }]}
         actions={
-          <Flex gap={2} w="full" wrap={{ base: 'wrap', md: 'nowrap' }}>
+          <Flex
+            gap={2}
+            w="full"
+            align="center"
+            wrap={{ base: 'wrap', md: 'nowrap' }}
+          >
             <DateRangeField value={range} onChange={setRange} />
-            <Select
-              aria-label="Filial em destaque"
+            <FilterSelect
+              label="Filial em destaque"
+              icon={Building2}
               value={branchFilter}
-              onChange={event => setBranchFilter(event.target.value)}
-              w={{ base: 'full', md: '180px' }}
-            >
-              <option value="all">Todas as filiais</option>
-              {branches.map(branch => (
-                <option key={branch.id} value={branch.id}>
-                  {branch.name}
-                </option>
-              ))}
-            </Select>
+              onChange={setBranchFilter}
+              w={{ base: 'full', md: '200px' }}
+              options={[
+                { value: 'all', label: 'Todas as filiais' },
+                ...branches.map(branch => ({
+                  value: String(branch.id),
+                  label: branch.name,
+                })),
+              ]}
+            />
             <Tooltip label="Atualizar indicadores">
               <IconButton
                 aria-label="Atualizar indicadores"
-                icon={<RefreshCw size={17} />}
+                icon={<RefreshCw size={16} />}
                 variant="outline"
+                w="40px"
+                h="40px"
+                flexShrink={0}
                 isLoading={dashboard.isFetching}
                 onClick={() => void dashboard.refetch()}
               />
@@ -250,39 +281,38 @@ export default function DashboardPage() {
               </Flex>
               <Box minW={0}>
                 <Text
+                  textStyle="overline"
                   fontSize="10px"
-                  fontWeight="700"
                   color="erp.textMuted"
-                  textTransform="uppercase"
-                  letterSpacing=".05em"
                 >
                   Empresa monitorada
                 </Text>
-                <Text fontSize="15px" fontWeight="700" noOfLines={1}>
+                <Text textStyle="subtitle1" fontWeight="600" noOfLines={1}>
                   {summary.company_name}
                 </Text>
               </Box>
             </Flex>
             <Flex align="center" gap={2} wrap="wrap">
-              <Badge variant="outline" textTransform="none" px={2.5} py={1}>
+              <MetaPill icon={Building2}>
                 {summary.branches_total} filiais
-              </Badge>
-              <Badge
-                colorScheme="green"
-                variant="subtle"
-                textTransform="none"
-                px={2.5}
-                py={1}
-              >
+              </MetaPill>
+              <MetaPill dotColor="erp.success">
                 {summary.branches_with_activity} com movimento
-              </Badge>
-              <Text
-                fontSize="11px"
+              </MetaPill>
+              <Flex
+                align="center"
+                gap={1.5}
+                display={{ base: 'none', md: 'flex' }}
                 color="erp.textMuted"
-                display={{ base: 'none', md: 'block' }}
               >
-                Atualizado em {formatDateTime(summary.last_sync)}
-              </Text>
+                <Icon as={Clock3} boxSize="12px" />
+                <Text
+                  fontSize="11px"
+                  sx={{ fontVariantNumeric: 'tabular-nums' }}
+                >
+                  Atualizado em {formatDateTime(summary.last_sync)}
+                </Text>
+              </Flex>
             </Flex>
           </Flex>
         </Surface>
@@ -331,113 +361,107 @@ export default function DashboardPage() {
       </SimpleGrid>
 
       <Reveal index={1}>
-        <Surface mb={5}>
-          <Flex
-            align="center"
-            gap={3}
-            px={5}
-            py={4}
-            borderBottom="1px solid"
-            borderColor="erp.border"
-          >
-            <Flex
-              w="40px"
-              h="40px"
-              align="center"
-              justify="center"
-              borderRadius="10px"
-              bg="erp.brandSoft"
-              border="1px solid"
-              borderColor="erp.brandBorder"
-              color="brand.500"
-              flexShrink={0}
-            >
-              <LineChart size={19} />
-            </Flex>
-            <Box>
-              <Text
-                fontSize="10px"
-                fontWeight="700"
-                color="erp.textMuted"
-                textTransform="uppercase"
-                letterSpacing=".05em"
-              >
-                Projecao de venda da rede
-              </Text>
-              <Text fontSize="17px" fontWeight="700">
-                {formatMonthYear()}
-              </Text>
-            </Box>
-          </Flex>
+        <Surface mb={5} overflow="hidden">
+          <SectionHeader
+            icon={LineChart}
+            eyebrow="Projecao de venda da rede"
+            title={formatMonthYear()}
+            description="Estimativa pelo ritmo de venda; a precisao aumenta conforme o mes avanca."
+            action={
+              <MetaPill icon={Clock3}>
+                {goal.days_remaining} dias restantes
+              </MetaPill>
+            }
+          />
 
           <Grid
             templateColumns={{
               base: '1fr',
-              lg: 'minmax(0,1.3fr) minmax(0,1fr)',
+              lg: 'minmax(0,1.15fr) minmax(0,1fr)',
             }}
-            gap={5}
-            p={5}
           >
             <Box
-              bg="erp.surfaceSubtle"
-              border="1px solid"
-              borderColor="erp.border"
-              borderRadius="12px"
               p={5}
+              borderRight={{ base: 'none', lg: '1px solid' }}
+              borderBottom={{ base: '1px solid', lg: 'none' }}
+              borderColor="erp.border"
             >
-              <HelpLabel
-                label="Venda realizada no mes"
-                hint="Total ja faturado pela rede na competencia atual."
-              />
+              <Flex align="center" justify="space-between" gap={3} wrap="wrap">
+                <HelpLabel
+                  label="Venda realizada no mes"
+                  hint="Total ja faturado pela rede na competencia atual."
+                />
+                <MetaPill icon={Target}>
+                  Meta {formatCurrency(goal.target)}
+                </MetaPill>
+              </Flex>
               <Text
-                mt={1}
-                fontSize={{ base: '30px', md: '38px' }}
-                fontWeight="800"
+                mt={1.5}
+                textStyle="numeric"
+                fontSize={{ base: '30px', md: '36px' }}
+                fontWeight="600"
                 lineHeight="1.1"
-                sx={{ fontVariantNumeric: 'tabular-nums' }}
               >
                 {formatCurrency(goal.sold)}
               </Text>
-              <Flex mt={2.5} gap={2} wrap="wrap">
-                <Badge variant="outline" textTransform="none" px={2.5} py={1}>
-                  {formatPercent(goal.percentage)} da meta
-                </Badge>
-                <Badge variant="outline" textTransform="none" px={2.5} py={1}>
-                  {goal.days_remaining} dias restantes
-                </Badge>
+
+              <Progress
+                mt={5}
+                value={Math.min(goal.percentage, 100)}
+                size="sm"
+                colorScheme={goal.percentage >= 100 ? 'green' : 'blue'}
+                borderRadius="full"
+                bg="erp.hover"
+              />
+              <Flex mt={2} justify="space-between" gap={3} wrap="wrap">
+                <Text
+                  fontSize="11px"
+                  color="erp.textSecondary"
+                  sx={{ fontVariantNumeric: 'tabular-nums' }}
+                >
+                  {formatPercent(goal.percentage)} da meta atingida
+                </Text>
+                <Text
+                  fontSize="11px"
+                  color="erp.textSecondary"
+                  sx={{ fontVariantNumeric: 'tabular-nums' }}
+                >
+                  faltam {formatCurrency(goal.remaining)} ·{' '}
+                  {formatCurrency(goal.daily_required)}/dia
+                </Text>
               </Flex>
 
-              <Flex mt={6} align="center" justify="space-between" gap={4}>
+              <Flex
+                mt={5}
+                pt={4}
+                borderTop="1px solid"
+                borderColor="erp.border"
+                align="center"
+                justify="space-between"
+                gap={4}
+              >
                 <HelpLabel
                   label="Projecao de fechamento"
                   hint="Estimativa de faturamento ao fim do mes mantido o ritmo atual."
                 />
-                <Text
-                  fontSize="15px"
-                  fontWeight="800"
-                  sx={{ fontVariantNumeric: 'tabular-nums' }}
-                >
-                  {formatCurrency(goal.projection)}
-                </Text>
+                <Flex align="center" gap={2}>
+                  <Text textStyle="numeric" fontSize="16px" fontWeight="600">
+                    {formatCurrency(goal.projection)}
+                  </Text>
+                  <MetaPill
+                    dotColor={
+                      goal.projection_percentage >= 100
+                        ? 'erp.success'
+                        : 'erp.warning'
+                    }
+                  >
+                    {formatPercent(goal.projection_percentage)} da meta
+                  </MetaPill>
+                </Flex>
               </Flex>
-              <Progress
-                mt={2.5}
-                value={Math.min(goal.projection_percentage, 100)}
-                size="sm"
-                colorScheme={
-                  goal.projection_percentage >= 100 ? 'green' : 'blue'
-                }
-                borderRadius="full"
-                bg="erp.hover"
-              />
-              <Text mt={2} fontSize="11px" color="erp.textSecondary">
-                {formatPercent(goal.projection_percentage)} da projecao · faltam{' '}
-                {formatCurrency(goal.remaining)} ·{' '}
-                {formatCurrency(goal.daily_required)}/dia
-              </Text>
             </Box>
 
-            <VStack align="stretch" spacing={3}>
+            <Box>
               <CompareRow
                 label="Vs mes anterior"
                 hint="Faturamento total do mes anterior fechado."
@@ -456,13 +480,8 @@ export default function DashboardPage() {
                 value={formatPercent(goal.expected_pace_percentage)}
                 delta={goal.percentage - goal.expected_pace_percentage}
               />
-            </VStack>
+            </Box>
           </Grid>
-
-          <Text px={5} pb={4} fontSize="11px" color="erp.textMuted">
-            Estimativa baseada no ritmo de venda do periodo. A precisao aumenta
-            conforme o mes avanca.
-          </Text>
         </Surface>
       </Reveal>
 
@@ -481,6 +500,22 @@ export default function DashboardPage() {
               eyebrow="Inteligencia comercial"
               title="Evolucao das vendas"
               description={`${formatDateRange(range.start, range.end)} comparado ao periodo anterior`}
+              action={
+                evolution.length ? (
+                  <Flex
+                    align="center"
+                    gap={2}
+                    display={{ base: 'none', sm: 'flex' }}
+                  >
+                    <Text textStyle="numeric" fontSize="15px" fontWeight="600">
+                      {formatCurrency(periodTotal)}
+                    </Text>
+                    {evolutionDelta !== undefined && (
+                      <DeltaPill delta={evolutionDelta} />
+                    )}
+                  </Flex>
+                ) : undefined
+              }
             />
             {evolution.length ? (
               <Box h="360px" p={5}>
@@ -520,7 +555,13 @@ export default function DashboardPage() {
                         />
                       }
                     />
-                    <Legend wrapperStyle={{ fontSize: 11 }} />
+                    <Legend
+                      verticalAlign="top"
+                      align="right"
+                      iconType="circle"
+                      iconSize={7}
+                      wrapperStyle={{ fontSize: 11, paddingBottom: 12 }}
+                    />
                     <Area
                       type="monotone"
                       dataKey="revenue"
@@ -560,6 +601,13 @@ export default function DashboardPage() {
               eyebrow="Monitoramento"
               title="Alertas"
               description="Pontos que exigem atencao"
+              action={
+                alerts.length ? (
+                  <MetaPill dotColor="erp.warning">
+                    {alerts.length} {alerts.length === 1 ? 'item' : 'itens'}
+                  </MetaPill>
+                ) : undefined
+              }
             />
             {alerts.length ? (
               <VStack align="stretch" spacing={0}>
@@ -576,25 +624,30 @@ export default function DashboardPage() {
                     _hover={{ bg: 'erp.hover' }}
                   >
                     <Flex
-                      w="31px"
-                      h="31px"
+                      w="32px"
+                      h="32px"
                       align="center"
                       justify="center"
                       borderRadius="9px"
-                      bg="erp.surfaceSubtle"
+                      bg={alertTint[alert.type] ?? 'erp.surfaceSubtle'}
                       color={`erp.${alert.type}`}
                       flexShrink={0}
                     >
                       <AlertTriangle size={15} />
                     </Flex>
-                    <Box>
-                      <Text fontSize="12px" fontWeight="700">
+                    <Box minW={0}>
+                      <Text textStyle="subtitle2" fontWeight="600">
                         {alert.title}
                       </Text>
-                      <Text mt={0.5} fontSize="11px" color="erp.textSecondary">
+                      <Text mt={0.5} fontSize="12px" color="erp.textSecondary">
                         {alert.description}
                       </Text>
-                      <Text mt={1} fontSize="10px" color="erp.textMuted">
+                      <Text
+                        mt={1}
+                        fontSize="11px"
+                        color="erp.textMuted"
+                        sx={{ fontVariantNumeric: 'tabular-nums' }}
+                      >
                         {formatDateTime(alert.occurred_at)}
                       </Text>
                     </Box>
@@ -612,30 +665,99 @@ export default function DashboardPage() {
         </Grid>
       </Reveal>
 
-      <Reveal index={3} mb={5}>
+      <Reveal index={3}>
         <Surface overflow="hidden">
           <SectionHeader
             icon={Trophy}
             eyebrow="Desempenho da rede"
             title="Ranking por venda"
             description="Filiais ordenadas pelo valor vendido no mes."
+            action={
+              <MetaPill icon={Building2}>
+                {visibleBranches.length}{' '}
+                {visibleBranches.length === 1 ? 'filial' : 'filiais'}
+              </MetaPill>
+            }
           />
           {visibleBranches.length ? (
-            <Box maxH="520px" overflowY="auto" px={{ base: 4, md: 5 }} py={2}>
+            <Box maxH="520px" overflowY="auto">
+              <Grid
+                display={{ base: 'none', md: 'grid' }}
+                templateColumns="44px minmax(0,1.4fr) 140px 130px 120px 100px"
+                gap={3}
+                px={5}
+                py={2.5}
+                bg="erp.surfaceSubtle"
+                borderBottom="1px solid"
+                borderColor="erp.border"
+                position="sticky"
+                top={0}
+                zIndex={1}
+              >
+                <Text
+                  textStyle="overline"
+                  fontSize="10px"
+                  color="erp.textMuted"
+                >
+                  #
+                </Text>
+                <Text
+                  textStyle="overline"
+                  fontSize="10px"
+                  color="erp.textMuted"
+                >
+                  Filial
+                </Text>
+                <Text
+                  textStyle="overline"
+                  fontSize="10px"
+                  color="erp.textMuted"
+                  textAlign="right"
+                >
+                  Vendido
+                </Text>
+                <Text
+                  textStyle="overline"
+                  fontSize="10px"
+                  color="erp.textMuted"
+                  textAlign="right"
+                >
+                  Meta
+                </Text>
+                <Text
+                  textStyle="overline"
+                  fontSize="10px"
+                  color="erp.textMuted"
+                  textAlign="right"
+                >
+                  Participacao
+                </Text>
+                <Text
+                  textStyle="overline"
+                  fontSize="10px"
+                  color="erp.textMuted"
+                  textAlign="right"
+                >
+                  Crescimento
+                </Text>
+              </Grid>
               {visibleBranches.map((branch, index) => (
                 <Grid
                   key={branch.id}
                   templateColumns={{
                     base: '36px minmax(0,1fr)',
-                    md: '44px minmax(0,1fr) 160px 84px',
+                    md: '44px minmax(0,1.4fr) 140px 130px 120px 100px',
                   }}
                   gap={3}
                   alignItems="center"
-                  py={3}
-                  borderBottom={
-                    index < visibleBranches.length - 1 ? '1px solid' : undefined
-                  }
-                  borderColor="erp.border"
+                  px={5}
+                  py={3.5}
+                  transition="background 140ms ease"
+                  _hover={{ bg: 'erp.hover' }}
+                  _notLast={{
+                    borderBottom: '1px solid',
+                    borderColor: 'erp.border',
+                  }}
                 >
                   <Flex
                     w="30px"
@@ -643,17 +765,18 @@ export default function DashboardPage() {
                     align="center"
                     justify="center"
                     borderRadius="8px"
-                    bg="erp.surfaceSubtle"
+                    bg={index < 3 ? 'erp.brandSoft' : 'erp.surfaceSubtle'}
                     border="1px solid"
-                    borderColor="erp.border"
-                    color={index < 3 ? 'brand.500' : 'erp.textSecondary'}
+                    borderColor={index < 3 ? 'erp.brandBorder' : 'erp.border'}
+                    color={index < 3 ? 'erp.brandText' : 'erp.textSecondary'}
                     fontSize="13px"
-                    fontWeight="800"
+                    fontWeight="700"
+                    sx={{ fontVariantNumeric: 'tabular-nums' }}
                   >
                     {index + 1}
                   </Flex>
                   <Box minW={0}>
-                    <Text fontSize="13px" fontWeight="700" noOfLines={1}>
+                    <Text textStyle="subtitle2" fontWeight="600" noOfLines={1}>
                       {branch.name}
                     </Text>
                     <Progress
@@ -665,39 +788,52 @@ export default function DashboardPage() {
                       bg="erp.hover"
                     />
                   </Box>
-                  <Box
-                    display={{ base: 'none', md: 'block' }}
-                    textAlign="right"
-                  >
-                    <Text
-                      fontSize="13px"
-                      fontWeight="800"
-                      sx={{ fontVariantNumeric: 'tabular-nums' }}
-                    >
-                      {formatCurrency(branch.revenue)}
-                    </Text>
-                    <Text fontSize="10px" color="erp.textMuted">
-                      {branch.target
-                        ? `${formatPercent(branch.target_percentage)} da meta`
-                        : 'Meta nao configurada'}
-                    </Text>
-                  </Box>
                   <Text
                     display={{ base: 'none', md: 'block' }}
                     textAlign="right"
-                    fontSize="11px"
-                    fontWeight="700"
-                    color={branch.growth >= 0 ? 'erp.success' : 'erp.danger'}
+                    textStyle="numeric"
+                    fontSize="13px"
+                    fontWeight="600"
                   >
-                    {formatDelta(branch.growth)}
+                    {formatCurrency(branch.revenue)}
                   </Text>
+                  <Text
+                    display={{ base: 'none', md: 'block' }}
+                    textAlign="right"
+                    fontSize="12px"
+                    color={branch.target ? 'erp.text' : 'erp.textMuted'}
+                    sx={{ fontVariantNumeric: 'tabular-nums' }}
+                  >
+                    {branch.target
+                      ? `${formatPercent(branch.target_percentage)} da meta`
+                      : 'Sem meta'}
+                  </Text>
+                  <Text
+                    display={{ base: 'none', md: 'block' }}
+                    textAlign="right"
+                    fontSize="12px"
+                    color="erp.textSecondary"
+                    sx={{ fontVariantNumeric: 'tabular-nums' }}
+                  >
+                    {totalNetworkRevenue > 0
+                      ? formatPercent(
+                          (branch.revenue / totalNetworkRevenue) * 100
+                        )
+                      : '-'}
+                  </Text>
+                  <Flex
+                    display={{ base: 'none', md: 'flex' }}
+                    justify="flex-end"
+                  >
+                    <DeltaPill delta={branch.growth} />
+                  </Flex>
                   <Flex
                     display={{ base: 'flex', md: 'none' }}
                     gridColumn="2"
                     justify="space-between"
                     gap={3}
                   >
-                    <Text fontSize="11px" fontWeight="700">
+                    <Text textStyle="numeric" fontSize="11px" fontWeight="600">
                       {formatCurrency(branch.revenue)}
                     </Text>
                     <Text fontSize="10px" color="erp.textMuted">
@@ -714,80 +850,6 @@ export default function DashboardPage() {
               title="Nenhuma filial encontrada"
               description="O ranking sera exibido quando houver filiais ativas."
               icon={Building2}
-            />
-          )}
-        </Surface>
-      </Reveal>
-
-      <Reveal index={4}>
-        <Surface overflow="hidden">
-          <SectionHeader
-            icon={Clock3}
-            eyebrow="Tempo real"
-            title="Atividades recentes"
-            description="Movimentacoes em ordem cronologica"
-          />
-          {activities.length ? (
-            <VStack align="stretch" spacing={0}>
-              {activities.map((activity, index) => {
-                const ActivityIcon = activityIcons[activity.type] || Building2;
-                return (
-                  <Grid
-                    key={`${activity.type}-${activity.occurred_at}-${index}`}
-                    templateColumns="36px minmax(0,1fr) auto"
-                    gap={3}
-                    alignItems="center"
-                    px={5}
-                    py={3.5}
-                    borderBottom={
-                      index < activities.length - 1 ? '1px solid' : undefined
-                    }
-                    borderColor="erp.border"
-                    transition="background 140ms ease"
-                    _hover={{ bg: 'erp.hover' }}
-                  >
-                    <Flex
-                      w="32px"
-                      h="32px"
-                      align="center"
-                      justify="center"
-                      borderRadius="9px"
-                      bg="erp.brandSoft"
-                      border="1px solid"
-                      borderColor="erp.brandBorder"
-                      color="brand.500"
-                    >
-                      <ActivityIcon size={16} />
-                    </Flex>
-                    <Box minW={0}>
-                      <Text fontSize="12px" fontWeight="700">
-                        {activity.title}
-                      </Text>
-                      <Text fontSize="10px" color="erp.textMuted" noOfLines={1}>
-                        {[activity.branch, formatDateTime(activity.occurred_at)]
-                          .filter(Boolean)
-                          .join(' - ')}
-                      </Text>
-                    </Box>
-                    {activity.value !== null &&
-                      activity.value !== undefined && (
-                        <Text
-                          fontSize="12px"
-                          fontWeight="800"
-                          sx={{ fontVariantNumeric: 'tabular-nums' }}
-                        >
-                          {formatCurrency(activity.value)}
-                        </Text>
-                      )}
-                  </Grid>
-                );
-              })}
-            </VStack>
-          ) : (
-            <EmptyState
-              title="Nenhuma atividade recente"
-              description="As movimentacoes relevantes aparecerao aqui."
-              icon={CircleDollarSign}
             />
           )}
         </Surface>

@@ -32,6 +32,7 @@ import {
   ArrowDownCircle,
   ArrowUpCircle,
   Banknote,
+  Building2,
   CircleDollarSign,
   Clock3,
   CreditCard,
@@ -49,6 +50,7 @@ import {
   SectionHeader,
   Surface,
 } from '../../../shared/ui/ErpUI';
+import { FilterSelect } from '../../../shared/ui/FilterSelect';
 import { CurrencyInput } from '../../../shared/ui/FormattedInput';
 import {
   formatCurrency,
@@ -155,18 +157,19 @@ export default function CashierPage() {
         description="Abertura, movimentacoes e fechamento de caixa por filial."
         breadcrumbs={[{ label: 'Financeiro' }, { label: 'Caixa' }]}
         actions={
-          <Select
-            aria-label="Filial do caixa"
+          <FilterSelect
+            label="Filial do caixa"
+            icon={Building2}
             value={branch || String(data?.branch ?? '')}
-            onChange={event => setBranch(event.target.value)}
+            onChange={setBranch}
             w={{ base: 'full', md: '220px' }}
-          >
-            {data?.options.branches.map(item => (
-              <option key={item.id} value={item.id}>
-                {item.nome}
-              </option>
-            ))}
-          </Select>
+            options={
+              data?.options.branches.map(item => ({
+                value: String(item.id),
+                label: item.nome,
+              })) ?? []
+            }
+          />
         }
       />
 

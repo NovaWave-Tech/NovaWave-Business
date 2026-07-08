@@ -23,7 +23,6 @@ import {
   MenuDivider,
   MenuItem,
   MenuList,
-  Select,
   SimpleGrid,
   Tab,
   TabList,
@@ -74,6 +73,7 @@ import {
   PageHeader,
   Surface,
 } from '../../../shared/ui/ErpUI';
+import { FilterSelect } from '../../../shared/ui/FilterSelect';
 import { formatDateTime, formatNumber } from '../../../shared/utils/formatters';
 import PermissionMatrix from '../components/PermissionMatrix';
 import {
@@ -358,39 +358,36 @@ export default function PermissionsPage() {
               placeholder="Buscar por nome, descricao ou modulo..."
             />
           </InputGroup>
-          <Select
-            aria-label="Situacao"
+          <FilterSelect
+            label="Situacao"
             value={filters.status}
-            onChange={event =>
-              setFilters(v => ({ ...v, status: event.target.value }))
-            }
-          >
-            <option value="">Situacoes</option>
-            <option value="1">Ativos</option>
-            <option value="0">Inativos</option>
-          </Select>
-          <Select
-            aria-label="Tipo"
+            onChange={v => setFilters(x => ({ ...x, status: v }))}
+            options={[
+              { value: '', label: 'Situacoes' },
+              { value: '1', label: 'Ativos' },
+              { value: '0', label: 'Inativos' },
+            ]}
+          />
+          <FilterSelect
+            label="Tipo"
             value={filters.type}
-            onChange={event =>
-              setFilters(v => ({ ...v, type: event.target.value }))
-            }
-          >
-            <option value="">Tipos</option>
-            <option value="system">Sistema</option>
-            <option value="custom">Personalizado</option>
-          </Select>
-          <Select
-            aria-label="Usuarios"
+            onChange={v => setFilters(x => ({ ...x, type: v }))}
+            options={[
+              { value: '', label: 'Tipos' },
+              { value: 'system', label: 'Sistema' },
+              { value: 'custom', label: 'Personalizado' },
+            ]}
+          />
+          <FilterSelect
+            label="Usuarios"
             value={filters.users}
-            onChange={event =>
-              setFilters(v => ({ ...v, users: event.target.value }))
-            }
-          >
-            <option value="">Usuarios</option>
-            <option value="with">Com usuarios</option>
-            <option value="without">Sem usuarios</option>
-          </Select>
+            onChange={v => setFilters(x => ({ ...x, users: v }))}
+            options={[
+              { value: '', label: 'Usuarios' },
+              { value: 'with', label: 'Com usuarios' },
+              { value: 'without', label: 'Sem usuarios' },
+            ]}
+          />
           <Button variant="ghost" onClick={clearFilters}>
             Limpar
           </Button>

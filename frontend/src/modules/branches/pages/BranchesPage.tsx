@@ -79,6 +79,7 @@ import {
   PageHeader,
   Surface,
 } from '../../../shared/ui/ErpUI';
+import { FilterSelect } from '../../../shared/ui/FilterSelect';
 import FormattedInput, {
   CurrencyInput,
 } from '../../../shared/ui/FormattedInput';
@@ -392,77 +393,72 @@ export default function BranchesPage() {
               placeholder="Buscar por nome, codigo, cidade, CNPJ ou gerente..."
             />
           </InputGroup>
-          <Select
-            aria-label="Situacao"
+          <FilterSelect
+            label="Situacao"
             value={filters.status}
-            onChange={event =>
-              setFilters(v => ({ ...v, status: event.target.value }))
-            }
-          >
-            <option value="">Situacao</option>
-            <option value="1">Ativas</option>
-            <option value="0">Inativas</option>
-          </Select>
-          <Select
-            aria-label="Cidade"
+            onChange={v => setFilters(x => ({ ...x, status: v }))}
+            options={[
+              { value: '', label: 'Situacao' },
+              { value: '1', label: 'Ativas' },
+              { value: '0', label: 'Inativas' },
+            ]}
+          />
+          <FilterSelect
+            label="Cidade"
             value={filters.city}
-            onChange={event =>
-              setFilters(v => ({ ...v, city: event.target.value }))
-            }
-          >
-            <option value="">Cidade</option>
-            {options?.cities.map(item => (
-              <option key={item.nome}>{item.nome}</option>
-            ))}
-          </Select>
-          <Select
-            aria-label="Estado"
+            onChange={v => setFilters(x => ({ ...x, city: v }))}
+            options={[
+              { value: '', label: 'Cidade' },
+              ...(options?.cities.map(item => ({
+                value: item.nome,
+                label: item.nome,
+              })) ?? []),
+            ]}
+          />
+          <FilterSelect
+            label="Estado"
             value={filters.state}
-            onChange={event =>
-              setFilters(v => ({ ...v, state: event.target.value }))
-            }
-          >
-            <option value="">Estado</option>
-            {options?.states.map(item => (
-              <option key={item.nome}>{item.nome}</option>
-            ))}
-          </Select>
-          <Select
-            aria-label="Matriz"
+            onChange={v => setFilters(x => ({ ...x, state: v }))}
+            options={[
+              { value: '', label: 'Estado' },
+              ...(options?.states.map(item => ({
+                value: item.nome,
+                label: item.nome,
+              })) ?? []),
+            ]}
+          />
+          <FilterSelect
+            label="Matriz"
             value={filters.matrix}
-            onChange={event =>
-              setFilters(v => ({ ...v, matrix: event.target.value }))
-            }
-          >
-            <option value="">Todas</option>
-            <option value="1">Matriz</option>
-            <option value="0">Filiais</option>
-          </Select>
-          <Select
-            aria-label="Gerente"
+            onChange={v => setFilters(x => ({ ...x, matrix: v }))}
+            options={[
+              { value: '', label: 'Todas' },
+              { value: '1', label: 'Matriz' },
+              { value: '0', label: 'Filiais' },
+            ]}
+          />
+          <FilterSelect
+            label="Gerente"
             value={filters.manager}
-            onChange={event =>
-              setFilters(v => ({ ...v, manager: event.target.value }))
-            }
-          >
-            <option value="">Gerente</option>
-            {options?.managers.map(item => (
-              <option key={item.id} value={item.id}>
-                {item.nome}
-              </option>
-            ))}
-          </Select>
-          <Select
-            aria-label="Movimentacao"
+            onChange={v => setFilters(x => ({ ...x, manager: v }))}
+            options={[
+              { value: '', label: 'Gerente' },
+              ...(options?.managers.map(item => ({
+                value: String(item.id),
+                label: item.nome,
+              })) ?? []),
+            ]}
+          />
+          <FilterSelect
+            label="Movimentacao"
             value={filters.movement}
-            onChange={event =>
-              setFilters(v => ({ ...v, movement: event.target.value }))
-            }
-          >
-            <option value="">Movimentacao</option>
-            <option value="with">Com movimento</option>
-            <option value="without">Sem movimento</option>
-          </Select>
+            onChange={v => setFilters(x => ({ ...x, movement: v }))}
+            options={[
+              { value: '', label: 'Movimentacao' },
+              { value: 'with', label: 'Com movimento' },
+              { value: 'without', label: 'Sem movimento' },
+            ]}
+          />
           <Button variant="ghost" onClick={clear}>
             Limpar
           </Button>

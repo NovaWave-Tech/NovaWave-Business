@@ -72,6 +72,7 @@ import {
   DateRangeField,
   type DateRange,
 } from '../../../shared/ui/DateRangeField';
+import { FilterSelect } from '../../../shared/ui/FilterSelect';
 import { CurrencyInput } from '../../../shared/ui/FormattedInput';
 import {
   formatCurrency,
@@ -337,31 +338,28 @@ export default function PurchasesPage() {
             />
           </InputGroup>
           <DateRangeField value={range} onChange={setRange} />
-          <Select
-            aria-label="Filial"
+          <FilterSelect
+            label="Filial"
             value={filters.branch}
-            onChange={event =>
-              setFilters(v => ({ ...v, branch: event.target.value }))
-            }
-          >
-            <option value="">Todas as filiais</option>
-            {options?.branches.map(branch => (
-              <option key={branch.id} value={branch.id}>
-                {branch.nome}
-              </option>
-            ))}
-          </Select>
-          <Select
-            aria-label="Situacao"
+            onChange={v => setFilters(x => ({ ...x, branch: v }))}
+            options={[
+              { value: '', label: 'Todas as filiais' },
+              ...(options?.branches.map(branch => ({
+                value: String(branch.id),
+                label: branch.nome,
+              })) ?? []),
+            ]}
+          />
+          <FilterSelect
+            label="Situacao"
             value={filters.status}
-            onChange={event =>
-              setFilters(v => ({ ...v, status: event.target.value }))
-            }
-          >
-            <option value="">Situacoes</option>
-            <option value="1">Concluidas</option>
-            <option value="4">Canceladas</option>
-          </Select>
+            onChange={v => setFilters(x => ({ ...x, status: v }))}
+            options={[
+              { value: '', label: 'Situacoes' },
+              { value: '1', label: 'Concluidas' },
+              { value: '4', label: 'Canceladas' },
+            ]}
+          />
           <Button
             variant="ghost"
             onClick={() => setFilters({ q: '', branch: '', status: '' })}

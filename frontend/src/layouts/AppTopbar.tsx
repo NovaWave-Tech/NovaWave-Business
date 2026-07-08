@@ -80,15 +80,24 @@ export default function AppTopbar({ onMenuOpen }: { onMenuOpen: () => void }) {
           onClick={onMenuOpen}
         />
         <Box minW={0}>
-          <Flex gap={1.5} align="center" fontSize="11px" color="erp.textMuted">
-            <Text display={{ base: 'none', sm: 'block' }}>
-              NovaWave Business
-            </Text>
-            <Text display={{ base: 'none', sm: 'block' }}>/</Text>
-            <Text color="erp.textSecondary" fontWeight="600" noOfLines={1}>
-              {current}
-            </Text>
-          </Flex>
+          <Text
+            display={{ base: 'none', sm: 'block' }}
+            fontSize="10px"
+            textStyle="overline"
+            color="erp.textMuted"
+            noOfLines={1}
+          >
+            NovaWave Business
+          </Text>
+          <Text
+            fontSize="13px"
+            fontWeight="600"
+            color="erp.text"
+            lineHeight="1.3"
+            noOfLines={1}
+          >
+            {current}
+          </Text>
         </Box>
       </Flex>
       <Box
@@ -146,30 +155,47 @@ export default function AppTopbar({ onMenuOpen }: { onMenuOpen: () => void }) {
         </Menu>
         <Menu>
           <MenuButton
-            as={Flex}
-            align="center"
-            gap={2}
             ml={1}
             px={2}
             h="44px"
             borderRadius="8px"
             cursor="pointer"
+            transition="background 140ms ease"
             _hover={{ bg: 'erp.hover' }}
+            aria-label="Menu do usuario"
           >
-            <Avatar size="sm" name={userName} bg="brand.700" />
-            <Box
-              display={{ base: 'none', xl: 'block' }}
-              textAlign="left"
-              maxW="150px"
-            >
-              <Text fontSize="13px" fontWeight="600" noOfLines={1}>
-                {userName}
-              </Text>
-              <Text fontSize="11px" color="erp.textMuted" noOfLines={1}>
-                Ambiente ERP
-              </Text>
-            </Box>
-            <ChevronDown size={14} />
+            <Flex align="center" gap={2.5}>
+              <Avatar size="sm" name={userName} bg="brand.700" />
+              <Box
+                display={{ base: 'none', lg: 'block' }}
+                textAlign="left"
+                maxW="160px"
+                minW={0}
+              >
+                <Text
+                  fontSize="13px"
+                  fontWeight="600"
+                  lineHeight="1.25"
+                  noOfLines={1}
+                >
+                  {userName}
+                </Text>
+                <Text
+                  fontSize="11px"
+                  lineHeight="1.25"
+                  color="erp.textMuted"
+                  noOfLines={1}
+                >
+                  Ambiente ERP
+                </Text>
+              </Box>
+              <Box
+                color="erp.textMuted"
+                display={{ base: 'none', lg: 'block' }}
+              >
+                <ChevronDown size={14} />
+              </Box>
+            </Flex>
           </MenuButton>
           <MenuList>
             <MenuItem icon={<User size={16} />}>Meu perfil</MenuItem>
