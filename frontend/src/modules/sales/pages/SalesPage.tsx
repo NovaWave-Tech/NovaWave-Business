@@ -183,6 +183,7 @@ export default function SalesPage() {
     (sum, line) => sum + line.quantidade * line.valor_unitario,
     0
   );
+  const totalItems = cart.reduce((sum, line) => sum + line.quantidade, 0);
   const discount = discountOpen
     ? Number(
         Math.min(
@@ -746,153 +747,218 @@ export default function SalesPage() {
                 </Flex>
               )}
             </Box>
-          </DrawerBody>
-          <DrawerFooter borderTop="1px solid" borderColor="erp.border">
-            <Grid templateColumns="1fr auto" gap={4} w="full" alignItems="end">
-              <Box>
-                <Flex justify="space-between" fontSize="12px" mb={1}>
-                  <Text color="erp.textSecondary">Subtotal</Text>
+
+            {cart.length > 0 && (
+              <Box
+                mt={5}
+                border="1px solid"
+                borderColor="erp.border"
+                borderRadius="12px"
+                overflow="hidden"
+              >
+                <Flex
+                  px={4}
+                  py={2.5}
+                  align="center"
+                  justify="space-between"
+                  bg="erp.surfaceSubtle"
+                  borderBottom="1px solid"
+                  borderColor="erp.border"
+                >
                   <Text
-                    fontWeight="600"
+                    textStyle="overline"
+                    fontSize="10px"
+                    color="erp.textMuted"
+                  >
+                    Resumo da venda
+                  </Text>
+                  <Text
+                    fontSize="11px"
+                    color="erp.textSecondary"
                     sx={{ fontVariantNumeric: 'tabular-nums' }}
                   >
-                    {formatCurrency(subtotal)}
+                    {cart.length} {cart.length === 1 ? 'produto' : 'produtos'} ·{' '}
+                    {formatNumber(totalItems)}{' '}
+                    {totalItems === 1 ? 'item' : 'itens'}
                   </Text>
                 </Flex>
-                {discountOpen ? (
-                  <>
-                    <Flex justify="space-between" align="center" gap={3} mb={1}>
-                      <Flex align="center" gap={2}>
-                        <Text fontSize="12px" color="erp.textSecondary">
-                          Desconto
-                        </Text>
-                        <ButtonGroup size="xs" isAttached variant="outline">
-                          <Button
-                            fontWeight="600"
-                            bg={
-                              discountMode === 'currency'
-                                ? 'erp.brandSoft'
-                                : undefined
-                            }
-                            color={
-                              discountMode === 'currency'
-                                ? 'erp.brandText'
-                                : 'erp.textSecondary'
-                            }
-                            onClick={() => setDiscountMode('currency')}
-                          >
-                            R$
-                          </Button>
-                          <Button
-                            fontWeight="600"
-                            bg={
-                              discountMode === 'percent'
-                                ? 'erp.brandSoft'
-                                : undefined
-                            }
-                            color={
-                              discountMode === 'percent'
-                                ? 'erp.brandText'
-                                : 'erp.textSecondary'
-                            }
-                            onClick={() => setDiscountMode('percent')}
-                          >
-                            %
-                          </Button>
-                        </ButtonGroup>
-                      </Flex>
-                      <Flex align="center" gap={1.5}>
-                        <Box w="120px">
-                          {discountMode === 'currency' ? (
-                            <CurrencyInput
-                              size="sm"
-                              value={String(discountValue || '')}
-                              onValueChange={value =>
-                                setDiscountValue(Number(value) || 0)
+                <Box px={4} py={3}>
+                  <Flex justify="space-between" align="center" py={1}>
+                    <Text fontSize="13px" color="erp.textSecondary">
+                      Subtotal
+                    </Text>
+                    <Text textStyle="numeric" fontSize="13px" fontWeight="600">
+                      {formatCurrency(subtotal)}
+                    </Text>
+                  </Flex>
+
+                  {discountOpen ? (
+                    <>
+                      <Flex
+                        justify="space-between"
+                        align="center"
+                        gap={3}
+                        py={1.5}
+                        wrap="wrap"
+                      >
+                        <Flex align="center" gap={2.5}>
+                          <Text fontSize="13px" color="erp.textSecondary">
+                            Desconto
+                          </Text>
+                          <ButtonGroup size="xs" isAttached variant="outline">
+                            <Button
+                              fontWeight="600"
+                              bg={
+                                discountMode === 'currency'
+                                  ? 'erp.brandSoft'
+                                  : undefined
                               }
-                            />
-                          ) : (
-                            <InputGroup size="sm">
-                              <Input
-                                type="number"
-                                min={0}
-                                max={100}
-                                value={discountValue || ''}
-                                onChange={event =>
-                                  setDiscountValue(
-                                    Math.min(
-                                      100,
-                                      Number(event.target.value) || 0
-                                    )
-                                  )
+                              color={
+                                discountMode === 'currency'
+                                  ? 'erp.brandText'
+                                  : 'erp.textSecondary'
+                              }
+                              onClick={() => setDiscountMode('currency')}
+                            >
+                              R$
+                            </Button>
+                            <Button
+                              fontWeight="600"
+                              bg={
+                                discountMode === 'percent'
+                                  ? 'erp.brandSoft'
+                                  : undefined
+                              }
+                              color={
+                                discountMode === 'percent'
+                                  ? 'erp.brandText'
+                                  : 'erp.textSecondary'
+                              }
+                              onClick={() => setDiscountMode('percent')}
+                            >
+                              %
+                            </Button>
+                          </ButtonGroup>
+                        </Flex>
+                        <Flex align="center" gap={1.5}>
+                          <Box w="140px">
+                            {discountMode === 'currency' ? (
+                              <CurrencyInput
+                                size="sm"
+                                autoFocus
+                                value={String(discountValue || '')}
+                                onValueChange={value =>
+                                  setDiscountValue(Number(value) || 0)
                                 }
                               />
-                              <InputRightElement
-                                pointerEvents="none"
-                                color="erp.textMuted"
-                                fontSize="12px"
-                              >
-                                %
-                              </InputRightElement>
-                            </InputGroup>
-                          )}
-                        </Box>
-                        <IconButton
-                          aria-label="Remover desconto"
-                          icon={<X size={13} />}
-                          size="xs"
-                          variant="ghost"
-                          onClick={() => {
-                            setDiscountOpen(false);
-                            setDiscountValue(0);
-                          }}
-                        />
+                            ) : (
+                              <InputGroup size="sm">
+                                <Input
+                                  type="number"
+                                  min={0}
+                                  max={100}
+                                  autoFocus
+                                  sx={{ fontVariantNumeric: 'tabular-nums' }}
+                                  value={discountValue || ''}
+                                  onChange={event =>
+                                    setDiscountValue(
+                                      Math.min(
+                                        100,
+                                        Number(event.target.value) || 0
+                                      )
+                                    )
+                                  }
+                                />
+                                <InputRightElement
+                                  pointerEvents="none"
+                                  color="erp.textMuted"
+                                  fontSize="12px"
+                                >
+                                  %
+                                </InputRightElement>
+                              </InputGroup>
+                            )}
+                          </Box>
+                          <Tooltip label="Remover desconto">
+                            <IconButton
+                              aria-label="Remover desconto"
+                              icon={<X size={13} />}
+                              size="xs"
+                              variant="ghost"
+                              onClick={() => {
+                                setDiscountOpen(false);
+                                setDiscountValue(0);
+                              }}
+                            />
+                          </Tooltip>
+                        </Flex>
                       </Flex>
+                      {discountMode === 'percent' && discount > 0 && (
+                        <Flex justify="space-between" align="center" py={1}>
+                          <Text fontSize="13px" color="erp.textSecondary">
+                            Desconto aplicado ({discountValue}%)
+                          </Text>
+                          <Text
+                            textStyle="numeric"
+                            fontSize="13px"
+                            fontWeight="600"
+                            color="erp.danger"
+                          >
+                            -{formatCurrency(discount)}
+                          </Text>
+                        </Flex>
+                      )}
+                    </>
+                  ) : (
+                    <Flex py={1}>
+                      <Button
+                        size="xs"
+                        variant="ghost"
+                        color="erp.brandText"
+                        leftIcon={<TicketPercent size={13} />}
+                        px={1.5}
+                        h="24px"
+                        onClick={() => setDiscountOpen(true)}
+                      >
+                        Aplicar desconto
+                      </Button>
                     </Flex>
-                    {discountMode === 'percent' && discount > 0 && (
-                      <Flex justify="space-between" fontSize="12px" mb={1}>
-                        <Text color="erp.textSecondary">
-                          Desconto aplicado ({discountValue}%)
-                        </Text>
-                        <Text
-                          fontWeight="600"
-                          color="erp.danger"
-                          sx={{ fontVariantNumeric: 'tabular-nums' }}
-                        >
-                          -{formatCurrency(discount)}
-                        </Text>
-                      </Flex>
-                    )}
-                  </>
-                ) : (
-                  <Button
-                    size="xs"
-                    variant="ghost"
-                    color="erp.brandText"
-                    leftIcon={<TicketPercent size={13} />}
-                    mb={1}
-                    px={1.5}
-                    h="22px"
-                    onClick={() => setDiscountOpen(true)}
-                  >
-                    Adicionar desconto
-                  </Button>
+                  )}
+                </Box>
+              </Box>
+            )}
+          </DrawerBody>
+          <DrawerFooter borderTop="1px solid" borderColor="erp.border" py={4}>
+            <Flex w="full" align="center" justify="space-between" gap={4}>
+              <Box>
+                <Text
+                  textStyle="overline"
+                  fontSize="10px"
+                  color="erp.textMuted"
+                >
+                  Total a pagar
+                </Text>
+                <Text
+                  textStyle="numeric"
+                  fontSize="24px"
+                  fontWeight="600"
+                  lineHeight="1.15"
+                >
+                  {formatCurrency(total)}
+                </Text>
+                {discount > 0 && (
+                  <Text fontSize="11px" color="erp.success">
+                    Desconto de {formatCurrency(discount)} aplicado
+                  </Text>
                 )}
-                <Flex justify="space-between" align="baseline">
-                  <Text fontSize="13px" fontWeight="700">
-                    Total
-                  </Text>
-                  <Text textStyle="numeric" fontSize="20px" fontWeight="600">
-                    {formatCurrency(total)}
-                  </Text>
-                </Flex>
               </Box>
               <Flex gap={2}>
                 <Button variant="ghost" onClick={saleDrawer.onClose}>
                   Cancelar
                 </Button>
                 <Button
-                  leftIcon={<CircleDollarSign size={16} />}
+                  px={6}
+                  leftIcon={<CheckCircle2 size={16} />}
                   isDisabled={!branchId || cart.length === 0}
                   isLoading={create.isPending}
                   onClick={() => create.mutate()}
@@ -900,7 +966,7 @@ export default function SalesPage() {
                   Finalizar venda
                 </Button>
               </Flex>
-            </Grid>
+            </Flex>
           </DrawerFooter>
         </DrawerContent>
       </Drawer>
