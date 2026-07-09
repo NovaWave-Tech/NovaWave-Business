@@ -1,8 +1,7 @@
 import {
-  Badge,
   Box,
   Button,
-  Divider,
+  ButtonGroup,
   Flex,
   IconButton,
   Menu,
@@ -23,7 +22,6 @@ import {
   MessageCircle,
   Printer,
   Share2,
-  Store,
 } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -39,9 +37,13 @@ import {
 import { saleService } from '../services/saleService';
 import type { SaleReceiptData } from '../types/saleTypes';
 
+type PaperWidth = 58 | 80;
+
+const MONO = "'Courier New', 'Roboto Mono', monospace";
+
 const receiptNumber = (id: number) => String(id).padStart(6, '0');
 
-/** Rotulo da forma de pagamento, ex.: "PIX · a vista" ou "Boleto · 3x". */
+/** Rotulo da forma de pagamento, ex.: "PIX a vista" ou "Boleto 3x". */
 function paymentLabel(sale: {
   forma_pagamento: string | null;
   a_prazo: boolean;
@@ -52,14 +54,12 @@ function paymentLabel(sale: {
   const method = formatPaymentMethod(sale.forma_pagamento);
   if (sale.a_prazo) {
     const fee =
-      sale.juros_atraso > 0
-        ? ` (juros de ${sale.juros_atraso}% a.m. por atraso)`
-        : '';
-    return `${method} · a prazo em ${sale.parcelas}x${fee}`;
+      sale.juros_atraso > 0 ? ` (juros ${sale.juros_atraso}% a.m.)` : '';
+    return `${method} a prazo ${sale.parcelas}x${fee}`;
   }
   return sale.parcelas > 1
-    ? `${method} · ${sale.parcelas}x`
-    : `${method} · a vista`;
+    ? `${method} ${sale.parcelas}x`
+    : `${method} a vista`;
 }
 
 /** Rotulo do percentual de desconto, ex.: " (10%)". Vazio quando nao ha base. */
@@ -76,24 +76,26 @@ function discountPercentLabel(sale: {
   return ` (${String(rounded).replace('.', ',')}%)`;
 }
 
+function branchLine(branch: SaleReceiptData['branch']): string {
+  if (!branch) return 'Loja';
+  return branch.matriz
+    ? 'Matriz'
+    : `Filial #${branch.idfilial} - ${branch.nome}`;
+}
+
 function buildShareText(receipt: SaleReceiptData) {
   const { sale, company, branch, customer } = receipt;
   const store = company.nome_fantasia || company.razao_social || 'Loja';
-  const branchLabel = branch
-    ? branch.matriz
-      ? 'Matriz'
-      : `Filial #${branch.idfilial} - ${branch.nome}`
-    : '';
   const lines = [
-    `*${store}*${branchLabel ? ` (${branchLabel})` : ''}`,
-    `Comprovante de venda Nº ${receiptNumber(sale.idvenda)}`,
+    `*${store}* (${branchLine(branch)})`,
+    `Comprovante de venda No ${receiptNumber(sale.idvenda)}`,
     `Data: ${formatDateTime(sale.data_venda)}`,
     `Cliente: ${customer?.nome ?? 'Consumidor final'}`,
     ...(sale.forma_pagamento ? [`Pagamento: ${paymentLabel(sale)}`] : []),
     '',
     ...sale.items.map(
       item =>
-        `${formatQuantity(item.quantidade)}x ${item.produto} — ${formatCurrency(item.valor_total)}`
+        `${formatQuantity(item.quantidade)}x ${item.produto} - ${formatCurrency(item.valor_total)}`
     ),
     '',
     `Subtotal: ${formatCurrency(sale.valor_bruto)}`,
@@ -109,6 +111,32 @@ function buildShareText(receipt: SaleReceiptData) {
   return lines.join('\n');
 }
 
+/** Linha rotulo/valor do cupom (label a esquerda, valor a direita). */
+function MetaRow({ label, value }: { label: string; value: string }) {
+  return (
+    <Flex justify="space-between" gap="2mm" lineHeight="1.45">
+      <Text as="span" flexShrink={0}>
+        {label}
+      </Text>
+      <Text as="span" textAlign="right" wordBreak="break-word">
+        {value}
+      </Text>
+    </Flex>
+  );
+}
+
+/** Separador tracejado de largura total, como o corte da bobina. */
+function Dashes() {
+  return (
+    <Box
+      borderBottom="1px dashed #000"
+      my="2mm"
+      aria-hidden
+      sx={{ '@media print': { borderColor: '#000' } }}
+    />
+  );
+}
+
 export default function SaleReceiptPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -116,6 +144,7 @@ export default function SaleReceiptPage() {
   const receiptRef = useRef<HTMLDivElement>(null);
   const [exporting, setExporting] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [paper, setPaper] = useState<PaperWidth>(58);
 
   const receipt = useQuery({
     queryKey: ['sale-receipt', id],
@@ -133,16 +162,23 @@ export default function SaleReceiptPage() {
         import('jspdf'),
       ]);
       const canvas = await html2canvas(receiptRef.current, {
-        scale: 2,
+        scale: 3,
         backgroundColor: '#FFFFFF',
       });
-      const width = 320;
-      const height = (canvas.height / canvas.width) * width;
+      const widthMm = paper;
+      const heightMm = (canvas.height / canvas.width) * widthMm;
       const pdf = new jsPDF({
-        unit: 'pt',
-        format: [width + 40, height + 40],
+        unit: 'mm',
+        format: [widthMm, heightMm],
       });
-      pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 20, 20, width, height);
+      pdf.addImage(
+        canvas.toDataURL('image/png'),
+        'PNG',
+        0,
+        0,
+        widthMm,
+        heightMm
+      );
       pdf.save(`comprovante-venda-${receiptNumber(data.sale.idvenda)}.pdf`);
     } catch {
       toast({
@@ -214,6 +250,14 @@ export default function SaleReceiptPage() {
   const address = branch?.endereco ? branch : company;
   const phone = branch?.telefone || company.telefone;
   const cancelled = sale.situacao === 4;
+  const addressText = [
+    address.endereco &&
+      `${address.endereco}${address.numero ? `, ${address.numero}` : ''}`,
+    address.bairro,
+    address.cidade && `${address.cidade}/${address.estado}`,
+  ]
+    .filter(Boolean)
+    .join(' - ');
 
   return (
     <Box
@@ -221,14 +265,19 @@ export default function SaleReceiptPage() {
       bg="erp.canvas"
       py={{ base: 4, md: 8 }}
       px={4}
-      sx={{ '@media print': { bg: 'white', py: 0, px: 0 } }}
+      sx={{ '@media print': { bg: 'white', p: 0, minH: 'auto' } }}
     >
+      {/* Configura a pagina de impressao para a largura da bobina termica. */}
+      <style>{`@media print { @page { size: ${paper}mm auto; margin: 0; } html, body { background: #fff !important; } }`}</style>
+
       <Flex
-        maxW="420px"
+        maxW={`${paper === 58 ? 300 : 360}px`}
         mx="auto"
         mb={4}
         gap={2}
+        wrap="wrap"
         justify="space-between"
+        align="center"
         sx={{ '@media print': { display: 'none' } }}
       >
         <Button
@@ -239,7 +288,25 @@ export default function SaleReceiptPage() {
         >
           Vendas
         </Button>
-        <Flex gap={2}>
+        <Flex gap={2} align="center">
+          <ButtonGroup size="sm" isAttached variant="outline">
+            <Button
+              onClick={() => setPaper(58)}
+              bg={paper === 58 ? 'erp.brandSoft' : undefined}
+              color={paper === 58 ? 'erp.brand' : undefined}
+              borderColor={paper === 58 ? 'erp.brand' : undefined}
+            >
+              58mm
+            </Button>
+            <Button
+              onClick={() => setPaper(80)}
+              bg={paper === 80 ? 'erp.brandSoft' : undefined}
+              color={paper === 80 ? 'erp.brand' : undefined}
+              borderColor={paper === 80 ? 'erp.brand' : undefined}
+            >
+              80mm
+            </Button>
+          </ButtonGroup>
           <Menu>
             <Tooltip label="Encaminhar comprovante">
               <MenuButton
@@ -292,278 +359,132 @@ export default function SaleReceiptPage() {
 
       <Box
         ref={receiptRef}
-        position="relative"
-        maxW="420px"
         mx="auto"
         bg="white"
-        color="gray.800"
-        borderRadius="12px"
-        border="1px solid"
-        borderColor="gray.200"
-        boxShadow="0 10px 32px rgba(15,23,42,.10)"
-        overflow="hidden"
+        color="#000"
+        width={`${paper}mm`}
+        fontFamily={MONO}
+        fontSize={paper === 58 ? '10.5px' : '12px'}
+        lineHeight="1.4"
+        px={paper === 58 ? '3mm' : '4mm'}
+        py="4mm"
+        boxShadow="0 8px 28px rgba(15,23,42,.14)"
         sx={{
+          fontVariantNumeric: 'tabular-nums',
           '@media print': {
             boxShadow: 'none',
-            border: 'none',
-            borderRadius: 0,
-            maxW: 'full',
+            width: `${paper}mm`,
+            px: paper === 58 ? '3mm' : '4mm',
           },
         }}
       >
-        <Box h="4px" bg="#2F80FF" />
+        {/* Cabecalho: loja centralizada */}
+        <Box textAlign="center">
+          <Text fontWeight="700" fontSize={paper === 58 ? '13px' : '15px'}>
+            {store.toUpperCase()}
+          </Text>
+          {company.razao_social && company.razao_social !== store && (
+            <Text>{company.razao_social}</Text>
+          )}
+          {documentNumber && <Text>CNPJ {formatDocument(documentNumber)}</Text>}
+          <Text>{branchLine(branch)}</Text>
+          {addressText && <Text>{addressText}</Text>}
+          {phone && <Text>Tel {formatPhone(phone)}</Text>}
+        </Box>
+
+        <Dashes />
+
+        <Box textAlign="center">
+          <Text fontWeight="700">COMPROVANTE DE VENDA</Text>
+          <Text>SEM VALOR FISCAL</Text>
+        </Box>
+
         {cancelled && (
-          <Text
-            position="absolute"
-            top="42%"
-            left="50%"
-            transform="translate(-50%,-50%) rotate(-18deg)"
-            fontSize="44px"
-            fontWeight="900"
-            color="red.500"
-            opacity={0.16}
-            letterSpacing="8px"
-            pointerEvents="none"
-          >
-            CANCELADA
+          <Text mt="1mm" textAlign="center" fontWeight="700">
+            *** VENDA CANCELADA ***
           </Text>
         )}
 
-        <Box px={6} pt={6} pb={5} textAlign="center">
-          <Flex
-            w="44px"
-            h="44px"
-            mx="auto"
-            mb={2}
-            align="center"
-            justify="center"
-            borderRadius="12px"
-            bg="#F3F6FF"
-            border="1px solid #C9D7FF"
-            color="#1D4ED8"
-          >
-            <Store size={21} />
-          </Flex>
-          <Text fontSize="18px" fontWeight="800" lineHeight="1.2">
-            {store}
-          </Text>
-          {company.razao_social && company.razao_social !== store && (
-            <Text fontSize="11px" color="gray.500">
-              {company.razao_social}
-            </Text>
-          )}
-          {documentNumber && (
-            <Text fontSize="11px" color="gray.500">
-              CNPJ {formatDocument(documentNumber)}
-            </Text>
-          )}
-          <Flex justify="center" mt={2}>
-            <Badge
-              colorScheme={branch?.matriz ? 'blue' : 'purple'}
-              textTransform="none"
-              borderRadius="full"
-              px={2.5}
-            >
-              {branch
-                ? branch.matriz
-                  ? 'Matriz'
-                  : `Filial #${branch.idfilial} · ${branch.nome}`
-                : 'Loja'}
-            </Badge>
-          </Flex>
-          {(address.endereco || phone) && (
-            <Text mt={2} fontSize="10px" color="gray.500">
-              {[
-                address.endereco &&
-                  `${address.endereco}${address.numero ? `, ${address.numero}` : ''}`,
-                address.cidade && `${address.cidade}/${address.estado}`,
-                phone && formatPhone(phone),
-              ]
-                .filter(Boolean)
-                .join(' · ')}
-            </Text>
-          )}
-        </Box>
+        <Dashes />
 
-        <Divider borderStyle="dashed" borderColor="gray.300" />
+        {/* Dados da venda */}
+        <MetaRow label="Venda No" value={receiptNumber(sale.idvenda)} />
+        <MetaRow label="Emissao" value={formatDateTime(new Date())} />
+        <MetaRow label="Data venda" value={formatDateTime(sale.data_venda)} />
+        <MetaRow label="Operador" value={sale.usuario} />
+        <MetaRow label="Cliente" value={customer?.nome ?? 'Consumidor final'} />
+        {customer?.documento && (
+          <MetaRow
+            label="Documento"
+            value={formatDocument(customer.documento)}
+          />
+        )}
+        {sale.forma_pagamento && (
+          <MetaRow label="Pagamento" value={paymentLabel(sale)} />
+        )}
 
-        <Box px={6} py={4}>
-          <Flex justify="space-between" align="center">
-            <Box>
-              <Text
-                fontSize="10px"
-                fontWeight="700"
-                color="gray.500"
-                textTransform="uppercase"
-                letterSpacing=".06em"
-              >
-                Comprovante de venda
-              </Text>
-              <Text
-                fontSize="20px"
-                fontWeight="800"
-                sx={{ fontVariantNumeric: 'tabular-nums' }}
-              >
-                Nº {receiptNumber(sale.idvenda)}
-              </Text>
-            </Box>
-            <Box textAlign="right">
-              <Text fontSize="10px" color="gray.500">
-                Emitido em
-              </Text>
-              <Text fontSize="12px" fontWeight="600">
-                {formatDateTime(new Date())}
-              </Text>
-              <Text fontSize="10px" color="gray.500" mt={1}>
-                Venda em {formatDateTime(sale.data_venda)}
-              </Text>
-            </Box>
-          </Flex>
+        <Dashes />
 
-          <Box
-            mt={4}
-            p={3}
-            bg="gray.50"
-            border="1px solid"
-            borderColor="gray.200"
-            borderRadius="8px"
-          >
-            <Text
-              fontSize="9px"
-              fontWeight="700"
-              color="gray.500"
-              textTransform="uppercase"
-              letterSpacing=".06em"
-            >
-              Cliente
-            </Text>
-            <Text fontSize="13px" fontWeight="700">
-              {customer?.nome ?? 'Consumidor final'}
-            </Text>
-            {customer?.documento && (
-              <Text fontSize="11px" color="gray.500">
-                {formatDocument(customer.documento)}
+        {/* Itens */}
+        <Flex justify="space-between" fontWeight="700">
+          <Text as="span">ITEM</Text>
+          <Text as="span">VALOR</Text>
+        </Flex>
+        <Box mt="1mm">
+          {sale.items.map((item, index) => (
+            <Box key={item.idvenda_item} mt={index === 0 ? 0 : '1.5mm'}>
+              <Text wordBreak="break-word">
+                {String(index + 1).padStart(2, '0')} {item.produto}
               </Text>
-            )}
-            {customer?.telefone && (
-              <Text fontSize="11px" color="gray.500">
-                {formatPhone(customer.telefone)}
-              </Text>
-            )}
-            {sale.forma_pagamento && (
-              <Text mt={1} fontSize="11px" color="gray.600" fontWeight="600">
-                Pagamento: {paymentLabel(sale)}
-              </Text>
-            )}
-          </Box>
-        </Box>
-
-        <Divider borderStyle="dashed" borderColor="gray.300" />
-
-        <Box px={6} py={4}>
-          <Flex
-            justify="space-between"
-            fontSize="9px"
-            fontWeight="700"
-            color="gray.500"
-            textTransform="uppercase"
-            letterSpacing=".06em"
-            mb={2}
-          >
-            <Text>Item</Text>
-            <Text>Total</Text>
-          </Flex>
-          {sale.items.map(item => (
-            <Flex
-              key={item.idvenda_item}
-              justify="space-between"
-              gap={3}
-              py={1.5}
-            >
-              <Box minW={0}>
-                <Text fontSize="12px" fontWeight="600" noOfLines={2}>
-                  {item.produto}
-                </Text>
-                <Text
-                  fontSize="10px"
-                  color="gray.500"
-                  sx={{ fontVariantNumeric: 'tabular-nums' }}
-                >
+              <Flex justify="space-between" gap="2mm">
+                <Text as="span">
                   {formatQuantity(item.quantidade)} {item.unidade} x{' '}
                   {formatCurrency(item.valor_unitario)}
                 </Text>
-              </Box>
-              <Text
-                fontSize="12px"
-                fontWeight="700"
-                flexShrink={0}
-                sx={{ fontVariantNumeric: 'tabular-nums' }}
-              >
-                {formatCurrency(item.valor_total)}
-              </Text>
-            </Flex>
+                <Text as="span" fontWeight="700">
+                  {formatCurrency(item.valor_total)}
+                </Text>
+              </Flex>
+            </Box>
           ))}
         </Box>
 
-        <Divider borderStyle="dashed" borderColor="gray.300" />
+        <Dashes />
 
-        <Box px={6} py={4}>
-          <Flex
-            justify="space-between"
-            fontSize="12px"
-            color="gray.600"
-            py={0.5}
-          >
-            <Text>Subtotal</Text>
-            <Text sx={{ fontVariantNumeric: 'tabular-nums' }}>
-              {formatCurrency(sale.valor_bruto)}
-            </Text>
-          </Flex>
-          {sale.valor_desconto > 0 && (
-            <Flex
-              justify="space-between"
-              fontSize="12px"
-              color="gray.600"
-              py={0.5}
-            >
-              <Text>Desconto{discountPercentLabel(sale)}</Text>
-              <Text sx={{ fontVariantNumeric: 'tabular-nums' }}>
-                -{formatCurrency(sale.valor_desconto)}
-              </Text>
-            </Flex>
-          )}
-          <Flex
-            justify="space-between"
-            align="baseline"
-            mt={2}
-            pt={2}
-            borderTop="2px solid"
-            borderColor="gray.800"
-          >
-            <Text fontSize="14px" fontWeight="800">
-              TOTAL
-            </Text>
-            <Text
-              fontSize="22px"
-              fontWeight="900"
-              sx={{ fontVariantNumeric: 'tabular-nums' }}
-            >
-              {formatCurrency(sale.valor_total)}
-            </Text>
-          </Flex>
-        </Box>
+        {/* Totais */}
+        <MetaRow label="Subtotal" value={formatCurrency(sale.valor_bruto)} />
+        {sale.valor_desconto > 0 && (
+          <MetaRow
+            label={`Desconto${discountPercentLabel(sale)}`}
+            value={`-${formatCurrency(sale.valor_desconto)}`}
+          />
+        )}
+        <Flex
+          justify="space-between"
+          align="center"
+          mt="1.5mm"
+          pt="1.5mm"
+          borderTop="1px solid #000"
+          fontWeight="700"
+          fontSize={paper === 58 ? '14px' : '16px'}
+        >
+          <Text as="span">TOTAL</Text>
+          <Text as="span">{formatCurrency(sale.valor_total)}</Text>
+        </Flex>
 
-        <Box px={6} pb={6} textAlign="center">
-          <Text fontSize="10px" color="gray.500">
-            Operador: {sale.usuario} · {sale.items.length}{' '}
-            {sale.items.length === 1 ? 'item' : 'itens'}
+        <Dashes />
+
+        {/* Rodape */}
+        <Box textAlign="center">
+          <Text>
+            {sale.items.length} {sale.items.length === 1 ? 'item' : 'itens'}{' '}
+            nesta venda
           </Text>
-          <Text mt={3} fontSize="10px" fontWeight="700" color="gray.600">
+          <Text mt="2mm" fontWeight="700">
             *** DOCUMENTO SEM VALOR FISCAL ***
           </Text>
-          <Text mt={1} fontSize="9px" color="gray.400">
-            Comprovante gerado pelo NovaWave Business
-          </Text>
+          <Text mt="1mm">NovaWave Business</Text>
+          <Text>.</Text>
         </Box>
       </Box>
     </Box>
