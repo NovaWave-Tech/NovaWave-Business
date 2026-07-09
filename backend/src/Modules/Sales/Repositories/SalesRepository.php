@@ -38,6 +38,7 @@ final class SalesRepository
 
         $sales = $this->all(
             "SELECT v.idvenda, v.data_venda, v.valor_bruto, v.valor_desconto, v.valor_total, v.situacao,
+                    v.forma_pagamento, v.a_prazo, v.parcelas, v.juros_atraso,
                     COALESCE(c.nome, 'Consumidor final') cliente, c.idcliente,
                     f.nome filial, COALESCE(u.nome, '-') usuario,
                     COALESCE(i.itens, 0) itens, COALESCE(i.quantidade, 0) quantidade
@@ -66,6 +67,7 @@ final class SalesRepository
     {
         $sale = $this->one(
             "SELECT v.idvenda, v.data_venda, v.valor_bruto, v.valor_desconto, v.valor_total, v.situacao,
+                    v.forma_pagamento, v.a_prazo, v.parcelas, v.juros_atraso,
                     v.idcliente, v.idfilial, COALESCE(c.nome, 'Consumidor final') cliente,
                     c.documento cliente_documento, f.nome filial, COALESCE(u.nome, '-') usuario, v.criado_em
              FROM venda v
@@ -146,23 +148,51 @@ final class SalesRepository
         return $this->transaction(function () use ($companyId, $actorId, $data, $ip, $agent) {
             $branchId = (int) $data['idfilial'];
             $branch = $this->one(
-                'SELECT permite_estoque_negativo FROM filial WHERE idempresa = :company_id AND idfilial = :branch AND situacao = 1',
+                'SELECT permite_estoque_negativo, caixa_obrigatorio FROM filial WHERE idempresa = :company_id AND idfilial = :branch AND situacao = 1',
                 ['company_id' => $companyId, 'branch' => $branchId]
             );
             if (!$branch) {
                 throw new InvalidArgumentException('Filial invalida');
             }
+
+            $payment = (string) ($data['forma_pagamento'] ?? 'dinheiro');
+            $onCredit = !empty($data['a_prazo']);
+            // Parcelamento: crediario (a prazo) ou cartao de credito (operadora).
+            $installments = $onCredit || $payment === 'cartao_credito'
+                ? max(1, min(24, (int) ($data['parcelas'] ?? 1)))
+                : 1;
+            $lateFee = $onCredit ? max(0.0, min(100.0, (float) ($data['juros_atraso'] ?? 0))) : 0.0;
+
             $customerId = !empty($data['idcliente']) ? (int) $data['idcliente'] : null;
             if ($customerId !== null) {
                 $customer = $this->one(
-                    'SELECT 1 FROM cliente WHERE idempresa = :company_id AND idcliente = :customer',
+                    'SELECT permite_venda_prazo FROM cliente WHERE idempresa = :company_id AND idcliente = :customer',
                     ['company_id' => $companyId, 'customer' => $customerId]
                 );
                 if (!$customer) {
                     throw new InvalidArgumentException('Cliente invalido');
                 }
+                if ($onCredit && !$this->truthy($customer['permite_venda_prazo'])) {
+                    throw new InvalidArgumentException('Cliente nao habilitado para venda a prazo. Ajuste o cadastro do cliente.');
+                }
             } else {
+                if ($onCredit) {
+                    throw new InvalidArgumentException('Venda a prazo exige um cliente identificado');
+                }
                 $customerId = $this->resolveDefaultCustomer($companyId);
+            }
+
+            // Somente dinheiro passa pelo caixa fisico (movimentacao tipo 3);
+            // as demais formas entram apenas no relatorio do dia.
+            $cashRegister = null;
+            if (!$onCredit && $payment === 'dinheiro') {
+                $cashRegister = $this->one(
+                    'SELECT idcaixa FROM caixa WHERE idempresa = :company_id AND idfilial = :branch AND situacao = 1 ORDER BY idcaixa DESC LIMIT 1 FOR UPDATE',
+                    ['company_id' => $companyId, 'branch' => $branchId]
+                ) ?: null;
+                if (!$cashRegister && $this->truthy($branch['caixa_obrigatorio'])) {
+                    throw new InvalidArgumentException('Abra o caixa da filial para registrar vendas em dinheiro');
+                }
             }
 
             $lines = $this->normalizeItems($companyId, $data['items'] ?? []);
@@ -177,8 +207,8 @@ final class SalesRepository
             $total = max(0.0, $gross - $discount);
 
             $statement = $this->pdo->prepare(
-                'INSERT INTO venda (idempresa, idfilial, idcliente, idusuario, valor_bruto, valor_desconto, valor_total, situacao)
-                 VALUES (:company_id, :branch, :customer, :actor, :gross, :discount, :total, 1)
+                'INSERT INTO venda (idempresa, idfilial, idcliente, idusuario, valor_bruto, valor_desconto, valor_total, situacao, forma_pagamento, a_prazo, parcelas, juros_atraso)
+                 VALUES (:company_id, :branch, :customer, :actor, :gross, :discount, :total, 1, :payment, :on_credit, :installments, :late_fee)
                  RETURNING idvenda'
             );
             $statement->execute([
@@ -189,6 +219,10 @@ final class SalesRepository
                 'gross' => $gross,
                 'discount' => $discount,
                 'total' => $total,
+                'payment' => $payment,
+                'on_credit' => $onCredit ? 'true' : 'false',
+                'installments' => $installments,
+                'late_fee' => $lateFee,
             ]);
             $saleId = (int) $statement->fetchColumn();
 
@@ -210,16 +244,76 @@ final class SalesRepository
                 $this->moveStock($companyId, $actorId, $branchId, $line['idproduto'], $line['quantidade'], 2, "Venda #{$saleId}", (bool) $branch['permite_estoque_negativo']);
             }
 
-            $this->audit($companyId, $actorId, $saleId, 'criar', null, ['valor_total' => $total, 'itens' => count($lines)], $ip, $agent);
+            if (!$onCredit && $cashRegister && $total > 0) {
+                $this->pdo->prepare(
+                    'INSERT INTO movimentacao_caixa (idempresa, idfilial, idcaixa, idusuario, tipo, descricao, valor, situacao)
+                     VALUES (:company_id, :branch, :register, :actor, 3, :description, :amount, 1)'
+                )->execute([
+                    'company_id' => $companyId,
+                    'branch' => $branchId,
+                    'register' => (int) $cashRegister['idcaixa'],
+                    'actor' => $actorId,
+                    'description' => "Venda #{$saleId} ({$payment})",
+                    'amount' => $total,
+                ]);
+            }
+
+            if ($onCredit && $total > 0) {
+                $this->createReceivables($companyId, $branchId, $customerId, $saleId, $total, $installments, $payment, $lateFee);
+            }
+
+            $this->audit($companyId, $actorId, $saleId, 'criar', null, ['valor_total' => $total, 'itens' => count($lines), 'forma_pagamento' => $payment, 'a_prazo' => $onCredit, 'parcelas' => $installments, 'juros_atraso' => $lateFee], $ip, $agent);
             return $saleId;
         });
+    }
+
+    /**
+     * Gera as parcelas da venda a prazo em conta_receber: valores iguais com
+     * ajuste de centavos na ultima, vencimentos mensais a partir de +30 dias.
+     * O percentual de juros por atraso fica registrado nas observacoes de
+     * cada parcela (a cobranca efetiva e lancada no recebimento).
+     */
+    private function createReceivables(int $companyId, int $branchId, int $customerId, int $saleId, float $total, int $installments, string $payment, float $lateFee): void
+    {
+        $base = floor(($total / $installments) * 100) / 100;
+        $notes = $lateFee > 0
+            ? sprintf('Juros de %s%% ao mes em caso de atraso.', rtrim(rtrim(number_format($lateFee, 2, '.', ''), '0'), '.'))
+            : null;
+        $statement = $this->pdo->prepare(
+            'INSERT INTO conta_receber (idempresa, idfilial, idcliente, idvenda, descricao, valor, data_vencimento, situacao, forma_pagamento, parcela_numero, parcelas_total, observacoes)
+             VALUES (:company_id, :branch, :customer, :sale, :description, :amount, :due_date, 1, :payment, :number, :total_installments, :notes)'
+        );
+        for ($number = 1; $number <= $installments; $number++) {
+            $amount = $number === $installments
+                ? round($total - $base * ($installments - 1), 2)
+                : $base;
+            $statement->execute([
+                'company_id' => $companyId,
+                'branch' => $branchId,
+                'customer' => $customerId,
+                'sale' => $saleId,
+                'description' => "Venda #{$saleId} - parcela {$number}/{$installments}",
+                'amount' => $amount,
+                'due_date' => (new \DateTimeImmutable('today'))->modify("+{$number} month")->format('Y-m-d'),
+                'payment' => $payment,
+                'number' => $number,
+                'total_installments' => $installments,
+                'notes' => $notes,
+            ]);
+        }
+    }
+
+    /** Normaliza booleanos vindos do PDO/pgsql (bool nativo ou 't'/'f'). */
+    private function truthy(mixed $value): bool
+    {
+        return in_array($value, [true, 't', 'true', 1, '1'], true);
     }
 
     public function setStatus(int $companyId, int $actorId, int $saleId, int $status, ?string $ip, ?string $agent): void
     {
         $this->transaction(function () use ($companyId, $actorId, $saleId, $status, $ip, $agent) {
             $sale = $this->one(
-                'SELECT idfilial, situacao FROM venda WHERE idempresa = :company_id AND idvenda = :sale FOR UPDATE',
+                'SELECT idfilial, situacao, valor_total, forma_pagamento, a_prazo FROM venda WHERE idempresa = :company_id AND idvenda = :sale FOR UPDATE',
                 ['company_id' => $companyId, 'sale' => $saleId]
             );
             if (!$sale) {
@@ -240,6 +334,38 @@ final class SalesRepository
                 foreach ($items as $item) {
                     $this->moveStock($companyId, $actorId, (int) $sale['idfilial'], (int) $item['idproduto'], (float) $item['quantidade'], 1, "Cancelamento venda #{$saleId}", true);
                 }
+
+                // Estorno no caixa (tipo 4 = saida) quando a venda a vista
+                // registrou entrada e ainda ha caixa aberto na filial.
+                if (!$this->truthy($sale['a_prazo']) && (float) $sale['valor_total'] > 0) {
+                    $register = $this->one(
+                        'SELECT idcaixa FROM caixa WHERE idempresa = :company_id AND idfilial = :branch AND situacao = 1 ORDER BY idcaixa DESC LIMIT 1 FOR UPDATE',
+                        ['company_id' => $companyId, 'branch' => (int) $sale['idfilial']]
+                    );
+                    $hadCashEntry = $this->one(
+                        'SELECT 1 FROM movimentacao_caixa WHERE idempresa = :company_id AND tipo = 3 AND situacao = 1 AND descricao LIKE :document LIMIT 1',
+                        ['company_id' => $companyId, 'document' => "Venda #{$saleId} (%"]
+                    );
+                    if ($register && $hadCashEntry) {
+                        $this->pdo->prepare(
+                            'INSERT INTO movimentacao_caixa (idempresa, idfilial, idcaixa, idusuario, tipo, descricao, valor, situacao)
+                             VALUES (:company_id, :branch, :register, :actor, 4, :description, :amount, 1)'
+                        )->execute([
+                            'company_id' => $companyId,
+                            'branch' => (int) $sale['idfilial'],
+                            'register' => (int) $register['idcaixa'],
+                            'actor' => $actorId,
+                            'description' => "Estorno venda #{$saleId}",
+                            'amount' => (float) $sale['valor_total'],
+                        ]);
+                    }
+                }
+
+                // Cancela as parcelas pendentes da venda a prazo.
+                $this->pdo->prepare(
+                    'UPDATE conta_receber SET situacao = 3, atualizado_em = CURRENT_TIMESTAMP
+                     WHERE idempresa = :company_id AND idvenda = :sale AND situacao = 1'
+                )->execute(['company_id' => $companyId, 'sale' => $saleId]);
             }
 
             $this->audit($companyId, $actorId, $saleId, $status === 4 ? 'cancelar' : 'atualizar', ['situacao' => (int) $sale['situacao']], ['situacao' => $status], $ip, $agent);
@@ -413,6 +539,10 @@ final class SalesRepository
             'valor_total' => (float) $sale['valor_total'],
             'itens' => (int) ($sale['itens'] ?? 0),
             'quantidade' => (float) ($sale['quantidade'] ?? 0),
+            'forma_pagamento' => $sale['forma_pagamento'] ?? null,
+            'a_prazo' => $this->truthy($sale['a_prazo'] ?? false),
+            'parcelas' => (int) ($sale['parcelas'] ?? 1),
+            'juros_atraso' => (float) ($sale['juros_atraso'] ?? 0),
         ];
     }
 

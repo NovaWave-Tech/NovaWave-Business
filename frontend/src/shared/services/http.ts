@@ -84,6 +84,14 @@ http.interceptors.response.use(
       }
     }
 
+    // Substitui a mensagem generica do axios ("Request failed with status
+    // code 422") pela mensagem amigavel retornada pela API.
+    const apiMessage =
+      error.response?.data?.error || error.response?.data?.message;
+    if (apiMessage) {
+      error.message = apiMessage;
+    }
+
     return Promise.reject(error);
   }
 );

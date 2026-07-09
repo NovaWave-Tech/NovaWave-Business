@@ -32,11 +32,18 @@ export type CashHistoryRow = {
   saidas: number;
 };
 
+export type DayReportRow = {
+  forma: string;
+  vendas: number;
+  total: number;
+};
+
 export type CashierData = {
   branch: number;
   current: CurrentCash | null;
   history: CashHistoryRow[];
   metrics: { open_company: number };
+  day_report: DayReportRow[];
   options: { branches: Array<{ id: number; nome: string }> };
 };
 

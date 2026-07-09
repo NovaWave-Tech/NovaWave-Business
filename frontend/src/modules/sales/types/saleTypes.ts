@@ -11,7 +11,36 @@ export type SaleRow = {
   valor_desconto: number;
   valor_total: number;
   situacao: number;
+  forma_pagamento: string | null;
+  a_prazo: boolean;
+  parcelas: number;
+  juros_atraso: number;
 };
+
+export type PaymentMethod =
+  | 'dinheiro'
+  | 'pix'
+  | 'cartao_credito'
+  | 'cartao_debito'
+  | 'boleto'
+  | 'transferencia';
+
+export const PAYMENT_METHODS: Array<{ value: PaymentMethod; label: string }> = [
+  { value: 'dinheiro', label: 'Dinheiro' },
+  { value: 'pix', label: 'PIX' },
+  { value: 'cartao_credito', label: 'Credito' },
+  { value: 'cartao_debito', label: 'Debito' },
+  { value: 'boleto', label: 'Boleto' },
+  { value: 'transferencia', label: 'Transferencia' },
+];
+
+/** Formas aceitas na cobranca de venda a prazo (crediario). */
+export const CREDIT_METHODS: PaymentMethod[] = [
+  'dinheiro',
+  'pix',
+  'boleto',
+  'transferencia',
+];
 
 export type SaleMetrics = {
   sales: number;
@@ -73,6 +102,10 @@ export type SalePayload = {
   idfilial: number;
   idcliente?: number | null;
   valor_desconto?: number;
+  forma_pagamento: PaymentMethod;
+  a_prazo: boolean;
+  parcelas: number;
+  juros_atraso: number;
   items: Array<{
     idproduto: number;
     quantidade: number;

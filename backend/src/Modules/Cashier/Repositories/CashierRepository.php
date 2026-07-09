@@ -84,6 +84,19 @@ final class CashierRepository
             ['company_id' => $companyId]
         );
 
+        // Relatorio do dia: vendas de hoje por forma de pagamento. Somente
+        // dinheiro passa pelo caixa fisico; as demais formas aparecem aqui.
+        $dayReport = $this->all(
+            "SELECT CASE WHEN v.a_prazo THEN 'prazo' ELSE COALESCE(v.forma_pagamento, 'outros') END forma,
+                    COUNT(*) vendas, COALESCE(SUM(v.valor_total), 0) total
+             FROM venda v
+             WHERE v.idempresa = :company_id AND v.idfilial = :branch AND v.situacao <> 4
+               AND v.data_venda::date = CURRENT_DATE
+             GROUP BY 1
+             ORDER BY total DESC",
+            ['company_id' => $companyId, 'branch' => $branchId]
+        );
+
         return [
             'branch' => $branchId,
             'current' => $current,
@@ -98,6 +111,11 @@ final class CashierRepository
             'metrics' => [
                 'open_company' => (int) ($openCount['total'] ?? 0),
             ],
+            'day_report' => array_map(fn ($row) => [
+                'forma' => (string) $row['forma'],
+                'vendas' => (int) $row['vendas'],
+                'total' => (float) $row['total'],
+            ], $dayReport),
             'options' => ['branches' => $branches],
         ];
     }
