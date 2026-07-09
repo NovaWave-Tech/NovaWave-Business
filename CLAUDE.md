@@ -90,7 +90,16 @@ O `gh` CLI nao esta no PATH do Git Bash. Use:
 - `movimentacao_estoque.tipo`: 1=entrada, 2=saida, 5=ajuste (backend aceita [1,2,5]).
 - `movimentacao_caixa.tipo`: 1=suprimento, 2=sangria, 3=venda, 4=outros;
   saldo = inicial + (1,3) - (2,4). `caixa.situacao`: 1=aberto, 2=fechado
-  (1 caixa aberto por filial).
+  (1 caixa aberto por filial). **Somente vendas em dinheiro passam pelo
+  caixa fisico** (tipo 3; estorno no cancelamento e tipo 4); as demais
+  formas aparecem no relatorio do dia da tela Caixa. Sangria pode deixar
+  o caixa negativo.
+- Pagamento da venda: `venda.forma_pagamento` (dinheiro, pix,
+  cartao_credito, cartao_debito, boleto, transferencia), `a_prazo`,
+  `parcelas`, `juros_atraso` (% a.m., so no prazo). Parcelamento apenas em
+  cartao de credito (a vista, 1-12x, informativo) ou a prazo (crediario,
+  gera `conta_receber` com vencimentos mensais e cliente com
+  `permite_venda_prazo`). Cartao nao se aplica a prazo.
 - `venda`/`compra.situacao`: 1=concluida ... 4=cancelada. Venda da baixa no
   estoque; compra da entrada; cancelamento estorna. Movimentar estoque =
   upsert em `estoque` + insert em `movimentacao_estoque`, respeitando

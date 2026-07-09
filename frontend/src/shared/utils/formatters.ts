@@ -227,9 +227,13 @@ export const formatPaymentMethod = (value?: string | null) => {
   const labels: Record<string, string> = {
     pix: 'PIX',
     cartao: 'Cartao',
+    cartao_credito: 'Cartao de credito',
+    cartao_debito: 'Cartao de debito',
     boleto: 'Boleto',
     transferencia: 'Transferencia',
     dinheiro: 'Dinheiro',
+    prazo: 'A prazo',
+    outros: 'Outros',
   };
   return value ? (labels[value.toLowerCase()] ?? value) : '-';
 };

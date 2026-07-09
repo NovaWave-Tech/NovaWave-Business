@@ -56,6 +56,7 @@ import {
   formatCurrency,
   formatDateTime,
   formatNumber,
+  formatPaymentMethod,
 } from '../../../shared/utils/formatters';
 import { cashierService } from '../services/cashierService';
 import { CASH_MOVEMENT_TYPES, type CashierData } from '../types/cashierTypes';
@@ -407,6 +408,83 @@ export default function CashierPage() {
               />
             </Surface>
           )}
+
+          <Surface overflow="hidden" mb={5}>
+            <SectionHeader
+              icon={CircleDollarSign}
+              eyebrow="Vendas de hoje"
+              title="Relatorio do dia"
+              description="Recebimentos por forma de pagamento; somente dinheiro passa pelo caixa fisico"
+            />
+            {data?.day_report.length ? (
+              <VStack align="stretch" spacing={0}>
+                {data.day_report.map(row => (
+                  <Flex
+                    key={row.forma}
+                    px={5}
+                    py={3}
+                    justify="space-between"
+                    align="center"
+                    gap={4}
+                    borderBottom="1px solid"
+                    borderColor="erp.border"
+                  >
+                    <Flex align="center" gap={2} wrap="wrap">
+                      <Text fontSize="13px" fontWeight="600">
+                        {formatPaymentMethod(row.forma)}
+                      </Text>
+                      {row.forma === 'dinheiro' && (
+                        <Badge
+                          colorScheme="green"
+                          textTransform="none"
+                          fontSize="10px"
+                        >
+                          Entra no caixa
+                        </Badge>
+                      )}
+                      {row.forma === 'prazo' && (
+                        <Badge
+                          colorScheme="purple"
+                          textTransform="none"
+                          fontSize="10px"
+                        >
+                          Contas a receber
+                        </Badge>
+                      )}
+                      <Text fontSize="11px" color="erp.textMuted">
+                        {row.vendas} {row.vendas === 1 ? 'venda' : 'vendas'}
+                      </Text>
+                    </Flex>
+                    <Text textStyle="numeric" fontSize="13px" fontWeight="600">
+                      {formatCurrency(row.total)}
+                    </Text>
+                  </Flex>
+                ))}
+                <Flex
+                  px={5}
+                  py={3}
+                  justify="space-between"
+                  align="center"
+                  bg="erp.surfaceSubtle"
+                >
+                  <Text fontSize="13px" fontWeight="700">
+                    Total vendido hoje
+                  </Text>
+                  <Text textStyle="numeric" fontSize="15px" fontWeight="600">
+                    {formatCurrency(
+                      data.day_report.reduce((sum, row) => sum + row.total, 0)
+                    )}
+                  </Text>
+                </Flex>
+              </VStack>
+            ) : (
+              <EmptyState
+                title="Nenhuma venda hoje"
+                description="As vendas do dia aparecerao aqui, separadas por forma de pagamento."
+                icon={CircleDollarSign}
+              />
+            )}
+          </Surface>
 
           <Surface overflow="hidden">
             <SectionHeader

@@ -32,6 +32,7 @@ import {
   formatCurrency,
   formatDateTime,
   formatDocument,
+  formatPaymentMethod,
   formatPhone,
   formatQuantity,
 } from '../../../shared/utils/formatters';
@@ -39,6 +40,27 @@ import { saleService } from '../services/saleService';
 import type { SaleReceiptData } from '../types/saleTypes';
 
 const receiptNumber = (id: number) => String(id).padStart(6, '0');
+
+/** Rotulo da forma de pagamento, ex.: "PIX · a vista" ou "Boleto · 3x". */
+function paymentLabel(sale: {
+  forma_pagamento: string | null;
+  a_prazo: boolean;
+  parcelas: number;
+  juros_atraso: number;
+}): string {
+  if (!sale.forma_pagamento) return '-';
+  const method = formatPaymentMethod(sale.forma_pagamento);
+  if (sale.a_prazo) {
+    const fee =
+      sale.juros_atraso > 0
+        ? ` (juros de ${sale.juros_atraso}% a.m. por atraso)`
+        : '';
+    return `${method} · a prazo em ${sale.parcelas}x${fee}`;
+  }
+  return sale.parcelas > 1
+    ? `${method} · ${sale.parcelas}x`
+    : `${method} · a vista`;
+}
 
 /** Rotulo do percentual de desconto, ex.: " (10%)". Vazio quando nao ha base. */
 function discountPercentLabel(sale: {
@@ -67,6 +89,7 @@ function buildShareText(receipt: SaleReceiptData) {
     `Comprovante de venda Nº ${receiptNumber(sale.idvenda)}`,
     `Data: ${formatDateTime(sale.data_venda)}`,
     `Cliente: ${customer?.nome ?? 'Consumidor final'}`,
+    ...(sale.forma_pagamento ? [`Pagamento: ${paymentLabel(sale)}`] : []),
     '',
     ...sale.items.map(
       item =>
@@ -425,6 +448,11 @@ export default function SaleReceiptPage() {
             {customer?.telefone && (
               <Text fontSize="11px" color="gray.500">
                 {formatPhone(customer.telefone)}
+              </Text>
+            )}
+            {sale.forma_pagamento && (
+              <Text mt={1} fontSize="11px" color="gray.600" fontWeight="600">
+                Pagamento: {paymentLabel(sale)}
               </Text>
             )}
           </Box>

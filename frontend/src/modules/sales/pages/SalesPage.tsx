@@ -92,6 +92,7 @@ import {
   formatDate,
   formatDateTime,
   formatNumber,
+  formatPaymentMethod,
   isoDaysAgo,
   isoToday,
 } from '../../../shared/utils/formatters';
@@ -101,7 +102,9 @@ import {
 } from '../components/CustomerSearchSelect';
 import { saleService } from '../services/saleService';
 import {
+  PAYMENT_METHODS,
   SALE_STATUS,
+  type PaymentMethod,
   type ProductOption,
   type SaleDetail,
   type SaleListData,
@@ -143,6 +146,10 @@ export default function SalesPage() {
 
   const [branchId, setBranchId] = useState('');
   const [customer, setCustomer] = useState<SelectedCustomer | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('dinheiro');
+  const [onCredit, setOnCredit] = useState(false);
+  const [installments, setInstallments] = useState(1);
+  const [lateFee, setLateFee] = useState(0);
   const [discountOpen, setDiscountOpen] = useState(false);
   const [discountMode, setDiscountMode] = useState<'currency' | 'percent'>(
     'currency'
@@ -202,6 +209,11 @@ export default function SalesPage() {
         idfilial: Number(branchId),
         idcliente: customer?.id ?? null,
         valor_desconto: discount,
+        forma_pagamento: paymentMethod,
+        a_prazo: onCredit,
+        parcelas:
+          onCredit || paymentMethod === 'cartao_credito' ? installments : 1,
+        juros_atraso: onCredit ? lateFee : 0,
         items: cart.map(line => ({
           idproduto: line.idproduto,
           quantidade: line.quantidade,
@@ -232,8 +244,35 @@ export default function SalesPage() {
     setDiscountMode('currency');
     setDiscountValue(0);
     setCustomer(null);
+    setPaymentMethod('dinheiro');
+    setOnCredit(false);
+    setInstallments(1);
+    setLateFee(0);
     setProductSearch('');
   };
+  // Venda a prazo exige cliente identificado; consumidor final volta a vista.
+  const selectCustomer = (selected: SelectedCustomer | null) => {
+    setCustomer(selected);
+    if (!selected || selected.id === null) setOnCredit(false);
+  };
+  const creditAllowed = customer !== null && customer.id !== null;
+  // Cartao nao se aplica a prazo; debito nunca parcela; credito parcela 1x-12x.
+  const pickPaymentMethod = (method: PaymentMethod) => {
+    setPaymentMethod(method);
+    if (method === 'cartao_credito' || method === 'cartao_debito') {
+      setOnCredit(false);
+      setInstallments(1);
+    }
+  };
+  const enableCredit = () => {
+    setOnCredit(true);
+    setInstallments(current => Math.max(2, current));
+  };
+  const paymentHint = onCredit
+    ? 'Gera parcelas em Contas a receber'
+    : paymentMethod === 'dinheiro'
+      ? 'Entra no caixa da filial'
+      : 'Nao passa pelo caixa; entra no relatorio do dia';
   const openSale = () => {
     resetSale();
     setBranchId(String(options?.branches[0]?.id ?? ''));
@@ -584,7 +623,10 @@ export default function SalesPage() {
               </FormControl>
               <FormControl>
                 <FormLabel>Cliente</FormLabel>
-                <CustomerSearchSelect value={customer} onChange={setCustomer} />
+                <CustomerSearchSelect
+                  value={customer}
+                  onChange={selectCustomer}
+                />
               </FormControl>
             </SimpleGrid>
 
@@ -751,6 +793,203 @@ export default function SalesPage() {
             {cart.length > 0 && (
               <Box
                 mt={5}
+                border="1px solid"
+                borderColor="erp.border"
+                borderRadius="12px"
+                overflow="hidden"
+              >
+                <Flex
+                  px={4}
+                  py={2.5}
+                  align="center"
+                  justify="space-between"
+                  bg="erp.surfaceSubtle"
+                  borderBottom="1px solid"
+                  borderColor="erp.border"
+                >
+                  <Text
+                    textStyle="overline"
+                    fontSize="10px"
+                    color="erp.textMuted"
+                  >
+                    Pagamento
+                  </Text>
+                  <Text fontSize="11px" color="erp.textSecondary">
+                    {paymentHint}
+                  </Text>
+                </Flex>
+                <Box px={4} py={3.5}>
+                  <Flex gap={1.5} wrap="wrap">
+                    {PAYMENT_METHODS.map(method => (
+                      <Button
+                        key={method.value}
+                        size="sm"
+                        variant="outline"
+                        fontWeight="600"
+                        fontSize="12px"
+                        px={3}
+                        bg={
+                          paymentMethod === method.value
+                            ? 'erp.brandSoft'
+                            : undefined
+                        }
+                        borderColor={
+                          paymentMethod === method.value
+                            ? 'erp.brandBorder'
+                            : undefined
+                        }
+                        color={
+                          paymentMethod === method.value
+                            ? 'erp.brandText'
+                            : 'erp.textSecondary'
+                        }
+                        onClick={() => pickPaymentMethod(method.value)}
+                      >
+                        {method.label}
+                      </Button>
+                    ))}
+                  </Flex>
+
+                  {paymentMethod === 'cartao_credito' && (
+                    <Flex mt={3.5} align="center" gap={2.5} wrap="wrap">
+                      <Text fontSize="13px" color="erp.textSecondary">
+                        Parcelamento no cartao
+                      </Text>
+                      <Box w="86px">
+                        <ComboSelect
+                          size="sm"
+                          value={String(installments)}
+                          onChange={value =>
+                            setInstallments(
+                              Math.max(1, Math.min(12, Number(value) || 1))
+                            )
+                          }
+                          options={Array.from({ length: 12 }).map(
+                            (_, index) => ({
+                              value: String(index + 1),
+                              label: `${index + 1}x`,
+                            })
+                          )}
+                        />
+                      </Box>
+                      {installments > 1 && total > 0 && (
+                        <Text fontSize="11px" color="erp.textSecondary">
+                          {installments}x de{' '}
+                          {formatCurrency(total / installments)} · recebimento
+                          pela operadora
+                        </Text>
+                      )}
+                    </Flex>
+                  )}
+
+                  {!paymentMethod.startsWith('cartao') && (
+                    <Flex mt={3.5} align="center" gap={2.5} wrap="wrap">
+                      <Text fontSize="13px" color="erp.textSecondary">
+                        Condicao
+                      </Text>
+                      <ButtonGroup size="xs" isAttached variant="outline">
+                        <Button
+                          fontWeight="600"
+                          bg={!onCredit ? 'erp.brandSoft' : undefined}
+                          color={
+                            !onCredit ? 'erp.brandText' : 'erp.textSecondary'
+                          }
+                          onClick={() => setOnCredit(false)}
+                        >
+                          A vista
+                        </Button>
+                        <Tooltip
+                          label="Identifique o cliente para vender a prazo"
+                          isDisabled={creditAllowed}
+                        >
+                          <Button
+                            fontWeight="600"
+                            bg={onCredit ? 'erp.brandSoft' : undefined}
+                            color={
+                              onCredit ? 'erp.brandText' : 'erp.textSecondary'
+                            }
+                            isDisabled={!creditAllowed}
+                            onClick={() => enableCredit()}
+                          >
+                            A prazo
+                          </Button>
+                        </Tooltip>
+                      </ButtonGroup>
+                      {onCredit && (
+                        <>
+                          <Box w="86px">
+                            <ComboSelect
+                              size="sm"
+                              value={String(installments)}
+                              onChange={value =>
+                                setInstallments(
+                                  Math.max(1, Math.min(24, Number(value) || 1))
+                                )
+                              }
+                              options={Array.from({ length: 24 }).map(
+                                (_, index) => ({
+                                  value: String(index + 1),
+                                  label: `${index + 1}x`,
+                                })
+                              )}
+                            />
+                          </Box>
+                          {total > 0 && (
+                            <Text fontSize="11px" color="erp.textSecondary">
+                              {installments}x de{' '}
+                              {formatCurrency(total / installments)} · 1ª em 30
+                              dias
+                            </Text>
+                          )}
+                        </>
+                      )}
+                    </Flex>
+                  )}
+
+                  {onCredit && (
+                    <Flex mt={3} align="center" gap={2.5} wrap="wrap">
+                      <Text fontSize="13px" color="erp.textSecondary">
+                        Juros por atraso
+                      </Text>
+                      <InputGroup size="sm" w="120px">
+                        <Input
+                          type="number"
+                          min={0}
+                          max={100}
+                          step="0.1"
+                          sx={{ fontVariantNumeric: 'tabular-nums' }}
+                          value={lateFee || ''}
+                          placeholder="0"
+                          onChange={event =>
+                            setLateFee(
+                              Math.max(
+                                0,
+                                Math.min(100, Number(event.target.value) || 0)
+                              )
+                            )
+                          }
+                        />
+                        <InputRightElement
+                          pointerEvents="none"
+                          color="erp.textMuted"
+                          fontSize="11px"
+                          w="3.2rem"
+                        >
+                          % a.m.
+                        </InputRightElement>
+                      </InputGroup>
+                      <Text fontSize="11px" color="erp.textMuted">
+                        aplicado as parcelas vencidas
+                      </Text>
+                    </Flex>
+                  )}
+                </Box>
+              </Box>
+            )}
+
+            {cart.length > 0 && (
+              <Box
+                mt={4}
                 border="1px solid"
                 borderColor="erp.border"
                 borderRadius="12px"
@@ -946,11 +1185,16 @@ export default function SalesPage() {
                 >
                   {formatCurrency(total)}
                 </Text>
-                {discount > 0 && (
-                  <Text fontSize="11px" color="erp.success">
-                    Desconto de {formatCurrency(discount)} aplicado
-                  </Text>
-                )}
+                <Text fontSize="11px" color="erp.textMuted">
+                  {onCredit
+                    ? `A prazo em ${installments}x · ${formatPaymentMethod(paymentMethod)}`
+                    : `${formatPaymentMethod(paymentMethod)}${
+                        paymentMethod === 'cartao_credito' && installments > 1
+                          ? ` · ${installments}x`
+                          : ' · a vista'
+                      }`}
+                  {discount > 0 && ` · desconto de ${formatCurrency(discount)}`}
+                </Text>
               </Box>
               <Flex gap={2}>
                 <Button variant="ghost" onClick={saleDrawer.onClose}>
@@ -1098,6 +1342,24 @@ function SaleDetailDrawer({
               <DetailRow label="Cliente" value={detail.cliente} />
               <DetailRow label="Filial" value={detail.filial} />
               <DetailRow label="Operador" value={detail.usuario} />
+              <DetailRow
+                label="Pagamento"
+                value={
+                  detail.forma_pagamento
+                    ? `${formatPaymentMethod(detail.forma_pagamento)}${
+                        detail.a_prazo
+                          ? ` · a prazo em ${detail.parcelas}x${
+                              detail.juros_atraso > 0
+                                ? ` (juros de ${detail.juros_atraso}% a.m. por atraso)`
+                                : ''
+                            }`
+                          : detail.parcelas > 1
+                            ? ` · ${detail.parcelas}x`
+                            : ' · a vista'
+                      }`
+                    : 'Nao informado'
+                }
+              />
               <DetailRow
                 label="Itens"
                 value={`${formatNumber(detail.items.length)} (${formatNumber(detail.quantidade)} un)`}
