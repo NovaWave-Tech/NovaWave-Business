@@ -1,7 +1,7 @@
 import {
   Input,
   InputGroup,
-  InputLeftAddon,
+  InputLeftElement,
   type InputProps,
 } from '@chakra-ui/react';
 import { maskValue } from '../utils/formatters';
@@ -32,6 +32,7 @@ export function CurrencyInput({
   value,
   onValueChange,
   currency = 'R$',
+  size,
   ...props
 }: Omit<InputProps, 'value' | 'onChange' | 'type'> & {
   value: string;
@@ -57,14 +58,22 @@ export function CurrencyInput({
   };
 
   return (
-    <InputGroup>
-      <InputLeftAddon>{currency}</InputLeftAddon>
+    <InputGroup size={size}>
+      <InputLeftElement
+        pointerEvents="none"
+        color="erp.textMuted"
+        fontSize={size === 'sm' ? '12px' : '13px'}
+        fontWeight="500"
+      >
+        {currency}
+      </InputLeftElement>
       <Input
         {...props}
         type="text"
         inputMode="numeric"
         value={formattedValue}
         placeholder="0,00"
+        sx={{ fontVariantNumeric: 'tabular-nums', ...props.sx }}
         onChange={event => handleChange(event.target.value)}
       />
     </InputGroup>
