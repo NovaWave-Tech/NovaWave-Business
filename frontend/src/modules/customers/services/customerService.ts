@@ -100,10 +100,27 @@ export type CustomerPayload = {
   observacao?: string;
 };
 
+export type CustomerSearchResult = {
+  idcliente: number;
+  nome: string;
+  documento: string | null;
+  telefone: string | null;
+  email: string | null;
+  situacao: number;
+  last_purchase: string | null;
+  total_bought: number;
+};
+
 export const customerService = {
   list: async (params: Record<string, string>) =>
     (await http.get<{ data: CustomerList }>('/customers', { params })).data
       .data,
+  search: async (q: string) =>
+    (
+      await http.get<{ data: CustomerSearchResult[] }>('/customers/search', {
+        params: { q },
+      })
+    ).data.data,
   detail: async (id: number) =>
     (await http.get<{ data: CustomerDetail }>(`/customers/${id}`)).data.data,
   create: async (payload: CustomerPayload) =>

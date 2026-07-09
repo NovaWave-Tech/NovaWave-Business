@@ -19,7 +19,6 @@ import {
   Input,
   InputGroup,
   InputLeftElement,
-  Select,
   SimpleGrid,
   Skeleton,
   Stack,
@@ -59,7 +58,7 @@ import {
   Users,
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { Controller, useForm } from 'react-hook-form';
 import {
   Area,
   AreaChart,
@@ -70,6 +69,8 @@ import {
   YAxis,
 } from 'recharts';
 import { ChartAreaGradient, PremiumTooltip } from '../../../shared/ui/chart';
+import { ComboSelect } from '../../../shared/ui/ComboSelect';
+import { FilterSelect } from '../../../shared/ui/FilterSelect';
 import {
   chartAnimation,
   chartColors,
@@ -129,22 +130,6 @@ const storage = {
   favorites: 'novawave:reports:favorites',
   history: 'novawave:reports:history',
 };
-const lightReportTokens = {
-  '--chakra-colors-erp-canvas': '#F8FAFC',
-  '--chakra-colors-erp-sidebar': '#FFFFFF',
-  '--chakra-colors-erp-surface': '#FFFFFF',
-  '--chakra-colors-erp-surface-subtle': '#F8FAFC',
-  '--chakra-colors-erp-hover': '#F1F5F9',
-  '--chakra-colors-erp-border': '#E2E8F0',
-  '--chakra-colors-erp-border-strong': '#CBD5E1',
-  '--chakra-colors-erp-text': '#0F172A',
-  '--chakra-colors-erp-text-secondary': '#64748B',
-  '--chakra-colors-erp-text-muted': '#94A3B8',
-  '--chakra-colors-erp-brand-soft': '#F3F6FF',
-  '--chakra-colors-erp-brand-border': '#C9D7FF',
-  '--chakra-colors-erp-brand-text': '#1D4ED8',
-};
-
 export default function ReportsPage() {
   const drawer = useDisclosure();
   const toast = useToast();
@@ -221,7 +206,7 @@ export default function ReportsPage() {
   const mainReport = reports[0] ?? fallbackReport;
 
   return (
-    <Box bg="erp.canvas" minH="100%" color="erp.text" sx={lightReportTokens}>
+    <Box bg="erp.canvas" minH="100%" color="erp.text">
       <PageHeader
         title="Relatorios"
         description="Visualize, analise e exporte informacoes estrategicas da empresa."
@@ -284,16 +269,19 @@ export default function ReportsPage() {
               onChange={e => setSearch(e.target.value)}
             />
           </InputGroup>
-          <Select
-            w={{ base: 'full', md: '190px' }}
+          <FilterSelect
+            label="Categoria"
             value={category}
-            onChange={e => setCategory(e.target.value)}
-          >
-            <option value="all">Todas as categorias</option>
-            {[...new Set(reports.map(x => x.category))].map(x => (
-              <option key={x}>{x}</option>
-            ))}
-          </Select>
+            onChange={setCategory}
+            w={{ base: 'full', md: '200px' }}
+            options={[
+              { value: 'all', label: 'Todas as categorias' },
+              ...[...new Set(reports.map(x => x.category))].map(x => ({
+                value: x,
+                label: x,
+              })),
+            ]}
+          />
           <Checkbox
             isChecked={onlyFavorites}
             onChange={e => setOnlyFavorites(e.target.checked)}
@@ -451,7 +439,7 @@ export default function ReportsPage() {
         size="full"
       >
         <DrawerOverlay bg="blackAlpha.700" backdropFilter="blur(2px)" />
-        <DrawerContent bg="erp.canvas" color="erp.text" sx={lightReportTokens}>
+        <DrawerContent bg="erp.canvas" color="erp.text">
           <DrawerCloseButton />
           <DrawerHeader
             bg="erp.surface"
@@ -480,14 +468,24 @@ export default function ReportsPage() {
                 <Stack spacing={4}>
                   <FormControl>
                     <FormLabel fontSize="xs">Filial</FormLabel>
-                    <Select {...form.register('branch')}>
-                      <option value="">Todas as filiais</option>
-                      {catalog.data?.branches.map(x => (
-                        <option key={x.id} value={x.id}>
-                          {x.name}
-                        </option>
-                      ))}
-                    </Select>
+                    <Controller
+                      control={form.control}
+                      name="branch"
+                      render={({ field }) => (
+                        <ComboSelect
+                          value={String(field.value ?? '')}
+                          onChange={field.onChange}
+                          placeholder="Todas as filiais"
+                          options={[
+                            { value: '', label: 'Todas as filiais' },
+                            ...(catalog.data?.branches.map(x => ({
+                              value: String(x.id),
+                              label: x.name,
+                            })) ?? []),
+                          ]}
+                        />
+                      )}
+                    />
                   </FormControl>
                   <FormControl>
                     <FormLabel fontSize="xs">Data inicial</FormLabel>
@@ -618,7 +616,9 @@ function ReportView({
               {formatDate(data.meta.start)} a {formatDate(data.meta.end)}
             </Text>
           </Box>
-          <Building2 size={30} color="#2563FF" />
+          <Box color="brand.500" lineHeight={0}>
+            <Building2 size={30} />
+          </Box>
         </Flex>
       </Surface>
       <SimpleGrid columns={{ base: 2, xl: 4 }} spacing={3}>
@@ -689,7 +689,9 @@ function ReportView({
         </Surface>
         <Surface p={5}>
           <Flex gap={3}>
-            <Sparkles size={18} color="#2563FF" />
+            <Box color="brand.500" lineHeight={0} flexShrink={0}>
+              <Sparkles size={18} />
+            </Box>
             <Box>
               <Heading fontSize="14px">Resumo executivo</Heading>
               <Text

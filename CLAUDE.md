@@ -7,6 +7,29 @@ oficiais antes de qualquer implementacao:
 - `frontend/CODEX-INSTRUCTIONS.md` - arquitetura e fluxo do frontend
 - `frontend/ERP-UI-GUIDE.md` - padrao visual do ERP
 
+## Sobre o projeto
+
+NovaWave Business e um ERP web multiempresa/multifilial (vendas, compras,
+estoque, caixa, clientes, fornecedores, relatorios) mais o painel
+administrativo NovaWave Platform. Roda apenas em ambiente local por
+enquanto - nao ha producao.
+
+## Stack
+
+- Frontend: React 19 + TypeScript + Vite 7, Chakra UI v2, TanStack Query,
+  React Hook Form + Zod, Recharts.
+- Backend: PHP 8 + Slim 4, JWT (firebase/php-jwt), PostgreSQL.
+- Infra: Docker Compose local (containers `backend-php` e `backend-postgres`).
+
+## Comandos
+
+- Subir backend: `cd backend && composer install && docker compose up -d --build`.
+- Subir frontend: `cd frontend && npm install && npm run dev`.
+- Lint do frontend: `npm run lint`; build/typecheck: `npm run build`.
+- Antes de rodar local: copiar `.env.example` -> `.env` em `backend/` e `frontend/`.
+- Nao ha suite de testes automatizados; a verificacao e lint + build +
+  smoke test autenticado (secao "Verificacao").
+
 ## Fluxo de trabalho obrigatorio
 
 1. Sincronizar a main antes de comecar: `git checkout main && git pull --ff-only origin main`.
@@ -72,6 +95,12 @@ O `gh` CLI nao esta no PATH do Git Bash. Use:
   estoque; compra da entrada; cancelamento estorna. Movimentar estoque =
   upsert em `estoque` + insert em `movimentacao_estoque`, respeitando
   `permite_estoque_negativo` de produto e filial.
+- Venda sem cliente informado (`idcliente` null) e vinculada pelo backend ao
+  cliente padrao da empresa `CONSUMIDOR FINAL` (find-or-create por empresa,
+  em `SalesRepository::resolveDefaultCustomer`).
+- `cliente.documento` e opcional (cadastro rapido no caixa); CPF/CNPJ e
+  validado apenas quando informado. Busca de clientes para autocomplete:
+  `GET /customers/search?q=` (nome, documento, telefone, e-mail; LIMIT 8).
 - Login do ERP usa campo `password`; login da platform usa `senha`.
 
 ### Banco e schema
@@ -86,10 +115,18 @@ O `gh` CLI nao esta no PATH do Git Bash. Use:
 - Modulo = `pages/ + services/ + types/` em `src/modules/{nome}`;
   rota em `src/app/App.tsx` (cuidado com conflito de nomes com paginas da
   Platform - usar alias `Erp...` no import se preciso).
-- Kit compartilhado obrigatorio (`src/shared/ui/`): `KpiCard`, `PageHeader`,
-  `Surface`, `SectionHeader`, `BrandSurface`, `EmptyState`/`ErrorState`,
-  `DateRangeField` (De -> Ate), `FormattedInput`/`CurrencyInput`,
+- Kit compartilhado obrigatorio (`src/shared/ui/`): `KpiCard`, `StatGroup`
+  (painel denso de numeros, padrao do Financeiro/Vendas/Compras/Produtos),
+  `DeltaPill`, `PageHeader`, `Surface`, `SectionHeader`, `BrandSurface`,
+  `EmptyState`/`ErrorState`, `DateRangeField` (popover De -> Ate com
+  atalhos), `FilterSelect`, `ComboSelect`, `FormattedInput`/`CurrencyInput`,
   `chart.tsx`/`chartTheme.ts` (graficos), `motion.tsx` (Reveal/CountUp).
+- **Nunca usar `Select` nativo do Chakra em telas do ERP.** Regra:
+  filtro de toolbar -> `FilterSelect` (menu com radio); campo de formulario
+  em modal/drawer -> `ComboSelect` (filtro por digitacao, dropdown em
+  Portal); cliente na venda -> `CustomerSearchSelect` (busca assincrona em
+  `sales/components`). Dropdowns dentro de `BrandSurface`/`Surface` com
+  overflow hidden precisam de `Portal` (senao ficam cortados).
 - Formatacao SEMPRE por `src/shared/utils/formatters.ts` (moeda, datas,
   documentos, `formatDelta`...). Nunca `Intl`/`toLocaleString` direto em pagina.
 - Direcao visual validada pelo usuario: **clean e estruturado, SEM

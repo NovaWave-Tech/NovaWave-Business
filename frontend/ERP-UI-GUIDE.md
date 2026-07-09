@@ -52,11 +52,32 @@ Use os tokens de `src/theme/index.ts`; nao aplique cores de fundo e texto direta
 - `Surface`: superficie base para conteudo operacional.
 - `BrandSurface`: superficie estrategica com assinatura visual NovaWave.
 - `SectionHeader`: cabecalho interno de secoes.
+- `KpiCard`: indicador com icone, valor animado e variacao em pill.
+- `StatGroup`: painel unico com celulas divididas e numeros grandes em fonte
+  mono/tabular. Preferir ao `KpiCard` quando ha muitos numeros lado a lado
+  (padrao aplicado em Financeiro, Vendas, Compras e Produtos).
+- `DeltaPill`: variacao percentual em pill (verde/vermelho/neutro).
 - `MetricCard`: indicador numerico com tendencia.
 - `StatusCard`: resumo de estado ou alerta.
 - `EmptyState`, `ErrorState` e `PageSkeleton`: estados obrigatorios.
 
 `src/shared/ui/DataTable.tsx` fornece busca, filtros, ordenacao, selecao, acoes em lote, menu por linha, loading, vazio e paginacao. Novas listagens devem partir deste componente.
+
+### Selects e campos de escolha
+
+Nao usar o `Select` nativo do Chakra nas telas do ERP. Em seu lugar:
+
+- `FilterSelect` (`src/shared/ui/FilterSelect.tsx`): filtros de toolbar.
+  Botao outline + menu com radio e check na opcao ativa.
+- `ComboSelect` (`src/shared/ui/ComboSelect.tsx`): campos de formulario em
+  modais e drawers. Clique lista as opcoes, digitar filtra, Enter seleciona.
+- `CustomerSearchSelect` (`src/modules/sales/components`): selecao de
+  cliente na venda, com busca assincrona (nome, CPF/CNPJ, telefone,
+  e-mail), opcao Consumidor Final e cadastro rapido em modal.
+- `DateRangeField`: intervalo De -> Ate em popover com atalhos de periodo.
+
+Todos renderizam o dropdown em `Portal` - obrigatorio para nao serem
+cortados por superficies com `overflow: hidden` (ex.: `BrandSurface`).
 
 ## Fluxo de Uma Pagina
 

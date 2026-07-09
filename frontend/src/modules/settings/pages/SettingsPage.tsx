@@ -3,7 +3,6 @@ import {
   Button,
   FormControl,
   FormLabel,
-  Select,
   SimpleGrid,
   Switch,
   Text,
@@ -26,6 +25,7 @@ import {
   SectionHeader,
   Surface,
 } from '../../../shared/ui/ErpUI';
+import { ComboSelect } from '../../../shared/ui/ComboSelect';
 import { CurrencyInput } from '../../../shared/ui/FormattedInput';
 import { formatCurrency } from '../../../shared/utils/formatters';
 import {
@@ -157,43 +157,40 @@ export default function SettingsPage() {
             <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4} p={5}>
               <FormControl>
                 <FormLabel>Tema</FormLabel>
-                <Select
+                <ComboSelect
                   value={preferences.tema}
-                  onChange={event =>
-                    setPref(
-                      'tema',
-                      event.target.value as PreferencesPayload['tema']
-                    )
+                  onChange={value =>
+                    setPref('tema', value as PreferencesPayload['tema'])
                   }
-                >
-                  <option value="dark">Escuro</option>
-                  <option value="light">Claro</option>
-                  <option value="system">Sistema</option>
-                </Select>
+                  options={[
+                    { value: 'dark', label: 'Escuro' },
+                    { value: 'light', label: 'Claro' },
+                    { value: 'system', label: 'Sistema' },
+                  ]}
+                />
               </FormControl>
               <FormControl>
                 <FormLabel>Idioma</FormLabel>
-                <Select
+                <ComboSelect
                   value={preferences.idioma}
-                  onChange={event => setPref('idioma', event.target.value)}
-                >
-                  <option value="pt-BR">Portugues (Brasil)</option>
-                  <option value="en-US">Ingles (EUA)</option>
-                  <option value="es-ES">Espanhol</option>
-                </Select>
+                  onChange={value => setPref('idioma', value)}
+                  options={[
+                    { value: 'pt-BR', label: 'Portugues (Brasil)' },
+                    { value: 'en-US', label: 'Ingles (EUA)' },
+                    { value: 'es-ES', label: 'Espanhol' },
+                  ]}
+                />
               </FormControl>
               <FormControl>
                 <FormLabel>Fuso horario</FormLabel>
-                <Select
+                <ComboSelect
                   value={preferences.timezone}
-                  onChange={event => setPref('timezone', event.target.value)}
-                >
-                  {TIMEZONES.map(zone => (
-                    <option key={zone} value={zone}>
-                      {zone}
-                    </option>
-                  ))}
-                </Select>
+                  onChange={value => setPref('timezone', value)}
+                  options={TIMEZONES.map(zone => ({
+                    value: zone,
+                    label: zone,
+                  }))}
+                />
               </FormControl>
             </SimpleGrid>
           </Surface>
@@ -208,38 +205,36 @@ export default function SettingsPage() {
             <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4} p={5}>
               <FormControl>
                 <FormLabel>Filial padrao</FormLabel>
-                <Select
-                  value={preferences.idfilial_padrao ?? ''}
-                  onChange={event =>
-                    setPref(
-                      'idfilial_padrao',
-                      event.target.value ? Number(event.target.value) : null
-                    )
+                <ComboSelect
+                  value={String(preferences.idfilial_padrao ?? '')}
+                  onChange={value =>
+                    setPref('idfilial_padrao', value ? Number(value) : null)
                   }
-                >
-                  <option value="">Sem filial padrao</option>
-                  {data?.options.branches.map(item => (
-                    <option key={item.id} value={item.id}>
-                      {item.nome}
-                    </option>
-                  ))}
-                </Select>
+                  placeholder="Sem filial padrao"
+                  options={[
+                    { value: '', label: 'Sem filial padrao' },
+                    ...(data?.options.branches.map(item => ({
+                      value: String(item.id),
+                      label: item.nome,
+                    })) ?? []),
+                  ]}
+                />
               </FormControl>
               <FormControl>
                 <FormLabel>Escopo do dashboard</FormLabel>
-                <Select
+                <ComboSelect
                   value={preferences.dashboard_escopo_padrao}
-                  onChange={event =>
+                  onChange={value =>
                     setPref(
                       'dashboard_escopo_padrao',
-                      event.target
-                        .value as PreferencesPayload['dashboard_escopo_padrao']
+                      value as PreferencesPayload['dashboard_escopo_padrao']
                     )
                   }
-                >
-                  <option value="empresa">Empresa (consolidado)</option>
-                  <option value="filial">Filial padrao</option>
-                </Select>
+                  options={[
+                    { value: 'empresa', label: 'Empresa (consolidado)' },
+                    { value: 'filial', label: 'Filial padrao' },
+                  ]}
+                />
               </FormControl>
               <FormControl display="flex" alignItems="center" pt={{ md: 8 }}>
                 <Switch

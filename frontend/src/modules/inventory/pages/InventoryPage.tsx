@@ -33,7 +33,6 @@ import {
   NumberInput,
   NumberInputField,
   NumberInputStepper,
-  Select,
   SimpleGrid,
   Table,
   Tbody,
@@ -71,6 +70,7 @@ import {
   SectionHeader,
   Surface,
 } from '../../../shared/ui/ErpUI';
+import { ComboSelect } from '../../../shared/ui/ComboSelect';
 import { FilterSelect } from '../../../shared/ui/FilterSelect';
 import {
   formatCurrency,
@@ -478,57 +478,51 @@ export default function InventoryPage() {
                 {movement.productLabel ? (
                   <Input value={movement.productLabel} isReadOnly />
                 ) : (
-                  <Select
+                  <ComboSelect
                     value={movement.productId}
-                    onChange={event =>
-                      setMovement(v => ({
-                        ...v,
-                        productId: event.target.value,
-                      }))
+                    onChange={value =>
+                      setMovement(v => ({ ...v, productId: value }))
                     }
-                  >
-                    <option value="">Selecione o produto</option>
-                    {options?.products.map(product => (
-                      <option key={product.id} value={product.id}>
-                        {product.nome}
-                        {product.sku ? ` (${product.sku})` : ''}
-                      </option>
-                    ))}
-                  </Select>
+                    placeholder="Selecione o produto"
+                    options={
+                      options?.products.map(product => ({
+                        value: String(product.id),
+                        label: product.nome,
+                        description: product.sku ?? undefined,
+                      })) ?? []
+                    }
+                  />
                 )}
               </FormControl>
               <SimpleGrid columns={2} spacing={4}>
                 <FormControl isRequired>
                   <FormLabel>Filial</FormLabel>
-                  <Select
+                  <ComboSelect
                     value={movement.branchId}
                     isDisabled={movement.branchLocked}
-                    onChange={event =>
-                      setMovement(v => ({ ...v, branchId: event.target.value }))
+                    onChange={value =>
+                      setMovement(v => ({ ...v, branchId: value }))
                     }
-                  >
-                    <option value="">Selecione</option>
-                    {options?.branches.map(branch => (
-                      <option key={branch.id} value={branch.id}>
-                        {branch.nome}
-                      </option>
-                    ))}
-                  </Select>
+                    placeholder="Selecione"
+                    options={
+                      options?.branches.map(branch => ({
+                        value: String(branch.id),
+                        label: branch.nome,
+                      })) ?? []
+                    }
+                  />
                 </FormControl>
                 <FormControl isRequired>
                   <FormLabel>Tipo</FormLabel>
-                  <Select
+                  <ComboSelect
                     value={movement.tipo}
-                    onChange={event =>
-                      setMovement(v => ({ ...v, tipo: event.target.value }))
+                    onChange={value =>
+                      setMovement(v => ({ ...v, tipo: value }))
                     }
-                  >
-                    {Object.entries(MOVEMENT_TYPES).map(([value, label]) => (
-                      <option key={value} value={value}>
-                        {label}
-                      </option>
-                    ))}
-                  </Select>
+                    options={Object.entries(MOVEMENT_TYPES).map(
+                      ([value, label]) => ({ value, label: String(label) })
+                    )}
+                  />
                 </FormControl>
               </SimpleGrid>
               <FormControl isRequired>

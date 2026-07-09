@@ -26,6 +26,13 @@ final class CustomerController extends ApiController
         );
     }
 
+    public function search(Request $request, Response $response): Response
+    {
+        return $this->run($request, $response, fn (RequestContext $context) =>
+            $this->service->search($context->companyId, (string) ($request->getQueryParams()['q'] ?? ''))
+        );
+    }
+
     public function show(Request $request, Response $response, array $args): Response
     {
         return $this->run($request, $response, fn (RequestContext $context) =>

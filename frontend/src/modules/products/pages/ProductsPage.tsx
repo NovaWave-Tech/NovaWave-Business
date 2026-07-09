@@ -36,7 +36,6 @@ import {
   ModalHeader,
   ModalOverlay,
   Portal,
-  Select,
   SimpleGrid,
   Skeleton,
   Tab,
@@ -98,10 +97,11 @@ import {
   BrandSurface,
   EmptyState,
   ErrorState,
-  KpiCard,
   PageHeader,
+  StatGroup,
   Surface,
 } from '../../../shared/ui/ErpUI';
+import { ComboSelect } from '../../../shared/ui/ComboSelect';
 import { FilterSelect } from '../../../shared/ui/FilterSelect';
 import { CurrencyInput } from '../../../shared/ui/FormattedInput';
 import CatalogManager from '../../catalog/components/CatalogManager';
@@ -395,70 +395,67 @@ export default function ProductsPage() {
           </Flex>
         }
       />
-      <SimpleGrid columns={{ base: 1, sm: 2, xl: 7 }} spacing={3} mb={5}>
-        <KpiCard
-          index={0}
-          tone="brand"
-          label="Produtos"
-          count={Number(data?.metrics.total)}
-          format={formatNumber}
-          detail="Itens no catalogo"
-          icon={Package}
-        />
-        <KpiCard
-          index={1}
-          tone="success"
-          label="Ativos"
-          count={Number(data?.metrics.active)}
-          format={formatNumber}
-          detail="Disponiveis"
-          icon={Check}
-        />
-        <KpiCard
-          index={2}
-          tone="neutral"
-          label="Inativos"
-          count={Number(data?.metrics.inactive)}
-          format={formatNumber}
-          detail="Fora de operacao"
-          icon={Ban}
-        />
-        <KpiCard
-          index={3}
-          tone="warning"
-          label="Estoque critico"
-          count={Number(data?.metrics.critical)}
-          format={formatNumber}
-          detail="Precisam de atencao"
-          icon={AlertTriangle}
-        />
-        <KpiCard
-          index={4}
-          tone="info"
-          label="Filiais com estoque"
-          count={Number(data?.metrics.branches)}
-          format={formatNumber}
-          detail="Unidades abastecidas"
-          icon={Store}
-        />
-        <KpiCard
-          index={5}
-          tone="brand"
-          label="Valor em estoque"
-          count={Number(data?.metrics.stock_value)}
-          format={value => formatCurrency(value, { compact: true })}
-          detail="Pelo custo atual"
-          icon={CircleDollarSign}
-        />
-        <KpiCard
-          index={6}
-          tone="neutral"
-          label="Mais vendido"
-          value={data?.metrics.best_seller || '-'}
-          detail="Lider historico"
-          icon={Flame}
-        />
-      </SimpleGrid>
+      <StatGroup
+        mb={5}
+        columns={{ base: 1, sm: 2, xl: 4 }}
+        items={[
+          {
+            label: 'Produtos',
+            count: Number(data?.metrics.total),
+            format: formatNumber,
+            detail: 'Itens no catalogo',
+            icon: Package,
+            tone: 'brand',
+          },
+          {
+            label: 'Ativos',
+            count: Number(data?.metrics.active),
+            format: formatNumber,
+            detail: 'Disponiveis',
+            icon: Check,
+            tone: 'success',
+          },
+          {
+            label: 'Inativos',
+            count: Number(data?.metrics.inactive),
+            format: formatNumber,
+            detail: 'Fora de operacao',
+            icon: Ban,
+            tone: 'neutral',
+          },
+          {
+            label: 'Estoque critico',
+            count: Number(data?.metrics.critical),
+            format: formatNumber,
+            detail: 'Precisam de atencao',
+            icon: AlertTriangle,
+            tone: 'warning',
+          },
+          {
+            label: 'Filiais com estoque',
+            count: Number(data?.metrics.branches),
+            format: formatNumber,
+            detail: 'Unidades abastecidas',
+            icon: Store,
+            tone: 'info',
+          },
+          {
+            label: 'Valor em estoque',
+            count: Number(data?.metrics.stock_value),
+            format: value => formatCurrency(value, { compact: true }),
+            detail: 'Pelo custo atual',
+            icon: CircleDollarSign,
+            tone: 'brand',
+          },
+          {
+            label: 'Mais vendido',
+            value: data?.metrics.best_seller || '-',
+            detail: 'Lider historico',
+            icon: Flame,
+            tone: 'neutral',
+          },
+        ]}
+      />
       <BrandSurface p={4} mb={4}>
         <Grid
           templateColumns={{
@@ -699,34 +696,33 @@ export default function ProductsPage() {
             <VStack align="stretch" spacing={4}>
               <FormControl>
                 <FormLabel>Filial</FormLabel>
-                <Select
-                  value={movement.idfilial}
-                  onChange={e =>
-                    setMovement(v => ({
-                      ...v,
-                      idfilial: Number(e.target.value),
-                    }))
+                <ComboSelect
+                  value={String(movement.idfilial || '')}
+                  onChange={value =>
+                    setMovement(v => ({ ...v, idfilial: Number(value) || 0 }))
                   }
-                >
-                  {data?.options.branches.map(x => (
-                    <option key={x.id} value={x.id}>
-                      {x.nome}
-                    </option>
-                  ))}
-                </Select>
+                  placeholder="Selecione a filial"
+                  options={
+                    data?.options.branches.map(x => ({
+                      value: String(x.id),
+                      label: x.nome,
+                    })) ?? []
+                  }
+                />
               </FormControl>
               <FormControl>
                 <FormLabel>Tipo</FormLabel>
-                <Select
-                  value={movement.tipo}
-                  onChange={e =>
-                    setMovement(v => ({ ...v, tipo: Number(e.target.value) }))
+                <ComboSelect
+                  value={String(movement.tipo)}
+                  onChange={value =>
+                    setMovement(v => ({ ...v, tipo: Number(value) || 1 }))
                   }
-                >
-                  <option value={1}>Entrada</option>
-                  <option value={2}>Saida</option>
-                  <option value={5}>Ajuste de saldo</option>
-                </Select>
+                  options={[
+                    { value: '1', label: 'Entrada' },
+                    { value: '2', label: 'Saida' },
+                    { value: '5', label: 'Ajuste de saldo' },
+                  ]}
+                />
               </FormControl>
               <FormControl>
                 <FormLabel>Quantidade</FormLabel>
@@ -1473,14 +1469,25 @@ function ProductStep({
         </Field>
         <Field label="Categoria" error={e.idcategoria?.message} required>
           <Flex gap={2}>
-            <Select {...form.register('idcategoria')}>
-              <option value={0}>Selecione</option>
-              {options?.categories.map(x => (
-                <option key={x.id} value={x.id}>
-                  {x.nome}
-                </option>
-              ))}
-            </Select>
+            <Box flex="1" minW={0}>
+              <Controller
+                control={form.control}
+                name="idcategoria"
+                render={({ field }) => (
+                  <ComboSelect
+                    value={String(field.value || '')}
+                    onChange={value => field.onChange(Number(value) || 0)}
+                    placeholder="Selecione"
+                    options={
+                      options?.categories.map(x => ({
+                        value: String(x.id),
+                        label: x.nome,
+                      })) ?? []
+                    }
+                  />
+                )}
+              />
+            </Box>
             <Tooltip label="Gerenciar categorias">
               <IconButton
                 aria-label="Gerenciar categorias"
@@ -1494,14 +1501,26 @@ function ProductStep({
         </Field>
         <Field label="Marca">
           <Flex gap={2}>
-            <Select {...form.register('idmarca')}>
-              <option value="">Sem marca</option>
-              {options?.brands.map(x => (
-                <option key={x.id} value={x.id}>
-                  {x.nome}
-                </option>
-              ))}
-            </Select>
+            <Box flex="1" minW={0}>
+              <Controller
+                control={form.control}
+                name="idmarca"
+                render={({ field }) => (
+                  <ComboSelect
+                    value={String(field.value ?? '')}
+                    onChange={field.onChange}
+                    placeholder="Sem marca"
+                    options={[
+                      { value: '', label: 'Sem marca' },
+                      ...(options?.brands.map(x => ({
+                        value: String(x.id),
+                        label: x.nome,
+                      })) ?? []),
+                    ]}
+                  />
+                )}
+              />
+            </Box>
             <Tooltip label="Gerenciar marcas">
               <IconButton
                 aria-label="Gerenciar marcas"
@@ -1514,11 +1533,20 @@ function ProductStep({
           </Flex>
         </Field>
         <Field label="Unidade">
-          <Select {...form.register('unidade')}>
-            {['UN', 'KG', 'L', 'M', 'CX', 'PC'].map(x => (
-              <option key={x}>{x}</option>
-            ))}
-          </Select>
+          <Controller
+            control={form.control}
+            name="unidade"
+            render={({ field }) => (
+              <ComboSelect
+                value={String(field.value ?? 'UN')}
+                onChange={field.onChange}
+                options={['UN', 'KG', 'L', 'M', 'CX', 'PC'].map(x => ({
+                  value: x,
+                  label: x,
+                }))}
+              />
+            )}
+          />
         </Field>
         <Field label="Descricao">
           <Textarea {...form.register('descricao')} />
@@ -1535,24 +1563,44 @@ function ProductStep({
     return (
       <VStack align="stretch" spacing={4}>
         <Field label="Fornecedor principal">
-          <Select {...form.register('idfornecedor_principal')}>
-            <option value="">Sem fornecedor</option>
-            {options?.suppliers.map(x => (
-              <option key={x.id} value={x.id}>
-                {x.nome}
-              </option>
-            ))}
-          </Select>
+          <Controller
+            control={form.control}
+            name="idfornecedor_principal"
+            render={({ field }) => (
+              <ComboSelect
+                value={String(field.value ?? '')}
+                onChange={field.onChange}
+                placeholder="Sem fornecedor"
+                options={[
+                  { value: '', label: 'Sem fornecedor' },
+                  ...(options?.suppliers.map(x => ({
+                    value: String(x.id),
+                    label: x.nome,
+                  })) ?? []),
+                ]}
+              />
+            )}
+          />
         </Field>
         <Field label="Fornecedor secundario">
-          <Select {...form.register('idfornecedor_secundario')}>
-            <option value="">Sem fornecedor</option>
-            {options?.suppliers.map(x => (
-              <option key={x.id} value={x.id}>
-                {x.nome}
-              </option>
-            ))}
-          </Select>
+          <Controller
+            control={form.control}
+            name="idfornecedor_secundario"
+            render={({ field }) => (
+              <ComboSelect
+                value={String(field.value ?? '')}
+                onChange={field.onChange}
+                placeholder="Sem fornecedor"
+                options={[
+                  { value: '', label: 'Sem fornecedor' },
+                  ...(options?.suppliers.map(x => ({
+                    value: String(x.id),
+                    label: x.nome,
+                  })) ?? []),
+                ]}
+              />
+            )}
+          />
         </Field>
         <Field label="Codigo do fornecedor">
           <Input {...form.register('codigo_fornecedor')} />
@@ -1624,14 +1672,24 @@ function ProductStep({
           />
         </Field>
         <Field label="Filial inicial">
-          <Select {...form.register('idfilial_inicial')}>
-            <option value="">Selecione</option>
-            {options?.branches.map(x => (
-              <option key={x.id} value={x.id}>
-                {x.nome}
-              </option>
-            ))}
-          </Select>
+          <Controller
+            control={form.control}
+            name="idfilial_inicial"
+            render={({ field }) => (
+              <ComboSelect
+                value={String(field.value ?? '')}
+                onChange={field.onChange}
+                placeholder="Selecione"
+                options={[
+                  { value: '', label: 'Selecione' },
+                  ...(options?.branches.map(x => ({
+                    value: String(x.id),
+                    label: x.nome,
+                  })) ?? []),
+                ]}
+              />
+            )}
+          />
         </Field>
         <Field label="Estoque minimo">
           <Input
@@ -1711,14 +1769,24 @@ function ProductStep({
           <Input {...form.register('cest')} />
         </Field>
         <Field label="Origem">
-          <Select {...form.register('origem')}>
-            <option value="">Selecione</option>
-            {Array.from({ length: 9 }).map((_, i) => (
-              <option key={i} value={i}>
-                {i}
-              </option>
-            ))}
-          </Select>
+          <Controller
+            control={form.control}
+            name="origem"
+            render={({ field }) => (
+              <ComboSelect
+                value={String(field.value ?? '')}
+                onChange={field.onChange}
+                placeholder="Selecione"
+                options={[
+                  { value: '', label: 'Selecione' },
+                  ...Array.from({ length: 9 }).map((_, i) => ({
+                    value: String(i),
+                    label: String(i),
+                  })),
+                ]}
+              />
+            )}
+          />
         </Field>
         <Field label="Tributacao">
           <Input {...form.register('tributacao')} />

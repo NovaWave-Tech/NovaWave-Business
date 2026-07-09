@@ -36,6 +36,36 @@ final class CustomerRepository
         return ['customers' => $customers, 'metrics' => array_merge($metrics, $commercial, $financial), 'options' => ['cities' => $this->all('SELECT DISTINCT cidade nome FROM cliente WHERE idempresa=:company_id AND cidade IS NOT NULL ORDER BY cidade', ['company_id' => $companyId]), 'states' => $this->all('SELECT DISTINCT estado nome FROM cliente WHERE idempresa=:company_id AND estado IS NOT NULL ORDER BY estado', ['company_id' => $companyId])]];
     }
 
+    /**
+     * Busca leve para autocomplete (venda rapida): nome, documento,
+     * telefone ou e-mail, com resumo de compras. Sempre limitada.
+     */
+    public function search(int $companyId, string $term, int $limit = 8): array
+    {
+        $digits = preg_replace('/\D/', '', $term);
+        $clauses = ['c.nome ILIKE :q', 'c.email ILIKE :q'];
+        $params = ['company_id' => $companyId, 'q' => '%' . $term . '%'];
+        if ($digits !== '') {
+            $clauses[] = 'c.documento LIKE :digits';
+            $clauses[] = 'c.telefone LIKE :digits';
+            $params['digits'] = '%' . $digits . '%';
+        }
+        return $this->all(
+            'SELECT c.idcliente, c.nome, c.documento, c.telefone, c.email, c.situacao,
+                    v.last_purchase, COALESCE(v.total_bought, 0) AS total_bought
+             FROM cliente c
+             LEFT JOIN (SELECT idempresa, idcliente,
+                               COALESCE(SUM(valor_total) FILTER (WHERE situacao = 1), 0) AS total_bought,
+                               MAX(data_venda) FILTER (WHERE situacao = 1) AS last_purchase
+                        FROM venda GROUP BY idempresa, idcliente) v
+               ON v.idempresa = c.idempresa AND v.idcliente = c.idcliente
+             WHERE c.idempresa = :company_id AND (' . implode(' OR ', $clauses) . ')
+             ORDER BY c.situacao DESC, v.last_purchase DESC NULLS LAST, c.nome
+             LIMIT ' . max(1, min(20, $limit)),
+            $params
+        );
+    }
+
     public function show(int $companyId, int $customerId): ?array
     {
         $customer = $this->one('SELECT * FROM cliente WHERE idempresa=:company_id AND idcliente=:customer_id', ['company_id' => $companyId, 'customer_id' => $customerId]);
@@ -70,7 +100,7 @@ final class CustomerRepository
         if(!$this->one('SELECT idcliente FROM cliente WHERE idempresa=:company_id AND idcliente=:customer_id',['company_id'=>$companyId,'customer_id'=>$customerId])) throw new InvalidArgumentException('Cliente nao encontrado');$this->audit($companyId,$actorId,$customerId,'adicionar_observacao',null,['observacao'=>$note],$ip,$agent);
     }
 
-    private function params(int $companyId,array $data): array { $nullable=fn(string $key)=>(isset($data[$key])&&trim((string)$data[$key])!=='')?trim((string)$data[$key]):null;return ['company_id'=>$companyId,'type'=>(int)$data['tipo_pessoa'],'name'=>trim($data['nome']),'trade_name'=>$nullable('nome_fantasia'),'rg'=>$nullable('rg'),'state_registration'=>$nullable('inscricao_estadual'),'birth_opening_date'=>$nullable('data_nascimento_abertura'),'document'=>preg_replace('/\D/','',(string)$data['documento']),'email'=>$nullable('email'),'phone'=>preg_replace('/\D/','',(string)($data['telefone']??''))?:null,'cep'=>preg_replace('/\D/','',(string)($data['cep']??''))?:null,'address'=>$nullable('endereco'),'number'=>$nullable('numero'),'complement'=>$nullable('complemento'),'district'=>$nullable('bairro'),'city'=>$nullable('cidade'),'state'=>!empty($data['estado'])?strtoupper(trim($data['estado'])):null,'credit'=>(float)($data['limite_credito']??0),'recurring'=>!empty($data['recorrente'])?'true':'false','credit_sales'=>!empty($data['permite_venda_prazo'])?'true':'false','status'=>!isset($data['situacao'])||!empty($data['situacao'])?1:0]; }
+    private function params(int $companyId,array $data): array { $nullable=fn(string $key)=>(isset($data[$key])&&trim((string)$data[$key])!=='')?trim((string)$data[$key]):null;return ['company_id'=>$companyId,'type'=>(int)$data['tipo_pessoa'],'name'=>trim($data['nome']),'trade_name'=>$nullable('nome_fantasia'),'rg'=>$nullable('rg'),'state_registration'=>$nullable('inscricao_estadual'),'birth_opening_date'=>$nullable('data_nascimento_abertura'),'document'=>preg_replace('/\D/','',(string)($data['documento']??''))?:null,'email'=>$nullable('email'),'phone'=>preg_replace('/\D/','',(string)($data['telefone']??''))?:null,'cep'=>preg_replace('/\D/','',(string)($data['cep']??''))?:null,'address'=>$nullable('endereco'),'number'=>$nullable('numero'),'complement'=>$nullable('complemento'),'district'=>$nullable('bairro'),'city'=>$nullable('cidade'),'state'=>!empty($data['estado'])?strtoupper(trim($data['estado'])):null,'credit'=>(float)($data['limite_credito']??0),'recurring'=>!empty($data['recorrente'])?'true':'false','credit_sales'=>!empty($data['permite_venda_prazo'])?'true':'false','status'=>!isset($data['situacao'])||!empty($data['situacao'])?1:0]; }
     private function audit(int $companyId,int $actorId,int $customerId,string $action,?array $before,?array $after,?string $ip,?string $agent): void { $this->pdo->prepare("INSERT INTO auditoria(idempresa,idusuario,origem_usuario,tabela,registro_id,acao,valores_anteriores,valores_novos,ip,dispositivo) VALUES(:company_id,:actor_id,'empresa','cliente',:customer_id,:action,:before::jsonb,:after::jsonb,:ip,:device)")->execute(['company_id'=>$companyId,'actor_id'=>$actorId,'customer_id'=>$customerId,'action'=>$action,'before'=>$before?json_encode($before):null,'after'=>$after?json_encode($after):null,'ip'=>$ip,'device'=>$agent?substr($agent,0,150):null]); }
     private function transaction(callable $callback): mixed { $this->pdo->beginTransaction();try{$result=$callback();$this->pdo->commit();return $result;}catch(Throwable $exception){$this->pdo->rollBack();throw $exception;} }
     private function one(string $sql,array $params): array { $s=$this->pdo->prepare($sql);$s->execute($params);return $s->fetch(PDO::FETCH_ASSOC)?:[]; }

@@ -13,7 +13,6 @@ import {
   ModalFooter,
   ModalHeader,
   ModalOverlay,
-  Select,
   SimpleGrid,
   Table,
   Tbody,
@@ -50,6 +49,7 @@ import {
   SectionHeader,
   Surface,
 } from '../../../shared/ui/ErpUI';
+import { ComboSelect } from '../../../shared/ui/ComboSelect';
 import { FilterSelect } from '../../../shared/ui/FilterSelect';
 import { CurrencyInput } from '../../../shared/ui/FormattedInput';
 import {
@@ -539,15 +539,14 @@ export default function CashierPage() {
             <VStack align="stretch" spacing={4}>
               <FormControl isRequired>
                 <FormLabel>Tipo</FormLabel>
-                <Select
+                <ComboSelect
                   value={movement.tipo}
-                  onChange={event =>
-                    setMovement(v => ({ ...v, tipo: event.target.value }))
-                  }
-                >
-                  <option value="1">Suprimento (entrada)</option>
-                  <option value="2">Sangria (saida)</option>
-                </Select>
+                  onChange={value => setMovement(v => ({ ...v, tipo: value }))}
+                  options={[
+                    { value: '1', label: 'Suprimento (entrada)' },
+                    { value: '2', label: 'Sangria (saida)' },
+                  ]}
+                />
               </FormControl>
               <FormControl isRequired>
                 <FormLabel>Descricao</FormLabel>
