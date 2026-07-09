@@ -161,6 +161,8 @@ final class SalesRepository
                 if (!$customer) {
                     throw new InvalidArgumentException('Cliente invalido');
                 }
+            } else {
+                $customerId = $this->resolveDefaultCustomer($companyId);
             }
 
             $lines = $this->normalizeItems($companyId, $data['items'] ?? []);
@@ -277,6 +279,28 @@ final class SalesRepository
             throw new InvalidArgumentException('Adicione ao menos um produto a venda');
         }
         return $lines;
+    }
+
+    /**
+     * Vendas sem cliente informado sao vinculadas ao cliente padrao da
+     * empresa "CONSUMIDOR FINAL" (criado sob demanda, uma vez por empresa).
+     */
+    private function resolveDefaultCustomer(int $companyId): int
+    {
+        $existing = $this->one(
+            "SELECT idcliente FROM cliente WHERE idempresa = :company_id AND nome = 'CONSUMIDOR FINAL' ORDER BY idcliente LIMIT 1",
+            ['company_id' => $companyId]
+        );
+        if ($existing) {
+            return (int) $existing['idcliente'];
+        }
+        $statement = $this->pdo->prepare(
+            "INSERT INTO cliente (idempresa, tipo_pessoa, nome, situacao)
+             VALUES (:company_id, 1, 'CONSUMIDOR FINAL', 1)
+             RETURNING idcliente"
+        );
+        $statement->execute(['company_id' => $companyId]);
+        return (int) $statement->fetchColumn();
     }
 
     private function moveStock(int $companyId, int $actorId, int $branchId, int $productId, float $quantity, int $type, string $document, bool $branchAllowsNegative): void

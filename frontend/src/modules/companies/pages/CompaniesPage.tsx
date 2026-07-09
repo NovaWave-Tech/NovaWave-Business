@@ -5,7 +5,6 @@ import {
   FormControl,
   FormLabel,
   Input,
-  Select,
   SimpleGrid,
   Text,
   VStack,
@@ -30,6 +29,7 @@ import {
   SectionHeader,
   Surface,
 } from '../../../shared/ui/ErpUI';
+import { ComboSelect } from '../../../shared/ui/ComboSelect';
 import FormattedInput from '../../../shared/ui/FormattedInput';
 import { formatDateTime, formatNumber } from '../../../shared/utils/formatters';
 import {
@@ -324,38 +324,38 @@ export default function CompaniesPage() {
             <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4} p={5}>
               <FormControl>
                 <FormLabel>Fuso horario</FormLabel>
-                <Select
-                  value={form.timezone}
-                  onChange={event => setField('timezone', event.target.value)}
-                >
-                  {TIMEZONES.map(zone => (
-                    <option key={zone} value={zone}>
-                      {zone}
-                    </option>
-                  ))}
-                </Select>
+                <ComboSelect
+                  value={form.timezone ?? ''}
+                  onChange={value => setField('timezone', value)}
+                  options={TIMEZONES.map(zone => ({
+                    value: zone,
+                    label: zone,
+                  }))}
+                />
               </FormControl>
               <FormControl>
                 <FormLabel>Moeda</FormLabel>
-                <Select
-                  value={form.moeda}
-                  onChange={event => setField('moeda', event.target.value)}
-                >
-                  <option value="BRL">Real (BRL)</option>
-                  <option value="USD">Dolar (USD)</option>
-                  <option value="EUR">Euro (EUR)</option>
-                </Select>
+                <ComboSelect
+                  value={form.moeda ?? ''}
+                  onChange={value => setField('moeda', value)}
+                  options={[
+                    { value: 'BRL', label: 'Real (BRL)' },
+                    { value: 'USD', label: 'Dolar (USD)' },
+                    { value: 'EUR', label: 'Euro (EUR)' },
+                  ]}
+                />
               </FormControl>
               <FormControl>
                 <FormLabel>Idioma</FormLabel>
-                <Select
-                  value={form.idioma}
-                  onChange={event => setField('idioma', event.target.value)}
-                >
-                  <option value="pt-BR">Portugues (Brasil)</option>
-                  <option value="en-US">Ingles (EUA)</option>
-                  <option value="es-ES">Espanhol</option>
-                </Select>
+                <ComboSelect
+                  value={form.idioma ?? ''}
+                  onChange={value => setField('idioma', value)}
+                  options={[
+                    { value: 'pt-BR', label: 'Portugues (Brasil)' },
+                    { value: 'en-US', label: 'Ingles (EUA)' },
+                    { value: 'es-ES', label: 'Espanhol' },
+                  ]}
+                />
               </FormControl>
             </SimpleGrid>
           </Surface>

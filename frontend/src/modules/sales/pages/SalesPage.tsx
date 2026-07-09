@@ -2,6 +2,7 @@ import {
   Badge,
   Box,
   Button,
+  ButtonGroup,
   Drawer,
   DrawerBody,
   DrawerCloseButton,
@@ -18,6 +19,7 @@ import {
   Input,
   InputGroup,
   InputLeftElement,
+  InputRightElement,
   Menu,
   MenuButton,
   MenuDivider,
@@ -34,7 +36,6 @@ import {
   NumberInput,
   NumberInputField,
   NumberInputStepper,
-  Select,
   SimpleGrid,
   Table,
   Tbody,
@@ -62,8 +63,10 @@ import {
   Search,
   ShoppingCart,
   Ticket,
+  TicketPercent,
   Trash2,
   TrendingUp,
+  X,
   XCircle,
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
@@ -72,15 +75,16 @@ import {
   BrandSurface,
   EmptyState,
   ErrorState,
-  KpiCard,
   PageHeader,
   SectionHeader,
+  StatGroup,
   Surface,
 } from '../../../shared/ui/ErpUI';
 import {
   DateRangeField,
   type DateRange,
 } from '../../../shared/ui/DateRangeField';
+import { ComboSelect } from '../../../shared/ui/ComboSelect';
 import { FilterSelect } from '../../../shared/ui/FilterSelect';
 import { CurrencyInput } from '../../../shared/ui/FormattedInput';
 import {
@@ -91,6 +95,10 @@ import {
   isoDaysAgo,
   isoToday,
 } from '../../../shared/utils/formatters';
+import {
+  CustomerSearchSelect,
+  type SelectedCustomer,
+} from '../components/CustomerSearchSelect';
 import { saleService } from '../services/saleService';
 import {
   SALE_STATUS,
@@ -134,8 +142,12 @@ export default function SalesPage() {
   const [filters, setFilters] = useState({ q: '', branch: '', status: '' });
 
   const [branchId, setBranchId] = useState('');
-  const [customerId, setCustomerId] = useState('');
-  const [discount, setDiscount] = useState(0);
+  const [customer, setCustomer] = useState<SelectedCustomer | null>(null);
+  const [discountOpen, setDiscountOpen] = useState(false);
+  const [discountMode, setDiscountMode] = useState<'currency' | 'percent'>(
+    'currency'
+  );
+  const [discountValue, setDiscountValue] = useState(0);
   const [productSearch, setProductSearch] = useState('');
   const [cart, setCart] = useState<CartLine[]>([]);
 
@@ -171,13 +183,23 @@ export default function SalesPage() {
     (sum, line) => sum + line.quantidade * line.valor_unitario,
     0
   );
+  const discount = discountOpen
+    ? Number(
+        Math.min(
+          subtotal,
+          discountMode === 'percent'
+            ? (subtotal * Math.min(discountValue, 100)) / 100
+            : discountValue
+        ).toFixed(2)
+      )
+    : 0;
   const total = Math.max(0, subtotal - discount);
 
   const create = useMutation({
     mutationFn: () =>
       saleService.create({
         idfilial: Number(branchId),
-        idcliente: customerId ? Number(customerId) : null,
+        idcliente: customer?.id ?? null,
         valor_desconto: discount,
         items: cart.map(line => ({
           idproduto: line.idproduto,
@@ -205,8 +227,10 @@ export default function SalesPage() {
 
   const resetSale = () => {
     setCart([]);
-    setDiscount(0);
-    setCustomerId('');
+    setDiscountOpen(false);
+    setDiscountMode('currency');
+    setDiscountValue(0);
+    setCustomer(null);
     setProductSearch('');
   };
   const openSale = () => {
@@ -277,62 +301,60 @@ export default function SalesPage() {
         }
       />
 
-      <SimpleGrid columns={{ base: 1, sm: 2, xl: 6 }} spacing={3} mb={5}>
-        <KpiCard
-          index={0}
-          tone="brand"
-          label="Vendas"
-          count={Number(data?.metrics.sales)}
-          format={formatNumber}
-          detail="Concluidas no periodo"
-          icon={ShoppingCart}
-        />
-        <KpiCard
-          index={1}
-          tone="success"
-          label="Faturamento"
-          count={Number(data?.metrics.revenue)}
-          format={value => formatCurrency(value, { compact: true })}
-          detail="Receita das vendas"
-          icon={CircleDollarSign}
-        />
-        <KpiCard
-          index={2}
-          tone="info"
-          label="Ticket medio"
-          count={Number(data?.metrics.average_ticket)}
-          format={formatCurrency}
-          detail="Por venda"
-          icon={Ticket}
-        />
-        <KpiCard
-          index={3}
-          tone="brand"
-          label="Itens vendidos"
-          count={Number(data?.metrics.items_sold)}
-          format={formatNumber}
-          detail="Unidades no periodo"
-          icon={Package}
-        />
-        <KpiCard
-          index={4}
-          tone="neutral"
-          label="Descontos"
-          count={Number(data?.metrics.discount)}
-          format={value => formatCurrency(value, { compact: true })}
-          detail="Concedidos no periodo"
-          icon={TrendingUp}
-        />
-        <KpiCard
-          index={5}
-          tone="danger"
-          label="Canceladas"
-          count={Number(data?.metrics.cancelled)}
-          format={formatNumber}
-          detail="No periodo"
-          icon={XCircle}
-        />
-      </SimpleGrid>
+      <StatGroup
+        mb={5}
+        columns={{ base: 1, sm: 2, xl: 3, '2xl': 6 }}
+        items={[
+          {
+            label: 'Vendas',
+            count: Number(data?.metrics.sales),
+            format: formatNumber,
+            detail: 'Concluidas no periodo',
+            icon: ShoppingCart,
+            tone: 'brand',
+          },
+          {
+            label: 'Faturamento',
+            count: Number(data?.metrics.revenue),
+            format: value => formatCurrency(value, { compact: true }),
+            detail: 'Receita das vendas',
+            icon: CircleDollarSign,
+            tone: 'success',
+          },
+          {
+            label: 'Ticket medio',
+            count: Number(data?.metrics.average_ticket),
+            format: formatCurrency,
+            detail: 'Por venda',
+            icon: Ticket,
+            tone: 'info',
+          },
+          {
+            label: 'Itens vendidos',
+            count: Number(data?.metrics.items_sold),
+            format: formatNumber,
+            detail: 'Unidades no periodo',
+            icon: Package,
+            tone: 'brand',
+          },
+          {
+            label: 'Descontos',
+            count: Number(data?.metrics.discount),
+            format: value => formatCurrency(value, { compact: true }),
+            detail: 'Concedidos no periodo',
+            icon: TrendingUp,
+            tone: 'neutral',
+          },
+          {
+            label: 'Canceladas',
+            count: Number(data?.metrics.cancelled),
+            format: formatNumber,
+            detail: 'No periodo',
+            icon: XCircle,
+            tone: 'danger',
+          },
+        ]}
+      />
 
       <BrandSurface mb={4} p={4}>
         <Grid
@@ -547,31 +569,21 @@ export default function SalesPage() {
             <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
               <FormControl isRequired>
                 <FormLabel>Filial</FormLabel>
-                <Select
+                <ComboSelect
                   value={branchId}
-                  onChange={event => setBranchId(event.target.value)}
-                >
-                  <option value="">Selecione</option>
-                  {options?.branches.map(branch => (
-                    <option key={branch.id} value={branch.id}>
-                      {branch.nome}
-                    </option>
-                  ))}
-                </Select>
+                  onChange={setBranchId}
+                  placeholder="Selecione a filial"
+                  options={
+                    options?.branches.map(branch => ({
+                      value: String(branch.id),
+                      label: branch.nome,
+                    })) ?? []
+                  }
+                />
               </FormControl>
               <FormControl>
                 <FormLabel>Cliente</FormLabel>
-                <Select
-                  value={customerId}
-                  onChange={event => setCustomerId(event.target.value)}
-                >
-                  <option value="">Consumidor final</option>
-                  {options?.customers.map(customer => (
-                    <option key={customer.id} value={customer.id}>
-                      {customer.nome}
-                    </option>
-                  ))}
-                </Select>
+                <CustomerSearchSelect value={customer} onChange={setCustomer} />
               </FormControl>
             </SimpleGrid>
 
@@ -740,29 +752,137 @@ export default function SalesPage() {
               <Box>
                 <Flex justify="space-between" fontSize="12px" mb={1}>
                   <Text color="erp.textSecondary">Subtotal</Text>
-                  <Text fontWeight="600">{formatCurrency(subtotal)}</Text>
-                </Flex>
-                <Flex justify="space-between" align="center" gap={3} mb={1}>
-                  <Text fontSize="12px" color="erp.textSecondary">
-                    Desconto
+                  <Text
+                    fontWeight="600"
+                    sx={{ fontVariantNumeric: 'tabular-nums' }}
+                  >
+                    {formatCurrency(subtotal)}
                   </Text>
-                  <Box w="130px">
-                    <CurrencyInput
-                      size="sm"
-                      value={String(discount || '')}
-                      onValueChange={value => setDiscount(Number(value) || 0)}
-                    />
-                  </Box>
                 </Flex>
+                {discountOpen ? (
+                  <>
+                    <Flex justify="space-between" align="center" gap={3} mb={1}>
+                      <Flex align="center" gap={2}>
+                        <Text fontSize="12px" color="erp.textSecondary">
+                          Desconto
+                        </Text>
+                        <ButtonGroup size="xs" isAttached variant="outline">
+                          <Button
+                            fontWeight="600"
+                            bg={
+                              discountMode === 'currency'
+                                ? 'erp.brandSoft'
+                                : undefined
+                            }
+                            color={
+                              discountMode === 'currency'
+                                ? 'erp.brandText'
+                                : 'erp.textSecondary'
+                            }
+                            onClick={() => setDiscountMode('currency')}
+                          >
+                            R$
+                          </Button>
+                          <Button
+                            fontWeight="600"
+                            bg={
+                              discountMode === 'percent'
+                                ? 'erp.brandSoft'
+                                : undefined
+                            }
+                            color={
+                              discountMode === 'percent'
+                                ? 'erp.brandText'
+                                : 'erp.textSecondary'
+                            }
+                            onClick={() => setDiscountMode('percent')}
+                          >
+                            %
+                          </Button>
+                        </ButtonGroup>
+                      </Flex>
+                      <Flex align="center" gap={1.5}>
+                        <Box w="120px">
+                          {discountMode === 'currency' ? (
+                            <CurrencyInput
+                              size="sm"
+                              value={String(discountValue || '')}
+                              onValueChange={value =>
+                                setDiscountValue(Number(value) || 0)
+                              }
+                            />
+                          ) : (
+                            <InputGroup size="sm">
+                              <Input
+                                type="number"
+                                min={0}
+                                max={100}
+                                value={discountValue || ''}
+                                onChange={event =>
+                                  setDiscountValue(
+                                    Math.min(
+                                      100,
+                                      Number(event.target.value) || 0
+                                    )
+                                  )
+                                }
+                              />
+                              <InputRightElement
+                                pointerEvents="none"
+                                color="erp.textMuted"
+                                fontSize="12px"
+                              >
+                                %
+                              </InputRightElement>
+                            </InputGroup>
+                          )}
+                        </Box>
+                        <IconButton
+                          aria-label="Remover desconto"
+                          icon={<X size={13} />}
+                          size="xs"
+                          variant="ghost"
+                          onClick={() => {
+                            setDiscountOpen(false);
+                            setDiscountValue(0);
+                          }}
+                        />
+                      </Flex>
+                    </Flex>
+                    {discountMode === 'percent' && discount > 0 && (
+                      <Flex justify="space-between" fontSize="12px" mb={1}>
+                        <Text color="erp.textSecondary">
+                          Desconto aplicado ({discountValue}%)
+                        </Text>
+                        <Text
+                          fontWeight="600"
+                          color="erp.danger"
+                          sx={{ fontVariantNumeric: 'tabular-nums' }}
+                        >
+                          -{formatCurrency(discount)}
+                        </Text>
+                      </Flex>
+                    )}
+                  </>
+                ) : (
+                  <Button
+                    size="xs"
+                    variant="ghost"
+                    color="erp.brandText"
+                    leftIcon={<TicketPercent size={13} />}
+                    mb={1}
+                    px={1.5}
+                    h="22px"
+                    onClick={() => setDiscountOpen(true)}
+                  >
+                    Adicionar desconto
+                  </Button>
+                )}
                 <Flex justify="space-between" align="baseline">
                   <Text fontSize="13px" fontWeight="700">
                     Total
                   </Text>
-                  <Text
-                    fontSize="20px"
-                    fontWeight="800"
-                    sx={{ fontVariantNumeric: 'tabular-nums' }}
-                  >
+                  <Text textStyle="numeric" fontSize="20px" fontWeight="600">
                     {formatCurrency(total)}
                   </Text>
                 </Flex>

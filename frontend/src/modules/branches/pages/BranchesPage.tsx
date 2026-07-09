@@ -26,7 +26,6 @@ import {
   MenuDivider,
   MenuItem,
   MenuList,
-  Select,
   SimpleGrid,
   Skeleton,
   Tab,
@@ -79,6 +78,7 @@ import {
   PageHeader,
   Surface,
 } from '../../../shared/ui/ErpUI';
+import { ComboSelect } from '../../../shared/ui/ComboSelect';
 import { FilterSelect } from '../../../shared/ui/FilterSelect';
 import FormattedInput, {
   CurrencyInput,
@@ -1253,14 +1253,24 @@ function BranchStep({
     return (
       <Box>
         <Field label="Gerente responsavel">
-          <Select {...form.register('idgerente')}>
-            <option value="">Sem gerente inicialmente</option>
-            {options?.managers.map(item => (
-              <option key={item.id} value={item.id}>
-                {item.nome}
-              </option>
-            ))}
-          </Select>
+          <Controller
+            control={form.control}
+            name="idgerente"
+            render={({ field }) => (
+              <ComboSelect
+                value={String(field.value ?? '')}
+                onChange={field.onChange}
+                placeholder="Sem gerente inicialmente"
+                options={[
+                  { value: '', label: 'Sem gerente inicialmente' },
+                  ...(options?.managers.map(item => ({
+                    value: String(item.id),
+                    label: item.nome,
+                  })) ?? []),
+                ]}
+              />
+            )}
+          />
         </Field>
         <Text mt={3} fontSize="11px" color="erp.textMuted">
           O responsavel pode ser alterado a qualquer momento.

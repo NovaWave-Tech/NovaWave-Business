@@ -97,6 +97,7 @@ $app->group('', function ($group): void {
     $group->post('/users/{id:[0-9]+}/reset-password', UserController::class . ':resetPassword');
     $group->delete('/users/{id:[0-9]+}/sessions/{sessionId:[0-9]+}', UserController::class . ':revokeSession');
     $group->get('/customers', CustomerController::class . ':index');
+    $group->get('/customers/search', CustomerController::class . ':search');
     $group->post('/customers', CustomerController::class . ':store');
     $group->get('/customers/{id:[0-9]+}', CustomerController::class . ':show');
     $group->put('/customers/{id:[0-9]+}', CustomerController::class . ':update');

@@ -40,6 +40,20 @@ import type { SaleReceiptData } from '../types/saleTypes';
 
 const receiptNumber = (id: number) => String(id).padStart(6, '0');
 
+/** Rotulo do percentual de desconto, ex.: " (10%)". Vazio quando nao ha base. */
+function discountPercentLabel(sale: {
+  valor_bruto: number;
+  valor_desconto: number;
+}): string {
+  if (!(Number(sale.valor_bruto) > 0) || !(Number(sale.valor_desconto) > 0)) {
+    return '';
+  }
+  const percent =
+    (Number(sale.valor_desconto) / Number(sale.valor_bruto)) * 100;
+  const rounded = Math.round(percent * 10) / 10;
+  return ` (${String(rounded).replace('.', ',')}%)`;
+}
+
 function buildShareText(receipt: SaleReceiptData) {
   const { sale, company, branch, customer } = receipt;
   const store = company.nome_fantasia || company.razao_social || 'Loja';
@@ -61,7 +75,9 @@ function buildShareText(receipt: SaleReceiptData) {
     '',
     `Subtotal: ${formatCurrency(sale.valor_bruto)}`,
     ...(sale.valor_desconto > 0
-      ? [`Desconto: -${formatCurrency(sale.valor_desconto)}`]
+      ? [
+          `Desconto${discountPercentLabel(sale)}: -${formatCurrency(sale.valor_desconto)}`,
+        ]
       : []),
     `*Total: ${formatCurrency(sale.valor_total)}*`,
     '',
@@ -482,7 +498,7 @@ export default function SaleReceiptPage() {
               color="gray.600"
               py={0.5}
             >
-              <Text>Desconto</Text>
+              <Text>Desconto{discountPercentLabel(sale)}</Text>
               <Text sx={{ fontVariantNumeric: 'tabular-nums' }}>
                 -{formatCurrency(sale.valor_desconto)}
               </Text>

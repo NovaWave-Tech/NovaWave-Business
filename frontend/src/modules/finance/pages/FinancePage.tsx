@@ -27,7 +27,6 @@ import {
   MenuItem,
   MenuList,
   Progress,
-  Select,
   SimpleGrid,
   Skeleton,
   Tab,
@@ -104,6 +103,7 @@ import {
   StatGroup,
   Surface,
 } from '../../../shared/ui/ErpUI';
+import { ComboSelect } from '../../../shared/ui/ComboSelect';
 import { FilterSelect } from '../../../shared/ui/FilterSelect';
 import { CurrencyInput } from '../../../shared/ui/FormattedInput';
 import {
@@ -1316,55 +1316,86 @@ function FinanceStep({
           error={e.idcategoria_financeira?.message}
           required
         >
-          <Select {...form.register('idcategoria_financeira')}>
-            <option value={0}>Selecione</option>
-            {categories?.map(x => (
-              <option key={x.id} value={x.id}>
-                {x.nome}
-              </option>
-            ))}
-          </Select>
+          <Controller
+            control={form.control}
+            name="idcategoria_financeira"
+            render={({ field }) => (
+              <ComboSelect
+                value={String(field.value || '')}
+                onChange={value => field.onChange(Number(value) || 0)}
+                placeholder="Selecione"
+                options={
+                  categories?.map(x => ({
+                    value: String(x.id),
+                    label: x.nome,
+                  })) ?? []
+                }
+              />
+            )}
+          />
         </Field>
         <Field
           label="Centro de custo"
           error={e.idcentro_custo?.message}
           required
         >
-          <Select {...form.register('idcentro_custo')}>
-            <option value={0}>Selecione</option>
-            {options?.cost_centers.map(x => (
-              <option key={x.id} value={x.id}>
-                {x.nome}
-              </option>
-            ))}
-          </Select>
+          <Controller
+            control={form.control}
+            name="idcentro_custo"
+            render={({ field }) => (
+              <ComboSelect
+                value={String(field.value || '')}
+                onChange={value => field.onChange(Number(value) || 0)}
+                placeholder="Selecione"
+                options={
+                  options?.cost_centers.map(x => ({
+                    value: String(x.id),
+                    label: x.nome,
+                  })) ?? []
+                }
+              />
+            )}
+          />
         </Field>
         <Field label="Filial">
-          <Select {...form.register('idfilial')}>
-            <option value="">Sem rateio</option>
-            {options?.branches.map(x => (
-              <option key={x.id} value={x.id}>
-                {x.nome}
-              </option>
-            ))}
-          </Select>
+          <Controller
+            control={form.control}
+            name="idfilial"
+            render={({ field }) => (
+              <ComboSelect
+                value={String(field.value ?? '')}
+                onChange={field.onChange}
+                placeholder="Sem rateio"
+                options={[
+                  { value: '', label: 'Sem rateio' },
+                  ...(options?.branches.map(x => ({
+                    value: String(x.id),
+                    label: x.nome,
+                  })) ?? []),
+                ]}
+              />
+            )}
+          />
         </Field>
         <Field label={type === 'revenue' ? 'Cliente' : 'Fornecedor'}>
-          <Select
-            {...form.register(
-              type === 'revenue' ? 'idcliente' : 'idfornecedor'
+          <Controller
+            control={form.control}
+            name={type === 'revenue' ? 'idcliente' : 'idfornecedor'}
+            render={({ field }) => (
+              <ComboSelect
+                value={String(field.value ?? '')}
+                onChange={field.onChange}
+                placeholder="Nao vinculado"
+                options={[
+                  { value: '', label: 'Nao vinculado' },
+                  ...((type === 'revenue'
+                    ? options?.customers
+                    : options?.suppliers
+                  )?.map(x => ({ value: String(x.id), label: x.nome })) ?? []),
+                ]}
+              />
             )}
-          >
-            <option value="">Nao vinculado</option>
-            {(type === 'revenue'
-              ? options?.customers
-              : options?.suppliers
-            )?.map(x => (
-              <option key={x.id} value={x.id}>
-                {x.nome}
-              </option>
-            ))}
-          </Select>
+          />
         </Field>
         <Field label="Documento">
           <Input {...form.register('documento')} />
@@ -1394,23 +1425,42 @@ function FinanceStep({
           error={e.idconta_bancaria?.message}
           required
         >
-          <Select {...form.register('idconta_bancaria')}>
-            <option value={0}>Selecione</option>
-            {options?.banks.map(x => (
-              <option key={x.id} value={x.id}>
-                {x.nome}
-              </option>
-            ))}
-          </Select>
+          <Controller
+            control={form.control}
+            name="idconta_bancaria"
+            render={({ field }) => (
+              <ComboSelect
+                value={String(field.value || '')}
+                onChange={value => field.onChange(Number(value) || 0)}
+                placeholder="Selecione"
+                options={
+                  options?.banks.map(x => ({
+                    value: String(x.id),
+                    label: x.nome,
+                  })) ?? []
+                }
+              />
+            )}
+          />
         </Field>
         <Field label="Forma de pagamento">
-          <Select {...form.register('forma_pagamento')}>
-            <option value="pix">PIX</option>
-            <option value="boleto">Boleto</option>
-            <option value="transferencia">Transferencia</option>
-            <option value="dinheiro">Dinheiro</option>
-            <option value="cartao">Cartao</option>
-          </Select>
+          <Controller
+            control={form.control}
+            name="forma_pagamento"
+            render={({ field }) => (
+              <ComboSelect
+                value={String(field.value ?? 'pix')}
+                onChange={field.onChange}
+                options={[
+                  { value: 'pix', label: 'PIX' },
+                  { value: 'boleto', label: 'Boleto' },
+                  { value: 'transferencia', label: 'Transferencia' },
+                  { value: 'dinheiro', label: 'Dinheiro' },
+                  { value: 'cartao', label: 'Cartao' },
+                ]}
+              />
+            )}
+          />
         </Field>
         <Field label="Parcelas">
           <Input

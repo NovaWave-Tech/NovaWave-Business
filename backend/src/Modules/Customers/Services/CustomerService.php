@@ -11,6 +11,13 @@ final class CustomerService
 
     public function index(int $companyId, array $filters): array { return $this->repository->index($companyId, $filters); }
 
+    public function search(int $companyId, string $term): array
+    {
+        $term = trim($term);
+        if (mb_strlen($term) < 2) return [];
+        return $this->repository->search($companyId, $term);
+    }
+
     public function show(int $companyId, int $customerId): array
     {
         $customer = $this->repository->show($companyId, $customerId);
@@ -49,7 +56,8 @@ final class CustomerService
         if (!in_array($type, [1, 2], true)) throw new InvalidArgumentException('Tipo de pessoa invalido');
         if (strlen(trim((string) ($data['nome'] ?? ''))) < 3) throw new InvalidArgumentException('Nome e obrigatorio');
         $document = preg_replace('/\D/', '', (string) ($data['documento'] ?? ''));
-        if (($type === 1 && !$this->validCpf($document)) || ($type === 2 && !$this->validCnpj($document))) throw new InvalidArgumentException($type === 1 ? 'CPF invalido' : 'CNPJ invalido');
+        // Documento e opcional (cadastro rapido no caixa); valida apenas quando informado.
+        if ($document !== '' && (($type === 1 && !$this->validCpf($document)) || ($type === 2 && !$this->validCnpj($document)))) throw new InvalidArgumentException($type === 1 ? 'CPF invalido' : 'CNPJ invalido');
         if (!empty($data['email']) && !filter_var($data['email'], FILTER_VALIDATE_EMAIL)) throw new InvalidArgumentException('E-mail invalido');
         if (isset($data['limite_credito']) && (float) $data['limite_credito'] < 0) throw new InvalidArgumentException('Limite de credito invalido');
         if (!empty($data['estado']) && strlen(trim((string) $data['estado'])) !== 2) throw new InvalidArgumentException('Estado deve usar a sigla com 2 letras');

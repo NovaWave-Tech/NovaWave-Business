@@ -34,7 +34,6 @@ import {
   ModalFooter,
   ModalHeader,
   ModalOverlay,
-  Select,
   SimpleGrid,
   Tab,
   TabList,
@@ -92,6 +91,7 @@ import {
   Surface,
 } from '../../../shared/ui/ErpUI';
 import { DateRangeField } from '../../../shared/ui/DateRangeField';
+import { ComboSelect } from '../../../shared/ui/ComboSelect';
 import { FilterSelect } from '../../../shared/ui/FilterSelect';
 import FormattedInput from '../../../shared/ui/FormattedInput';
 import {
@@ -937,48 +937,87 @@ function EditUserModal({
             </FormControl>
             <FormControl isInvalid={Boolean(errors.idfilial)} isRequired>
               <FormLabel>Filial principal</FormLabel>
-              <Select {...form.register('idfilial')}>
-                <option value={0}>Selecione</option>
-                {options?.branches.map(item => (
-                  <option key={item.id} value={item.id}>
-                    {item.nome}
-                  </option>
-                ))}
-              </Select>
+              <Controller
+                control={form.control}
+                name="idfilial"
+                render={({ field }) => (
+                  <ComboSelect
+                    value={String(field.value || '')}
+                    onChange={value => field.onChange(Number(value) || 0)}
+                    placeholder="Selecione"
+                    options={
+                      options?.branches.map(item => ({
+                        value: String(item.id),
+                        label: item.nome,
+                      })) ?? []
+                    }
+                  />
+                )}
+              />
               <FormErrorMessage>{errors.idfilial?.message}</FormErrorMessage>
             </FormControl>
             <FormControl>
               <FormLabel>Departamento</FormLabel>
-              <Select {...form.register('iddepartamento')}>
-                <option value="">Sem departamento</option>
-                {options?.departments.map(item => (
-                  <option key={item.id} value={item.id}>
-                    {item.nome}
-                  </option>
-                ))}
-              </Select>
+              <Controller
+                control={form.control}
+                name="iddepartamento"
+                render={({ field }) => (
+                  <ComboSelect
+                    value={String(field.value ?? '')}
+                    onChange={field.onChange}
+                    placeholder="Sem departamento"
+                    options={[
+                      { value: '', label: 'Sem departamento' },
+                      ...(options?.departments.map(item => ({
+                        value: String(item.id),
+                        label: item.nome,
+                      })) ?? []),
+                    ]}
+                  />
+                )}
+              />
             </FormControl>
             <FormControl>
               <FormLabel>Cargo</FormLabel>
-              <Select {...form.register('idcargo')}>
-                <option value="">Sem cargo</option>
-                {roles.map(item => (
-                  <option key={item.id} value={item.id}>
-                    {item.nome}
-                  </option>
-                ))}
-              </Select>
+              <Controller
+                control={form.control}
+                name="idcargo"
+                render={({ field }) => (
+                  <ComboSelect
+                    value={String(field.value ?? '')}
+                    onChange={field.onChange}
+                    placeholder="Sem cargo"
+                    options={[
+                      { value: '', label: 'Sem cargo' },
+                      ...roles.map(item => ({
+                        value: String(item.id),
+                        label: item.nome,
+                      })),
+                    ]}
+                  />
+                )}
+              />
             </FormControl>
             <FormControl>
               <FormLabel>Perfil de acesso</FormLabel>
-              <Select {...form.register('idperfil')}>
-                <option value="">Sem perfil</option>
-                {options?.profiles.map(item => (
-                  <option key={item.id} value={item.id}>
-                    {item.nome}
-                  </option>
-                ))}
-              </Select>
+              <Controller
+                control={form.control}
+                name="idperfil"
+                render={({ field }) => (
+                  <ComboSelect
+                    value={String(field.value ?? '')}
+                    onChange={field.onChange}
+                    placeholder="Sem perfil"
+                    options={[
+                      { value: '', label: 'Sem perfil' },
+                      ...(options?.profiles.map(item => ({
+                        value: String(item.id),
+                        label: item.nome,
+                      })) ?? []),
+                    ]}
+                  />
+                )}
+              />
             </FormControl>
           </SimpleGrid>
           <Checkbox mt={5} {...form.register('admin_empresa')}>
@@ -1089,14 +1128,23 @@ function UserStep({
     return (
       <FormControl isInvalid={Boolean(errors.idfilial)} isRequired>
         <FormLabel>Filial principal</FormLabel>
-        <Select {...form.register('idfilial')}>
-          <option value={0}>Selecione</option>
-          {options?.branches.map(item => (
-            <option key={item.id} value={item.id}>
-              {item.nome}
-            </option>
-          ))}
-        </Select>
+        <Controller
+          control={form.control}
+          name="idfilial"
+          render={({ field }) => (
+            <ComboSelect
+              value={String(field.value || '')}
+              onChange={value => field.onChange(Number(value) || 0)}
+              placeholder="Selecione"
+              options={
+                options?.branches.map(item => ({
+                  value: String(item.id),
+                  label: item.nome,
+                })) ?? []
+              }
+            />
+          )}
+        />
         <FormErrorMessage>{errors.idfilial?.message}</FormErrorMessage>
         <Text mt={2} fontSize="11px" color="erp.textMuted">
           A estrutura do backend ja permite vincular multiplas filiais
@@ -1108,28 +1156,48 @@ function UserStep({
     return (
       <FormControl>
         <FormLabel>Departamento</FormLabel>
-        <Select {...form.register('iddepartamento')}>
-          <option value="">Sem departamento</option>
-          {options?.departments.map(item => (
-            <option key={item.id} value={item.id}>
-              {item.nome}
-            </option>
-          ))}
-        </Select>
+        <Controller
+          control={form.control}
+          name="iddepartamento"
+          render={({ field }) => (
+            <ComboSelect
+              value={String(field.value ?? '')}
+              onChange={field.onChange}
+              placeholder="Sem departamento"
+              options={[
+                { value: '', label: 'Sem departamento' },
+                ...(options?.departments.map(item => ({
+                  value: String(item.id),
+                  label: item.nome,
+                })) ?? []),
+              ]}
+            />
+          )}
+        />
       </FormControl>
     );
   if (step === 4)
     return (
       <FormControl>
         <FormLabel>Cargo</FormLabel>
-        <Select {...form.register('idcargo')}>
-          <option value="">Sem cargo</option>
-          {availableRoles.map(item => (
-            <option key={item.id} value={item.id}>
-              {item.nome}
-            </option>
-          ))}
-        </Select>
+        <Controller
+          control={form.control}
+          name="idcargo"
+          render={({ field }) => (
+            <ComboSelect
+              value={String(field.value ?? '')}
+              onChange={field.onChange}
+              placeholder="Sem cargo"
+              options={[
+                { value: '', label: 'Sem cargo' },
+                ...availableRoles.map(item => ({
+                  value: String(item.id),
+                  label: item.nome,
+                })),
+              ]}
+            />
+          )}
+        />
       </FormControl>
     );
   if (step === 5)
@@ -1137,14 +1205,24 @@ function UserStep({
       <Box>
         <FormControl>
           <FormLabel>Perfil de acesso</FormLabel>
-          <Select {...form.register('idperfil')}>
-            <option value="">Sem perfil</option>
-            {options?.profiles.map(item => (
-              <option key={item.id} value={item.id}>
-                {item.nome}
-              </option>
-            ))}
-          </Select>
+          <Controller
+            control={form.control}
+            name="idperfil"
+            render={({ field }) => (
+              <ComboSelect
+                value={String(field.value ?? '')}
+                onChange={field.onChange}
+                placeholder="Sem perfil"
+                options={[
+                  { value: '', label: 'Sem perfil' },
+                  ...(options?.profiles.map(item => ({
+                    value: String(item.id),
+                    label: item.nome,
+                  })) ?? []),
+                ]}
+              />
+            )}
+          />
         </FormControl>
         <Checkbox mt={4} {...form.register('admin_empresa')}>
           Administrador da empresa

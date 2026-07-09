@@ -35,7 +35,6 @@ import {
   ModalHeader,
   ModalOverlay,
   Portal,
-  Select,
   SimpleGrid,
   Skeleton,
   Tab,
@@ -102,6 +101,7 @@ import {
   SectionHeader,
   Surface,
 } from '../../../shared/ui/ErpUI';
+import { ComboSelect } from '../../../shared/ui/ComboSelect';
 import { FilterSelect } from '../../../shared/ui/FilterSelect';
 import { DateRangeField } from '../../../shared/ui/DateRangeField';
 import { Reveal } from '../../../shared/ui/motion';
@@ -789,18 +789,16 @@ function MenuFilterOption({
       <Text mb={1} fontSize="10px" color="erp.textMuted">
         {label}
       </Text>
-      <Select
+      <ComboSelect
         size="sm"
         value={value}
-        onChange={event => onChange(event.target.value)}
-      >
-        <option value="">Todos</option>
-        {options.map(([key, text]) => (
-          <option key={key} value={key}>
-            {text}
-          </option>
-        ))}
-      </Select>
+        onChange={onChange}
+        placeholder="Todos"
+        options={[
+          { value: '', label: 'Todos' },
+          ...options.map(([key, text]) => ({ value: key, label: text })),
+        ]}
+      />
     </Box>
   );
 }

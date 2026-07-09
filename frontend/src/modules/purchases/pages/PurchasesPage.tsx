@@ -28,7 +28,6 @@ import {
   NumberInput,
   NumberInputField,
   NumberInputStepper,
-  Select,
   SimpleGrid,
   Table,
   Tbody,
@@ -63,15 +62,16 @@ import {
   BrandSurface,
   EmptyState,
   ErrorState,
-  KpiCard,
   PageHeader,
   SectionHeader,
+  StatGroup,
   Surface,
 } from '../../../shared/ui/ErpUI';
 import {
   DateRangeField,
   type DateRange,
 } from '../../../shared/ui/DateRangeField';
+import { ComboSelect } from '../../../shared/ui/ComboSelect';
 import { FilterSelect } from '../../../shared/ui/FilterSelect';
 import { CurrencyInput } from '../../../shared/ui/FormattedInput';
 import {
@@ -259,62 +259,60 @@ export default function PurchasesPage() {
         }
       />
 
-      <SimpleGrid columns={{ base: 1, sm: 2, xl: 6 }} spacing={3} mb={5}>
-        <KpiCard
-          index={0}
-          tone="brand"
-          label="Compras"
-          count={Number(data?.metrics.purchases)}
-          format={formatNumber}
-          detail="Concluidas no periodo"
-          icon={ShoppingBag}
-        />
-        <KpiCard
-          index={1}
-          tone="info"
-          label="Total comprado"
-          count={Number(data?.metrics.total)}
-          format={value => formatCurrency(value, { compact: true })}
-          detail="Custo das entradas"
-          icon={CircleDollarSign}
-        />
-        <KpiCard
-          index={2}
-          tone="brand"
-          label="Ticket medio"
-          count={Number(data?.metrics.average_ticket)}
-          format={formatCurrency}
-          detail="Por compra"
-          icon={Ticket}
-        />
-        <KpiCard
-          index={3}
-          tone="brand"
-          label="Itens comprados"
-          count={Number(data?.metrics.items_bought)}
-          format={formatNumber}
-          detail="Unidades no periodo"
-          icon={Package}
-        />
-        <KpiCard
-          index={4}
-          tone="neutral"
-          label="Fornecedores"
-          count={Number(data?.metrics.suppliers)}
-          format={formatNumber}
-          detail="Com compras no periodo"
-          icon={Truck}
-        />
-        <KpiCard
-          index={5}
-          tone="danger"
-          label="Canceladas"
-          count={Number(data?.metrics.cancelled)}
-          format={formatNumber}
-          detail="No periodo"
-          icon={XCircle}
-        />
-      </SimpleGrid>
+      <StatGroup
+        mb={5}
+        columns={{ base: 1, sm: 2, xl: 3, '2xl': 6 }}
+        items={[
+          {
+            label: 'Compras',
+            count: Number(data?.metrics.purchases),
+            format: formatNumber,
+            detail: 'Concluidas no periodo',
+            icon: ShoppingBag,
+            tone: 'brand',
+          },
+          {
+            label: 'Total comprado',
+            count: Number(data?.metrics.total),
+            format: value => formatCurrency(value, { compact: true }),
+            detail: 'Custo das entradas',
+            icon: CircleDollarSign,
+            tone: 'info',
+          },
+          {
+            label: 'Ticket medio',
+            count: Number(data?.metrics.average_ticket),
+            format: formatCurrency,
+            detail: 'Por compra',
+            icon: Ticket,
+            tone: 'brand',
+          },
+          {
+            label: 'Itens comprados',
+            count: Number(data?.metrics.items_bought),
+            format: formatNumber,
+            detail: 'Unidades no periodo',
+            icon: Package,
+            tone: 'brand',
+          },
+          {
+            label: 'Fornecedores',
+            count: Number(data?.metrics.suppliers),
+            format: formatNumber,
+            detail: 'Com compras no periodo',
+            icon: Truck,
+            tone: 'neutral',
+          },
+          {
+            label: 'Canceladas',
+            count: Number(data?.metrics.cancelled),
+            format: formatNumber,
+            detail: 'No periodo',
+            icon: XCircle,
+            tone: 'danger',
+          },
+        ]}
+      />
 
       <BrandSurface mb={4} p={4}>
         <Grid
@@ -520,31 +518,32 @@ export default function PurchasesPage() {
             <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
               <FormControl isRequired>
                 <FormLabel>Filial (entrada)</FormLabel>
-                <Select
+                <ComboSelect
                   value={branchId}
-                  onChange={event => setBranchId(event.target.value)}
-                >
-                  <option value="">Selecione</option>
-                  {options?.branches.map(branch => (
-                    <option key={branch.id} value={branch.id}>
-                      {branch.nome}
-                    </option>
-                  ))}
-                </Select>
+                  onChange={setBranchId}
+                  placeholder="Selecione a filial"
+                  options={
+                    options?.branches.map(branch => ({
+                      value: String(branch.id),
+                      label: branch.nome,
+                    })) ?? []
+                  }
+                />
               </FormControl>
               <FormControl>
                 <FormLabel>Fornecedor</FormLabel>
-                <Select
+                <ComboSelect
                   value={supplierId}
-                  onChange={event => setSupplierId(event.target.value)}
-                >
-                  <option value="">Sem fornecedor</option>
-                  {options?.suppliers.map(supplier => (
-                    <option key={supplier.id} value={supplier.id}>
-                      {supplier.nome}
-                    </option>
-                  ))}
-                </Select>
+                  onChange={setSupplierId}
+                  placeholder="Sem fornecedor"
+                  options={[
+                    { value: '', label: 'Sem fornecedor' },
+                    ...(options?.suppliers.map(supplier => ({
+                      value: String(supplier.id),
+                      label: supplier.nome,
+                    })) ?? []),
+                  ]}
+                />
               </FormControl>
             </SimpleGrid>
 
