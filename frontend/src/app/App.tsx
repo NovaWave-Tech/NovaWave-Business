@@ -73,6 +73,9 @@ const SuppliersPage = lazy(
   () => import('../modules/suppliers/pages/SuppliersPage')
 );
 const CashierPage = lazy(() => import('../modules/cashier/pages/CashierPage'));
+const ReceivablesPage = lazy(
+  () => import('../modules/receivables/pages/ReceivablesPage')
+);
 const ErpCompanyPage = lazy(
   () => import('../modules/companies/pages/CompaniesPage')
 );
@@ -177,6 +180,7 @@ export default function App() {
             <Route path="/permissions" element={<PermissionsPage />} />
             <Route path="/suppliers" element={<SuppliersPage />} />
             <Route path="/cashier" element={<CashierPage />} />
+            <Route path="/receivables" element={<ReceivablesPage />} />
             <Route path="/companies" element={<ErpCompanyPage />} />
             <Route path="/settings" element={<ErpSettingsPage />} />
           </Route>

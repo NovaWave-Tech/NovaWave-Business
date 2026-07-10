@@ -5,6 +5,7 @@ import {
   CreditCard,
   FileBarChart,
   GitBranch,
+  HandCoins,
   LayoutDashboard,
   Package,
   Settings,
@@ -85,6 +86,12 @@ export const erpNavigation: ErpNavGroup[] = [
         label: 'Caixa',
         path: '/cashier',
         icon: CreditCard,
+        permission: 'financeiro:visualizar',
+      },
+      {
+        label: 'Recebimentos',
+        path: '/receivables',
+        icon: HandCoins,
         permission: 'financeiro:visualizar',
       },
       {

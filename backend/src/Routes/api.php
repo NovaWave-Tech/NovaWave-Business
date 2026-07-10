@@ -18,6 +18,7 @@ use App\Modules\Platform\Controllers\PlatformAuthController;
 use App\Modules\Platform\Controllers\PlatformController;
 use App\Modules\Products\Controllers\ProductController;
 use App\Modules\Purchases\Controllers\PurchasesController;
+use App\Modules\Receivables\Controllers\ReceivableController;
 use App\Modules\Reports\Controllers\ReportController;
 use App\Modules\Sales\Controllers\SalesController;
 use App\Modules\Settings\Controllers\SettingsController;
@@ -124,6 +125,9 @@ $app->group('', function ($group): void {
     $group->put('/finance/{type:revenue|expense}/{id:[0-9]+}', FinanceController::class . ':update')->add(PermissionMiddleware::check('financeiro:editar'));
     $group->patch('/finance/{type:revenue|expense}/{id:[0-9]+}/status', FinanceController::class . ':status')->add(PermissionMiddleware::check('financeiro:editar'));
     $group->post('/finance/{type:revenue|expense}/{id:[0-9]+}/duplicate', FinanceController::class . ':duplicate')->add(PermissionMiddleware::check('financeiro:criar'));
+    $group->get('/receivables/customers', ReceivableController::class . ':customers')->add(PermissionMiddleware::check('financeiro:visualizar'));
+    $group->get('/receivables', ReceivableController::class . ':index')->add(PermissionMiddleware::check('financeiro:visualizar'));
+    $group->post('/receivables/{id:[0-9]+}/settle', ReceivableController::class . ':settle')->add(PermissionMiddleware::check('financeiro:editar'));
     $group->get('/reports', ReportController::class . ':index')->add(PermissionMiddleware::check('relatorio:visualizar'));
     $group->get('/reports/{slug:[a-z-]+}', ReportController::class . ':preview')->add(PermissionMiddleware::check('relatorio:visualizar'));
     $group->get('/sales', SalesController::class . ':index')->add(PermissionMiddleware::check('venda:visualizar'));
