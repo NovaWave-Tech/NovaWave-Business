@@ -111,6 +111,13 @@ O `gh` CLI nao esta no PATH do Git Bash. Use:
   validado apenas quando informado. Busca de clientes para autocomplete:
   `GET /customers/search?q=` (nome, documento, telefone, e-mail; LIMIT 8).
 - Login do ERP usa campo `password`; login da platform usa `senha`.
+- Autorizacao do ERP: toda rota exige permissao `modulo:acao` via
+  `PermissionMiddleware::check(...)` (rotas novas DEVEM declarar a sua).
+  `admin_empresa` recebe o curinga `*`; os demais carregam as permissoes
+  dos perfis ativos no JWT (trocar perfil exige novo login). No frontend,
+  `useAuth().can('modulo:acao')` e o campo `permission` de
+  `erpNavigation` controlam a visibilidade; 403 mostra a mensagem da API
+  sem derrubar a sessao (so 401 desloga).
 
 ### Banco e schema
 

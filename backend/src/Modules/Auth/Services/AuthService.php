@@ -33,6 +33,13 @@ class AuthService
             throw new RuntimeException('Empresa inativa ou bloqueada');
         }
 
+        // Admin da empresa recebe o curinga "*"; os demais carregam as
+        // permissoes reais dos perfis de acesso vinculados.
+        $isAdmin = in_array($user->admin_empresa ?? false, [true, 't', 'true', 1, '1'], true);
+        $permissions = $isAdmin
+            ? ['*']
+            : $this->repository->loadPermissions((int) $user->company_id, (int) $user->idusuario);
+
         $authUser = [
             'idusuario' => (int) $user->idusuario,
             'nome' => $user->nome,
@@ -40,6 +47,8 @@ class AuthService
             'situacao' => (int) $user->situacao,
             'company_id' => isset($user->company_id) ? (int) $user->company_id : null,
             'branch_id' => isset($user->branch_id) ? (int) $user->branch_id : null,
+            'admin_empresa' => $isAdmin,
+            'permissions' => $permissions,
         ];
 
         $token = JwtService::encode([
@@ -48,7 +57,7 @@ class AuthService
             'nome' => $authUser['nome'],
             'company_id' => $authUser['company_id'],
             'branch_id' => $authUser['branch_id'],
-            'permissions' => [],
+            'permissions' => $permissions,
         ], self::ACCESS_TOKEN_TTL);
 
         return [
