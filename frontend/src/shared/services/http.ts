@@ -9,6 +9,9 @@ export type AuthUser = {
   situacao: number;
   company_id?: number | null;
   branch_id?: number | null;
+  admin_empresa?: boolean;
+  /** Permissoes "modulo:acao"; admin recebe o curinga "*". */
+  permissions?: string[];
 };
 
 export const getToken = (): string | null => localStorage.getItem('auth_token');
@@ -76,7 +79,9 @@ http.interceptors.response.use(
   (error: AxiosError<{ error?: string; message?: string }>) => {
     const status = error.response?.status;
 
-    if (status === 401 || status === 403) {
+    // 401 = sessao invalida (logout); 403 = sem permissao (a tela mostra a
+    // mensagem da API, sem derrubar a sessao do usuario).
+    if (status === 401) {
       clearAuth();
 
       if (!window.location.pathname.includes('/login')) {

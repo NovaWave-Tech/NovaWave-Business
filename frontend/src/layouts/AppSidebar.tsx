@@ -30,13 +30,22 @@ export default function AppSidebar({
 }: AppSidebarProps) {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, signOut } = useAuth();
+  const { user, signOut, can } = useAuth();
   const logoTone = useColorModeValue('dark', 'light');
   const userName = user?.nome || user?.email || 'Usuario';
   const go = (path: string) => {
     navigate(path);
     onClose?.();
   };
+  // Esconde itens (e grupos inteiros) sem permissao de visualizacao.
+  const visibleNavigation = erpNavigation
+    .map(group => ({
+      ...group,
+      items: group.items.filter(
+        item => !item.permission || can(item.permission)
+      ),
+    }))
+    .filter(group => group.items.length > 0);
 
   return (
     <Flex
@@ -89,7 +98,7 @@ export default function AppSidebar({
         overflowX="hidden"
         sx={{ scrollbarWidth: 'thin' }}
       >
-        {erpNavigation.map(group => (
+        {visibleNavigation.map(group => (
           <Box key={group.label}>
             {!collapsed && (
               <Text

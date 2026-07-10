@@ -34,7 +34,7 @@ import { erpNavItems } from './erpNavigation';
 export default function AppTopbar({ onMenuOpen }: { onMenuOpen: () => void }) {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, signOut } = useAuth();
+  const { user, signOut, can } = useAuth();
   const { colorMode, toggleColorMode } = useColorMode();
   const [search, setSearch] = useState('');
   const current =
@@ -42,10 +42,12 @@ export default function AppTopbar({ onMenuOpen }: { onMenuOpen: () => void }) {
     'NovaWave Business';
   const match = useMemo(
     () =>
-      erpNavItems.find(item =>
-        item.label.toLowerCase().includes(search.trim().toLowerCase())
+      erpNavItems.find(
+        item =>
+          (!item.permission || can(item.permission)) &&
+          item.label.toLowerCase().includes(search.trim().toLowerCase())
       ),
-    [search]
+    [search, can]
   );
   const submit = (event: React.FormEvent) => {
     event.preventDefault();

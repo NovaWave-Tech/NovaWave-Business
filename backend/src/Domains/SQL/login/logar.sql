@@ -6,6 +6,7 @@ SELECT
     u.email,
     u.senha_hash,
     u.situacao,
+    u.admin_empresa,
     e.situacao AS empresa_situacao
 FROM public.usuario AS u
 INNER JOIN public.empresa AS e ON e.idempresa = u.idempresa
