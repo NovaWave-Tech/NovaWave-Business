@@ -258,8 +258,15 @@ final class SalesRepository
                 ]);
             }
 
-            if ($onCredit && $total > 0) {
-                $this->createReceivables($companyId, $branchId, $customerId, $saleId, $total, $installments, $payment, $lateFee);
+            // Toda venda concluida vira receita no Financeiro (visao geral da
+            // empresa): a prazo gera parcelas em aberto; a vista gera um
+            // recebivel ja quitado na data da venda.
+            if ($total > 0) {
+                if ($onCredit) {
+                    $this->createReceivables($companyId, $branchId, $customerId, $saleId, $total, $installments, $payment, $lateFee);
+                } else {
+                    $this->createSettledReceivable($companyId, $branchId, $customerId, $saleId, $total, $payment);
+                }
             }
 
             $this->audit($companyId, $actorId, $saleId, 'criar', null, ['valor_total' => $total, 'itens' => count($lines), 'forma_pagamento' => $payment, 'a_prazo' => $onCredit, 'parcelas' => $installments, 'juros_atraso' => $lateFee], $ip, $agent);
@@ -301,6 +308,30 @@ final class SalesRepository
                 'notes' => $notes,
             ]);
         }
+    }
+
+    /**
+     * Venda a vista: registra a receita ja recebida em conta_receber
+     * (situacao 2, vencimento e recebimento na data da venda), para aparecer
+     * no Financeiro como receita realizada. O caixa fisico (dinheiro) e uma
+     * visao operacional separada e nao entra na conta do Financeiro.
+     */
+    private function createSettledReceivable(int $companyId, int $branchId, int $customerId, int $saleId, float $total, string $payment): void
+    {
+        $today = (new \DateTimeImmutable('today'))->format('Y-m-d');
+        $this->pdo->prepare(
+            'INSERT INTO conta_receber (idempresa, idfilial, idcliente, idvenda, descricao, valor, data_vencimento, data_recebimento, situacao, forma_pagamento, parcela_numero, parcelas_total)
+             VALUES (:company_id, :branch, :customer, :sale, :description, :amount, :date, :date, 2, :payment, 1, 1)'
+        )->execute([
+            'company_id' => $companyId,
+            'branch' => $branchId,
+            'customer' => $customerId,
+            'sale' => $saleId,
+            'description' => "Venda #{$saleId}",
+            'amount' => $total,
+            'date' => $today,
+            'payment' => $payment,
+        ]);
     }
 
     /** Normaliza booleanos vindos do PDO/pgsql (bool nativo ou 't'/'f'). */
@@ -361,10 +392,11 @@ final class SalesRepository
                     }
                 }
 
-                // Cancela as parcelas pendentes da venda a prazo.
+                // Estorna a receita da venda no Financeiro: parcelas pendentes
+                // (a prazo) e o recebivel ja quitado (a vista) sao cancelados.
                 $this->pdo->prepare(
-                    'UPDATE conta_receber SET situacao = 3, atualizado_em = CURRENT_TIMESTAMP
-                     WHERE idempresa = :company_id AND idvenda = :sale AND situacao = 1'
+                    'UPDATE conta_receber SET situacao = 3, data_recebimento = NULL, atualizado_em = CURRENT_TIMESTAMP
+                     WHERE idempresa = :company_id AND idvenda = :sale AND situacao IN (1, 2)'
                 )->execute(['company_id' => $companyId, 'sale' => $saleId]);
             }
 
