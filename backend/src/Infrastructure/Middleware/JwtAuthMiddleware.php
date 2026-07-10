@@ -23,6 +23,13 @@ class JwtAuthMiddleware implements MiddlewareInterface
         try {
             $decoded = JwtService::decode($token);
 
+            // Tokens emitidos antes do enforcement de permissoes (sem a
+            // claim "pv") nao carregam as permissoes do usuario; derruba a
+            // sessao para o frontend redirecionar ao login.
+            if (!isset($decoded->pv)) {
+                return $this->unauthorized('Sessao expirada, faca login novamente');
+            }
+
             $request = $request
                 ->withAttribute('user_id', $decoded->sub ?? null)
                 ->withAttribute('company_id', $decoded->company_id ?? null)
