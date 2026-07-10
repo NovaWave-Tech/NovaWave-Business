@@ -58,6 +58,9 @@ class AuthService
             'company_id' => $authUser['company_id'],
             'branch_id' => $authUser['branch_id'],
             'permissions' => $permissions,
+            // Versao do payload de permissoes: tokens sem esta claim sao
+            // anteriores ao enforcement e recebem 401 (forca novo login).
+            'pv' => 1,
         ], self::ACCESS_TOKEN_TTL);
 
         return [
