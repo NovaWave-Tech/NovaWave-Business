@@ -72,13 +72,20 @@ final class ReceivableRepository
         if (!$customer) {
             throw new InvalidArgumentException('Cliente nao encontrado');
         }
+        $company = $this->one(
+            'SELECT razao_social, nome_fantasia, cnpj FROM empresa WHERE idempresa = :company_id',
+            ['company_id' => $companyId]
+        );
 
         $rows = $this->all(
             "SELECT cr.idconta_receber, cr.idvenda, cr.descricao, cr.valor, cr.data_vencimento,
                     cr.data_recebimento, cr.situacao, cr.forma_pagamento, cr.parcela_numero,
                     cr.parcelas_total, cr.juros, cr.multa, cr.desconto, cr.observacoes,
+                    cr.atualizado_em, cr.criado_em,
                     f.nome AS filial, f.idfilial,
                     COALESCE(v.juros_atraso, 0) AS juros_atraso,
+                    v.data_venda, v.valor_total AS venda_total, v.forma_pagamento AS venda_pagamento,
+                    v.a_prazo AS venda_a_prazo,
                     GREATEST(0, (CURRENT_DATE - cr.data_vencimento)) AS dias_atraso
              FROM conta_receber cr
              LEFT JOIN filial f ON f.idempresa = cr.idempresa AND f.idfilial = cr.idfilial
@@ -92,24 +99,42 @@ final class ReceivableRepository
 
         $open = [];
         $paid = [];
+        $transactions = [];
+        $pedidos = [];
         $totalOpen = 0.0;
         $totalOverdue = 0.0;
         $totalPaid = 0.0;
         foreach ($rows as $row) {
             $title = $this->normalizeTitle($row, $itemsBySale);
-            if ((int) $row['situacao'] === 2) {
+            $situacao = (int) $row['situacao'];
+            if ($situacao === 2) {
                 $totalPaid += $title['valor_pago'];
                 $paid[] = $title;
-            } elseif ((int) $row['situacao'] === 1) {
+                $transactions[] = $this->transactionFromTitle($row, $title);
+            } elseif ($situacao === 1) {
                 $totalOpen += $title['valor_com_juros'];
                 if ($title['dias_atraso'] > 0) {
                     $totalOverdue += $title['valor_com_juros'];
                 }
                 $open[] = $title;
             }
+            // Agrupa por venda (pedido). Ignora titulos avulsos (sem venda).
+            if ($title['idvenda'] !== null && $situacao !== 3) {
+                $this->accumulatePedido($pedidos, $row, $title);
+            }
         }
 
+        // Transacoes mais recentes primeiro.
+        usort($transactions, fn ($a, $b) => strcmp((string) $b['data_hora'], (string) $a['data_hora']));
+
+        [$pedidosAbertos, $pedidosBaixados] = $this->finalizePedidos($pedidos, $itemsBySale);
+
         return [
+            'company' => [
+                'razao_social' => $company['razao_social'] ?? null,
+                'nome_fantasia' => $company['nome_fantasia'] ?? null,
+                'cnpj' => $company['cnpj'] ?? null,
+            ],
             'customer' => [
                 'idcliente' => (int) $customer['idcliente'],
                 'nome' => $customer['nome'],
@@ -120,14 +145,102 @@ final class ReceivableRepository
             ],
             'titulos' => $open,
             'titulos_pagos' => $paid,
+            'pedidos' => $pedidosAbertos,
+            'pedidos_baixados' => $pedidosBaixados,
+            'transacoes' => $transactions,
             'summary' => [
                 'total_aberto' => round($totalOpen, 2),
                 'total_vencido' => round($totalOverdue, 2),
                 'total_pago' => round($totalPaid, 2),
                 'abertos' => count($open),
                 'pagos' => count($paid),
+                'pedidos_abertos' => count($pedidosAbertos),
+                'pedidos_baixados' => count($pedidosBaixados),
+                'transacoes' => count($transactions),
             ],
         ];
+    }
+
+    /** Monta uma transacao (evento de pagamento) a partir de um titulo pago. */
+    private function transactionFromTitle(array $row, array $title): array
+    {
+        return [
+            'idconta_receber' => $title['idconta_receber'],
+            'idvenda' => $title['idvenda'],
+            'grupo' => $title['contrato'],
+            'status' => 'Pago',
+            'data_hora' => $row['atualizado_em'] ?: $row['criado_em'],
+            'valor' => $title['valor_pago'],
+            'origem' => sprintf('Parcela %d/%d', $title['parcela_numero'], $title['parcelas_total']),
+            'meio' => $title['forma_pagamento'],
+            'filial' => $title['filial'],
+            'cliente' => null,
+            'valor_base' => $title['valor'],
+            'juros' => (float) $row['juros'],
+            'multa' => (float) $row['multa'],
+            'desconto' => (float) $row['desconto'],
+            'data_vencimento' => $title['data_vencimento'],
+            'data_recebimento' => $title['data_recebimento'],
+            'parcela_numero' => $title['parcela_numero'],
+            'parcelas_total' => $title['parcelas_total'],
+            'items' => $title['items'],
+        ];
+    }
+
+    /** Acumula os totais de um pedido (venda) a partir de cada titulo. */
+    private function accumulatePedido(array &$pedidos, array $row, array $title): void
+    {
+        $saleId = $title['idvenda'];
+        if (!isset($pedidos[$saleId])) {
+            $pedidos[$saleId] = [
+                'idvenda' => $saleId,
+                'contrato' => $title['contrato'],
+                'data_venda' => $row['data_venda'],
+                'filial' => $title['filial'],
+                'idfilial' => $title['idfilial'],
+                'valor_total' => (float) ($row['venda_total'] ?? 0),
+                'forma_pagamento' => $row['venda_pagamento'],
+                'a_prazo' => $this->truthy($row['venda_a_prazo'] ?? false),
+                'titulos_total' => 0,
+                'titulos_pagos' => 0,
+                'titulos_abertos' => 0,
+                'parcelas_total' => $title['parcelas_total'],
+                'valor_pago' => 0.0,
+                'valor_aberto' => 0.0,
+                'proximo_vencimento' => null,
+            ];
+        }
+        $pedidos[$saleId]['titulos_total']++;
+        if ($title['situacao'] === 2) {
+            $pedidos[$saleId]['titulos_pagos']++;
+            $pedidos[$saleId]['valor_pago'] += $title['valor_pago'];
+        } elseif ($title['situacao'] === 1) {
+            $pedidos[$saleId]['titulos_abertos']++;
+            $pedidos[$saleId]['valor_aberto'] += $title['valor_com_juros'];
+            $due = $title['data_vencimento'];
+            if ($pedidos[$saleId]['proximo_vencimento'] === null || $due < $pedidos[$saleId]['proximo_vencimento']) {
+                $pedidos[$saleId]['proximo_vencimento'] = $due;
+            }
+        }
+    }
+
+    /** Fecha os pedidos, separando os em aberto dos baixados (tudo pago). */
+    private function finalizePedidos(array $pedidos, array $itemsBySale): array
+    {
+        $abertos = [];
+        $baixados = [];
+        foreach ($pedidos as $saleId => $pedido) {
+            $pedido['valor_pago'] = round($pedido['valor_pago'], 2);
+            $pedido['valor_aberto'] = round($pedido['valor_aberto'], 2);
+            $pedido['baixado'] = $pedido['titulos_abertos'] === 0;
+            $pedido['items'] = $itemsBySale[$saleId] ?? [];
+            if ($pedido['baixado']) {
+                $baixados[] = $pedido;
+            } else {
+                $abertos[] = $pedido;
+            }
+        }
+        return [$abertos, $baixados];
     }
 
     /**
@@ -236,6 +349,9 @@ final class ReceivableRepository
             'juros_atraso' => $rate,
             'dias_atraso' => $daysLate,
             'juros_projetado' => $projectedInterest,
+            'juros' => (float) $row['juros'],
+            'multa' => (float) $row['multa'],
+            'desconto' => (float) $row['desconto'],
             'valor_com_juros' => round($valor + $projectedInterest, 2),
             'valor_pago' => round($valor + (float) $row['juros'] + (float) $row['multa'] - (float) $row['desconto'], 2),
             'items' => $saleId !== null ? ($itemsBySale[$saleId] ?? []) : [],

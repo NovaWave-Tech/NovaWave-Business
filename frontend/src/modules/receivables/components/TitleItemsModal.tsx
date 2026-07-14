@@ -13,15 +13,21 @@ import {
   formatCurrency,
   formatQuantity,
 } from '../../../shared/utils/formatters';
-import type { ReceivableTitle } from '../types/receivableTypes';
+import type { ReceivableItem } from '../types/receivableTypes';
 
-/** Mostra os produtos da venda que originou o titulo (botao lupa). */
+export type ItemsSource = {
+  contrato: string;
+  idvenda: number | null;
+  items: ReceivableItem[];
+};
+
+/** Mostra os produtos da venda que originou o titulo/pedido (botao lupa). */
 export function TitleItemsModal({
   title,
   isOpen,
   onClose,
 }: {
-  title: ReceivableTitle | null;
+  title: ItemsSource | null;
   isOpen: boolean;
   onClose: () => void;
 }) {
