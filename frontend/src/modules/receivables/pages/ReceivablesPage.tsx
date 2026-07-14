@@ -36,12 +36,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import {
-  EmptyState,
-  PageHeader,
-  SectionHeader,
-  Surface,
-} from '../../../shared/ui/ErpUI';
+import { EmptyState, PageHeader, Surface } from '../../../shared/ui/ErpUI';
 import { Reveal } from '../../../shared/ui/motion';
 import {
   formatCurrency,
@@ -235,17 +230,37 @@ export default function ReceivablesPage() {
       />
 
       <Surface p={{ base: 4, md: 5 }} mb={5}>
-        <Flex justify="space-between" align="flex-start" gap={3} wrap="wrap">
-          <SectionHeader
-            icon={Search}
-            eyebrow="Busca"
-            title="Selecione o cliente para carregar titulos e transacoes"
-          />
+        <Flex justify="space-between" align="center" gap={3} wrap="wrap">
+          <Flex align="center" gap={3} minW={0}>
+            <Flex
+              w="38px"
+              h="38px"
+              align="center"
+              justify="center"
+              borderRadius="10px"
+              color="erp.brandText"
+              bg="erp.brandSoft"
+              border="1px solid"
+              borderColor="erp.brandBorder"
+              flexShrink={0}
+            >
+              <Icon as={Search} boxSize="17px" />
+            </Flex>
+            <Box minW={0}>
+              <Text textStyle="overline" fontSize="10px" color="erp.brandText">
+                Busca
+              </Text>
+              <Text textStyle="h6" color="erp.text" noOfLines={1}>
+                Selecione o cliente para carregar titulos e transacoes
+              </Text>
+            </Box>
+          </Flex>
           {data && (
             <Button
               size="sm"
               variant="outline"
               leftIcon={<UserSearch size={14} />}
+              flexShrink={0}
               onClick={() => setCustomerId(null)}
             >
               Busca de clientes
