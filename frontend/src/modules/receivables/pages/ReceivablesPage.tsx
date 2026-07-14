@@ -1,16 +1,14 @@
 import {
-  Alert,
-  AlertIcon,
   Badge,
   Box,
+  Button,
+  Divider,
   Flex,
+  Grid,
+  Icon,
   IconButton,
-  SimpleGrid,
   Spinner,
   Table,
-  Tab,
-  TabList,
-  Tabs,
   Tbody,
   Td,
   Text,
@@ -18,6 +16,7 @@ import {
   Thead,
   Tooltip,
   Tr,
+  useColorModeValue,
   useDisclosure,
   useToast,
 } from '@chakra-ui/react';
@@ -26,21 +25,23 @@ import {
   CheckCircle2,
   HandCoins,
   ListChecks,
+  PackageCheck,
   Receipt,
+  RefreshCw,
   Search,
   Store,
-  TriangleAlert,
   Wallet,
   X,
+  type LucideIcon,
 } from 'lucide-react';
 import { useState } from 'react';
 import {
   EmptyState,
-  KpiCard,
   PageHeader,
   SectionHeader,
   Surface,
 } from '../../../shared/ui/ErpUI';
+import { Reveal } from '../../../shared/ui/motion';
 import {
   formatCurrency,
   formatDate,
@@ -65,14 +66,40 @@ import type {
   ReceivableOrder,
   ReceivableTitle,
   ReceivableTransaction,
+  ReceivablesData,
   SettlePayload,
 } from '../types/receivableTypes';
+
+type ViewKey =
+  | 'titulos'
+  | 'titulos_pagos'
+  | 'pedidos'
+  | 'pedidos_baixados'
+  | 'transacoes';
+
+type DueInfo = { kind: 'overdue' | 'soon' | 'ok'; days: number };
+
+/** Classifica o vencimento de um titulo em aberto (vencido / vence em breve). */
+function dueInfo(vencimento: string, diasAtraso: number): DueInfo {
+  if (diasAtraso > 0) return { kind: 'overdue', days: diasAtraso };
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const due = new Date(
+    /^\d{4}-\d{2}-\d{2}$/.test(vencimento)
+      ? `${vencimento}T12:00:00`
+      : vencimento
+  );
+  const days = Math.ceil((due.getTime() - today.getTime()) / 86_400_000);
+  if (days >= 0 && days <= 3) return { kind: 'soon', days };
+  return { kind: 'ok', days };
+}
 
 export default function ReceivablesPage() {
   const toast = useToast();
   const client = useQueryClient();
   const [customerId, setCustomerId] = useState<number | null>(null);
-  const [tab, setTab] = useState(0);
+  const [view, setView] = useState<ViewKey>('titulos');
+  const [syncing, setSyncing] = useState(false);
   const itemsModal = useDisclosure();
   const settleModal = useDisclosure();
   const receiptModal = useDisclosure();
@@ -111,7 +138,7 @@ export default function ReceivablesPage() {
 
   const selectCustomer = (customer: ReceivableCustomerOption) => {
     setCustomerId(customer.idcliente);
-    setTab(0);
+    setView('titulos');
   };
   const openItemsFor = (source: ItemsSource) => {
     setActiveItems(source);
@@ -128,6 +155,20 @@ export default function ReceivablesPage() {
   const openTx = (transaction: ReceivableTransaction) => {
     setActiveTx(transaction);
     txModal.onOpen();
+  };
+
+  const syncStatus = async () => {
+    if (customerId === null) return;
+    setSyncing(true);
+    const result = await query.refetch();
+    setSyncing(false);
+    const count = result.data?.summary.transacoes ?? 0;
+    toast({
+      title: 'Sincronizacao concluida',
+      description: `${count} transacao(oes) atualizada(s) com sucesso.`,
+      status: 'success',
+      position: 'top-right',
+    });
   };
 
   const receiptFromTitle = (t: ReceivableTitle): PaymentReceiptData => ({
@@ -176,29 +217,52 @@ export default function ReceivablesPage() {
       <PageHeader
         icon={HandCoins}
         title="Recebimentos"
-        description="Titulos, pedidos e transacoes do cliente. Baixe parcelas, escolha a forma de pagamento e emita o comprovante."
+        description="Central de cobranca do cliente: titulos, pedidos, transacoes e comprovantes."
         breadcrumbs={[{ label: 'Financeiro' }, { label: 'Recebimentos' }]}
+        actions={
+          <Button
+            variant="outline"
+            leftIcon={<RefreshCw size={15} />}
+            isLoading={syncing}
+            loadingText="Atualizando..."
+            isDisabled={customerId === null}
+            onClick={() => void syncStatus()}
+          >
+            Atualizar status
+          </Button>
+        }
       />
 
-      <Surface p={5} mb={5}>
+      <Surface p={{ base: 4, md: 5 }} mb={5}>
         <SectionHeader
           icon={Search}
           eyebrow="Busca"
           title="Selecione o cliente para carregar titulos e transacoes"
         />
-        <Box mt={4} maxW="720px">
+        <Box mt={4}>
           <CustomerReceivableSearch onSelect={selectCustomer} />
         </Box>
         {data && (
           <Flex mt={4} align="center" gap={3} wrap="wrap">
-            <Badge colorScheme="blue" fontSize="12px" px={2.5} py={1}>
-              {data.customer.nome}
-            </Badge>
-            {data.customer.documento && (
-              <Text fontSize="12px" color="erp.textSecondary">
-                {doc}
+            <Flex
+              align="center"
+              gap={2}
+              px={3}
+              py={1.5}
+              borderRadius="full"
+              bg="erp.brandSoft"
+              border="1px solid"
+              borderColor="erp.brandBorder"
+            >
+              <Text fontSize="13px" fontWeight="700" color="erp.brandText">
+                {data.customer.nome}
               </Text>
-            )}
+              {data.customer.documento && (
+                <Text fontSize="12px" color="erp.brandText" opacity={0.8}>
+                  · {doc}
+                </Text>
+              )}
+            </Flex>
             <IconButton
               aria-label="Limpar cliente"
               icon={<X size={14} />}
@@ -215,124 +279,34 @@ export default function ReceivablesPage() {
           <EmptyState
             icon={Wallet}
             title="Busque um cliente para comecar"
-            description="Digite o CPF/CNPJ ou o nome do cliente para carregar os titulos, pedidos e transacoes."
+            description="Digite o CPF/CNPJ (carrega automaticamente) ou o nome do cliente para abrir os titulos, pedidos e transacoes."
           />
         </Surface>
       ) : query.isLoading ? (
-        <Flex justify="center" py={16}>
+        <Flex justify="center" py={20}>
           <Spinner color="brand.500" size="lg" />
         </Flex>
       ) : (
         data && (
-          <>
-            <SimpleGrid columns={{ base: 1, sm: 3 }} spacing={3} mb={5}>
-              <KpiCard
-                index={0}
-                tone="warning"
-                label="Total em aberto"
-                value={formatCurrency(data.summary.total_aberto)}
-                detail={`${data.summary.abertos} titulo(s) pendente(s)`}
-                icon={Wallet}
-              />
-              <KpiCard
-                index={1}
-                tone="danger"
-                label="Vencido"
-                value={formatCurrency(data.summary.total_vencido)}
-                detail="Parcelas em atraso"
-                icon={TriangleAlert}
-              />
-              <KpiCard
-                index={2}
-                tone="success"
-                label="Ja recebido"
-                value={formatCurrency(data.summary.total_pago)}
-                detail={`${data.summary.pagos} titulo(s) baixado(s)`}
-                icon={CheckCircle2}
-              />
-            </SimpleGrid>
-
-            {data.summary.pedidos_abertos > 0 && (
-              <Alert
-                status="warning"
-                variant="left-accent"
-                borderRadius="10px"
-                mb={4}
-              >
-                <AlertIcon />
-                <Text fontSize="13px" fontWeight="600">
-                  Atencao: este cliente possui {data.summary.pedidos_abertos}{' '}
-                  contrato(s) em aberto
-                </Text>
-              </Alert>
-            )}
-
-            <Surface overflow="hidden">
-              <Tabs index={tab} onChange={setTab} colorScheme="blue">
-                <TabList px={4} pt={2} flexWrap="wrap">
-                  <Tab fontSize="14px">Titulos ({data.summary.abertos})</Tab>
-                  <Tab fontSize="14px">
-                    Titulos pagos ({data.summary.pagos})
-                  </Tab>
-                  <Tab fontSize="14px">
-                    Pedidos ({data.summary.pedidos_abertos})
-                  </Tab>
-                  <Tab fontSize="14px">
-                    Pedidos baixados ({data.summary.pedidos_baixados})
-                  </Tab>
-                  <Tab fontSize="14px">
-                    Transacoes ({data.summary.transacoes})
-                  </Tab>
-                </TabList>
-              </Tabs>
-
-              {tab === 0 && (
-                <TitlesTable
-                  titles={data.titulos}
-                  customerName={data.customer.nome}
-                  doc={doc}
-                  mode="open"
-                  onItems={openItemsFor}
-                  onSettle={openSettle}
-                  onReceipt={t => openReceipt(receiptFromTitle(t))}
-                />
-              )}
-              {tab === 1 && (
-                <TitlesTable
-                  titles={data.titulos_pagos}
-                  customerName={data.customer.nome}
-                  doc={doc}
-                  mode="paid"
-                  onItems={openItemsFor}
-                  onSettle={openSettle}
-                  onReceipt={t => openReceipt(receiptFromTitle(t))}
-                />
-              )}
-              {tab === 2 && (
-                <OrdersTable
-                  orders={data.pedidos}
-                  mode="open"
-                  onItems={openItemsFor}
-                  onReceipt={p => openReceipt(receiptFromOrder(p))}
-                />
-              )}
-              {tab === 3 && (
-                <OrdersTable
-                  orders={data.pedidos_baixados}
-                  mode="settled"
-                  onItems={openItemsFor}
-                  onReceipt={p => openReceipt(receiptFromOrder(p))}
-                />
-              )}
-              {tab === 4 && (
-                <TransactionsTable
-                  transactions={data.transacoes}
-                  onDetails={openTx}
-                  onReceipt={t => openReceipt(receiptFromTx(t))}
-                />
-              )}
-            </Surface>
-          </>
+          <Grid templateColumns={{ base: '1fr', md: '250px 1fr' }} gap={5}>
+            <SideMenu data={data} view={view} onChange={setView} />
+            <Box minW={0}>
+              <Reveal key={view}>
+                <Surface overflow="hidden">
+                  <ViewContent
+                    view={view}
+                    data={data}
+                    onItems={openItemsFor}
+                    onSettle={openSettle}
+                    onTx={openTx}
+                    onReceiptTitle={t => openReceipt(receiptFromTitle(t))}
+                    onReceiptOrder={p => openReceipt(receiptFromOrder(p))}
+                    onReceiptTx={t => openReceipt(receiptFromTx(t))}
+                  />
+                </Surface>
+              </Reveal>
+            </Box>
+          </Grid>
         )
       )}
 
@@ -368,6 +342,197 @@ export default function ReceivablesPage() {
   );
 }
 
+type MenuItem = {
+  key: ViewKey;
+  label: string;
+  icon: LucideIcon;
+  count: number;
+};
+
+function SideMenu({
+  data,
+  view,
+  onChange,
+}: {
+  data: ReceivablesData;
+  view: ViewKey;
+  onChange: (view: ViewKey) => void;
+}) {
+  const s = data.summary;
+  const primary: MenuItem[] = [
+    { key: 'titulos', label: 'Titulos', icon: Wallet, count: s.abertos },
+    {
+      key: 'titulos_pagos',
+      label: 'Titulos pagos',
+      icon: CheckCircle2,
+      count: s.pagos,
+    },
+    {
+      key: 'pedidos',
+      label: 'Pedidos',
+      icon: ListChecks,
+      count: s.pedidos_abertos,
+    },
+  ];
+  const secondary: MenuItem[] = [
+    {
+      key: 'pedidos_baixados',
+      label: 'Pedidos baixados',
+      icon: PackageCheck,
+      count: s.pedidos_baixados,
+    },
+    {
+      key: 'transacoes',
+      label: 'Transacoes',
+      icon: Receipt,
+      count: s.transacoes,
+    },
+  ];
+  return (
+    <Surface p={2} h="fit-content" position={{ md: 'sticky' }} top={{ md: 4 }}>
+      <MenuGroup
+        label="Operacao"
+        items={primary}
+        view={view}
+        onChange={onChange}
+      />
+      <Divider my={2} borderColor="erp.border" />
+      <Text
+        px={3}
+        pt={1}
+        pb={2}
+        textStyle="overline"
+        color="erp.textMuted"
+        fontSize="10px"
+      >
+        Consulta
+      </Text>
+      <MenuGroup items={secondary} view={view} onChange={onChange} />
+    </Surface>
+  );
+}
+
+function MenuGroup({
+  label,
+  items,
+  view,
+  onChange,
+}: {
+  label?: string;
+  items: MenuItem[];
+  view: ViewKey;
+  onChange: (view: ViewKey) => void;
+}) {
+  return (
+    <>
+      {label && (
+        <Text
+          px={3}
+          pt={2}
+          pb={2}
+          textStyle="overline"
+          color="erp.textMuted"
+          fontSize="10px"
+        >
+          {label}
+        </Text>
+      )}
+      <Flex direction="column" gap={0.5}>
+        {items.map(item => {
+          const isActive = view === item.key;
+          return (
+            <Flex
+              key={item.key}
+              as="button"
+              align="center"
+              gap={2.5}
+              px={3}
+              py={2.5}
+              borderRadius="10px"
+              textAlign="left"
+              transition="all 120ms ease"
+              bg={isActive ? 'erp.brandSoft' : 'transparent'}
+              color={isActive ? 'erp.brandText' : 'erp.textSecondary'}
+              fontWeight={isActive ? '700' : '500'}
+              _hover={{ bg: isActive ? 'erp.brandSoft' : 'erp.hover' }}
+              onClick={() => onChange(item.key)}
+            >
+              <Icon as={item.icon} boxSize="17px" flexShrink={0} />
+              <Text fontSize="13px" flex="1" noOfLines={1}>
+                {item.label}
+              </Text>
+              <Badge
+                borderRadius="full"
+                minW="22px"
+                textAlign="center"
+                colorScheme={isActive ? 'blue' : 'gray'}
+                fontSize="10px"
+              >
+                {item.count}
+              </Badge>
+            </Flex>
+          );
+        })}
+      </Flex>
+    </>
+  );
+}
+
+function ViewContent({
+  view,
+  data,
+  onItems,
+  onSettle,
+  onTx,
+  onReceiptTitle,
+  onReceiptOrder,
+  onReceiptTx,
+}: {
+  view: ViewKey;
+  data: ReceivablesData;
+  onItems: (source: ItemsSource) => void;
+  onSettle: (title: ReceivableTitle) => void;
+  onTx: (transaction: ReceivableTransaction) => void;
+  onReceiptTitle: (title: ReceivableTitle) => void;
+  onReceiptOrder: (order: ReceivableOrder) => void;
+  onReceiptTx: (transaction: ReceivableTransaction) => void;
+}) {
+  if (view === 'titulos' || view === 'titulos_pagos') {
+    return (
+      <TitlesTable
+        titles={view === 'titulos' ? data.titulos : data.titulos_pagos}
+        customerName={data.customer.nome}
+        doc={
+          data.customer.documento
+            ? formatDocument(data.customer.documento)
+            : '-'
+        }
+        mode={view === 'titulos' ? 'open' : 'paid'}
+        onItems={onItems}
+        onSettle={onSettle}
+        onReceipt={onReceiptTitle}
+      />
+    );
+  }
+  if (view === 'pedidos' || view === 'pedidos_baixados') {
+    return (
+      <OrdersTable
+        orders={view === 'pedidos' ? data.pedidos : data.pedidos_baixados}
+        mode={view === 'pedidos' ? 'open' : 'settled'}
+        onItems={onItems}
+        onReceipt={onReceiptOrder}
+      />
+    );
+  }
+  return (
+    <TransactionsTable
+      transactions={data.transacoes}
+      onDetails={onTx}
+      onReceipt={onReceiptTx}
+    />
+  );
+}
+
 function TitlesTable({
   titles,
   customerName,
@@ -385,6 +550,9 @@ function TitlesTable({
   onSettle: (title: ReceivableTitle) => void;
   onReceipt: (title: ReceivableTitle) => void;
 }) {
+  const overdueBg = useColorModeValue('#FEF2F2', 'rgba(251,113,133,0.10)');
+  const soonBg = useColorModeValue('#FFFBEB', 'rgba(251,191,36,0.10)');
+
   if (titles.length === 0) {
     return (
       <EmptyState
@@ -394,7 +562,7 @@ function TitlesTable({
         }
         description={
           mode === 'open'
-            ? 'Este cliente nao possui parcelas pendentes.'
+            ? 'Este cliente esta em dia — nao ha parcelas pendentes.'
             : 'Os titulos recebidos aparecerao aqui.'
         }
       />
@@ -418,16 +586,38 @@ function TitlesTable({
         </Thead>
         <Tbody>
           {titles.map(title => {
-            const overdue = title.dias_atraso > 0;
+            const due =
+              mode === 'open'
+                ? dueInfo(title.data_vencimento, title.dias_atraso)
+                : { kind: 'ok' as const, days: 0 };
+            const rowBg =
+              due.kind === 'overdue'
+                ? overdueBg
+                : due.kind === 'soon'
+                  ? soonBg
+                  : undefined;
+            const accent =
+              due.kind === 'overdue'
+                ? 'erp.danger'
+                : due.kind === 'soon'
+                  ? 'erp.warning'
+                  : 'transparent';
             return (
-              <Tr key={title.idconta_receber}>
-                <Td fontWeight="600">{title.contrato}</Td>
+              <Tr key={title.idconta_receber} bg={rowBg}>
+                <Td
+                  fontWeight="600"
+                  borderLeft="3px solid"
+                  borderLeftColor={accent}
+                >
+                  {title.contrato}
+                </Td>
                 <Td maxW="180px">
                   <Text noOfLines={1}>{customerName}</Text>
                 </Td>
                 <Td>{doc}</Td>
                 <Td
-                  color={overdue && mode === 'open' ? 'erp.danger' : undefined}
+                  color={due.kind === 'overdue' ? 'erp.danger' : undefined}
+                  fontWeight={due.kind === 'overdue' ? '600' : undefined}
                 >
                   {formatDate(
                     mode === 'open'
@@ -445,14 +635,21 @@ function TitlesTable({
                 </Td>
                 <Td>
                   {mode === 'open' ? (
-                    <Badge
-                      colorScheme={overdue ? 'red' : 'yellow'}
-                      textTransform="none"
-                    >
-                      {overdue
-                        ? `Vencido ha ${title.dias_atraso}d`
-                        : 'A vencer'}
-                    </Badge>
+                    due.kind === 'overdue' ? (
+                      <Badge colorScheme="red" textTransform="none">
+                        Vencido ha {due.days}d
+                      </Badge>
+                    ) : due.kind === 'soon' ? (
+                      <Badge colorScheme="orange" textTransform="none">
+                        {due.days === 0
+                          ? 'Vence hoje'
+                          : `Vence em ${due.days}d`}
+                      </Badge>
+                    ) : (
+                      <Badge colorScheme="gray" textTransform="none">
+                        A vencer
+                      </Badge>
+                    )
                   ) : (
                     <Text fontSize="12px">
                       {formatPaymentMethod(title.forma_pagamento)}
@@ -526,7 +723,7 @@ function OrdersTable({
   if (orders.length === 0) {
     return (
       <EmptyState
-        icon={ListChecks}
+        icon={mode === 'open' ? ListChecks : PackageCheck}
         title={
           mode === 'open' ? 'Nenhum pedido em aberto' : 'Nenhum pedido baixado'
         }

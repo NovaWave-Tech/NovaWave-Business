@@ -1,6 +1,8 @@
 import {
   Box,
   Button,
+  Flex,
+  Icon,
   Modal,
   ModalBody,
   ModalCloseButton,
@@ -8,8 +10,9 @@ import {
   ModalFooter,
   ModalHeader,
   ModalOverlay,
+  Text,
 } from '@chakra-ui/react';
-import { Printer } from 'lucide-react';
+import { Printer, ReceiptText } from 'lucide-react';
 import {
   formatCurrency,
   formatDateTime,
@@ -140,11 +143,35 @@ export function PaymentReceiptModal({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} size="sm" isCentered>
-      <ModalOverlay />
-      <ModalContent>
-        <ModalHeader>Comprovante de pagamento</ModalHeader>
-        <ModalCloseButton />
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      size="sm"
+      isCentered
+      motionPreset="slideInBottom"
+    >
+      <ModalOverlay backdropFilter="blur(3px)" />
+      <ModalContent borderRadius="16px" overflow="hidden">
+        <ModalHeader p={5} borderBottom="1px solid" borderColor="erp.border">
+          <Flex align="center" gap={3}>
+            <Flex
+              w="40px"
+              h="40px"
+              align="center"
+              justify="center"
+              borderRadius="11px"
+              bg="erp.brandSoft"
+              border="1px solid"
+              borderColor="erp.brandBorder"
+              color="brand.500"
+              flexShrink={0}
+            >
+              <Icon as={ReceiptText} boxSize="20px" />
+            </Flex>
+            <Text textStyle="h5">Comprovante de pagamento</Text>
+          </Flex>
+        </ModalHeader>
+        <ModalCloseButton top={4} />
         <ModalBody>
           <Box
             bg="white"
