@@ -109,9 +109,9 @@ export function CustomerReceivableSearch({
         )}
       </InputGroup>
 
-      {isFullDocument && searching && (
+      {isFullDocument && (
         <Text mt={2} fontSize="12px" color="erp.brandText" fontWeight="500">
-          Documento completo. Carregando os dados automaticamente...
+          Documento completo. Os dados sao carregados automaticamente.
         </Text>
       )}
 

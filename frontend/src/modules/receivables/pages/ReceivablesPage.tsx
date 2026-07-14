@@ -2,9 +2,8 @@ import {
   Badge,
   Box,
   Button,
-  Divider,
+  Checkbox,
   Flex,
-  Grid,
   Icon,
   IconButton,
   Spinner,
@@ -12,6 +11,7 @@ import {
   Tbody,
   Td,
   Text,
+  Tfoot,
   Th,
   Thead,
   Tooltip,
@@ -30,11 +30,12 @@ import {
   RefreshCw,
   Search,
   Store,
+  UserSearch,
   Wallet,
   X,
   type LucideIcon,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   EmptyState,
   PageHeader,
@@ -72,10 +73,10 @@ import type {
 
 type ViewKey =
   | 'titulos'
-  | 'titulos_pagos'
   | 'pedidos'
-  | 'pedidos_baixados'
-  | 'transacoes';
+  | 'transacoes'
+  | 'titulos_pagos'
+  | 'pedidos_baixados';
 
 type DueInfo = { kind: 'overdue' | 'soon' | 'ok'; days: number };
 
@@ -164,8 +165,8 @@ export default function ReceivablesPage() {
     setSyncing(false);
     const count = result.data?.summary.transacoes ?? 0;
     toast({
-      title: 'Sincronizacao concluida',
-      description: `${count} transacao(oes) atualizada(s) com sucesso.`,
+      title: 'Dados atualizados',
+      description: `${count} transacao(oes) sincronizada(s) com sucesso.`,
       status: 'success',
       position: 'top-right',
     });
@@ -228,17 +229,29 @@ export default function ReceivablesPage() {
             isDisabled={customerId === null}
             onClick={() => void syncStatus()}
           >
-            Atualizar status
+            Atualizar dados
           </Button>
         }
       />
 
       <Surface p={{ base: 4, md: 5 }} mb={5}>
-        <SectionHeader
-          icon={Search}
-          eyebrow="Busca"
-          title="Selecione o cliente para carregar titulos e transacoes"
-        />
+        <Flex justify="space-between" align="flex-start" gap={3} wrap="wrap">
+          <SectionHeader
+            icon={Search}
+            eyebrow="Busca"
+            title="Selecione o cliente para carregar titulos e transacoes"
+          />
+          {data && (
+            <Button
+              size="sm"
+              variant="outline"
+              leftIcon={<UserSearch size={14} />}
+              onClick={() => setCustomerId(null)}
+            >
+              Busca de clientes
+            </Button>
+          )}
+        </Flex>
         <Box mt={4}>
           <CustomerReceivableSearch onSelect={selectCustomer} />
         </Box>
@@ -288,25 +301,21 @@ export default function ReceivablesPage() {
         </Flex>
       ) : (
         data && (
-          <Grid templateColumns={{ base: '1fr', md: '250px 1fr' }} gap={5}>
-            <SideMenu data={data} view={view} onChange={setView} />
-            <Box minW={0}>
-              <Reveal key={view}>
-                <Surface overflow="hidden">
-                  <ViewContent
-                    view={view}
-                    data={data}
-                    onItems={openItemsFor}
-                    onSettle={openSettle}
-                    onTx={openTx}
-                    onReceiptTitle={t => openReceipt(receiptFromTitle(t))}
-                    onReceiptOrder={p => openReceipt(receiptFromOrder(p))}
-                    onReceiptTx={t => openReceipt(receiptFromTx(t))}
-                  />
-                </Surface>
-              </Reveal>
-            </Box>
-          </Grid>
+          <Surface overflow="hidden">
+            <TabBar summary={data.summary} view={view} onChange={setView} />
+            <Reveal key={view}>
+              <ViewContent
+                view={view}
+                data={data}
+                onItems={openItemsFor}
+                onSettle={openSettle}
+                onTx={openTx}
+                onReceiptTitle={t => openReceipt(receiptFromTitle(t))}
+                onReceiptOrder={p => openReceipt(receiptFromOrder(p))}
+                onReceiptTx={t => openReceipt(receiptFromTx(t))}
+              />
+            </Reveal>
+          </Surface>
         )
       )}
 
@@ -342,139 +351,121 @@ export default function ReceivablesPage() {
   );
 }
 
-type MenuItem = {
-  key: ViewKey;
-  label: string;
-  icon: LucideIcon;
-  count: number;
-};
+type TabDef = { key: ViewKey; label: string; icon: LucideIcon; count: number };
 
-function SideMenu({
-  data,
+function TabBar({
+  summary,
   view,
   onChange,
 }: {
-  data: ReceivablesData;
+  summary: ReceivablesData['summary'];
   view: ViewKey;
   onChange: (view: ViewKey) => void;
 }) {
-  const s = data.summary;
-  const primary: MenuItem[] = [
-    { key: 'titulos', label: 'Titulos', icon: Wallet, count: s.abertos },
-    {
-      key: 'titulos_pagos',
-      label: 'Titulos pagos',
-      icon: CheckCircle2,
-      count: s.pagos,
-    },
+  const primary: TabDef[] = [
+    { key: 'titulos', label: 'Titulos', icon: Wallet, count: summary.abertos },
     {
       key: 'pedidos',
       label: 'Pedidos',
       icon: ListChecks,
-      count: s.pedidos_abertos,
-    },
-  ];
-  const secondary: MenuItem[] = [
-    {
-      key: 'pedidos_baixados',
-      label: 'Pedidos baixados',
-      icon: PackageCheck,
-      count: s.pedidos_baixados,
+      count: summary.pedidos_abertos,
     },
     {
       key: 'transacoes',
       label: 'Transacoes',
       icon: Receipt,
-      count: s.transacoes,
+      count: summary.transacoes,
+    },
+  ];
+  const secondary: TabDef[] = [
+    {
+      key: 'titulos_pagos',
+      label: 'Titulos pagos',
+      icon: CheckCircle2,
+      count: summary.pagos,
+    },
+    {
+      key: 'pedidos_baixados',
+      label: 'Pedidos baixados',
+      icon: PackageCheck,
+      count: summary.pedidos_baixados,
     },
   ];
   return (
-    <Surface p={2} h="fit-content" position={{ md: 'sticky' }} top={{ md: 4 }}>
-      <MenuGroup
-        label="Operacao"
-        items={primary}
-        view={view}
-        onChange={onChange}
-      />
-      <Divider my={2} borderColor="erp.border" />
-      <Text
-        px={3}
-        pt={1}
-        pb={2}
-        textStyle="overline"
-        color="erp.textMuted"
-        fontSize="10px"
-      >
-        Consulta
-      </Text>
-      <MenuGroup items={secondary} view={view} onChange={onChange} />
-    </Surface>
+    <Flex
+      px={{ base: 2, md: 4 }}
+      pt={2}
+      borderBottom="1px solid"
+      borderColor="erp.border"
+      justify="space-between"
+      align="center"
+      wrap="wrap"
+      gap={1}
+      overflowX="auto"
+    >
+      <Flex gap={0.5}>
+        {primary.map(tab => (
+          <TabButton
+            key={tab.key}
+            tab={tab}
+            active={view === tab.key}
+            onClick={() => onChange(tab.key)}
+          />
+        ))}
+      </Flex>
+      <Flex gap={0.5}>
+        {secondary.map(tab => (
+          <TabButton
+            key={tab.key}
+            tab={tab}
+            active={view === tab.key}
+            onClick={() => onChange(tab.key)}
+          />
+        ))}
+      </Flex>
+    </Flex>
   );
 }
 
-function MenuGroup({
-  label,
-  items,
-  view,
-  onChange,
+function TabButton({
+  tab,
+  active,
+  onClick,
 }: {
-  label?: string;
-  items: MenuItem[];
-  view: ViewKey;
-  onChange: (view: ViewKey) => void;
+  tab: TabDef;
+  active: boolean;
+  onClick: () => void;
 }) {
   return (
-    <>
-      {label && (
-        <Text
-          px={3}
-          pt={2}
-          pb={2}
-          textStyle="overline"
-          color="erp.textMuted"
+    <Flex
+      as="button"
+      align="center"
+      gap={2}
+      px={3}
+      py={2.5}
+      borderBottom="2px solid"
+      borderColor={active ? 'brand.500' : 'transparent'}
+      color={active ? 'erp.brandText' : 'erp.textSecondary'}
+      fontWeight={active ? '700' : '500'}
+      transition="all 120ms ease"
+      _hover={{ color: 'erp.brandText' }}
+      whiteSpace="nowrap"
+      onClick={onClick}
+    >
+      <Icon as={tab.icon} boxSize="15px" />
+      <Text fontSize="13.5px">{tab.label}</Text>
+      {tab.count > 0 && (
+        <Badge
+          borderRadius="full"
+          minW="20px"
+          textAlign="center"
+          colorScheme={active ? 'blue' : 'orange'}
           fontSize="10px"
         >
-          {label}
-        </Text>
+          {tab.count}
+        </Badge>
       )}
-      <Flex direction="column" gap={0.5}>
-        {items.map(item => {
-          const isActive = view === item.key;
-          return (
-            <Flex
-              key={item.key}
-              as="button"
-              align="center"
-              gap={2.5}
-              px={3}
-              py={2.5}
-              borderRadius="10px"
-              textAlign="left"
-              transition="all 120ms ease"
-              bg={isActive ? 'erp.brandSoft' : 'transparent'}
-              color={isActive ? 'erp.brandText' : 'erp.textSecondary'}
-              fontWeight={isActive ? '700' : '500'}
-              _hover={{ bg: isActive ? 'erp.brandSoft' : 'erp.hover' }}
-              onClick={() => onChange(item.key)}
-            >
-              <Icon as={item.icon} boxSize="17px" flexShrink={0} />
-              <Text fontSize="13px" flex="1" noOfLines={1}>
-                {item.label}
-              </Text>
-              <Badge
-                borderRadius="full"
-                minW="22px"
-                textAlign="center"
-                colorScheme={isActive ? 'blue' : 'gray'}
-                fontSize="10px"
-              >
-                {item.count}
-              </Badge>
-            </Flex>
-          );
-        })}
-      </Flex>
-    </>
+    </Flex>
   );
 }
 
@@ -497,16 +488,16 @@ function ViewContent({
   onReceiptOrder: (order: ReceivableOrder) => void;
   onReceiptTx: (transaction: ReceivableTransaction) => void;
 }) {
+  const docNumber = data.customer.documento
+    ? formatDocument(data.customer.documento)
+    : '-';
   if (view === 'titulos' || view === 'titulos_pagos') {
     return (
       <TitlesTable
+        key={view}
         titles={view === 'titulos' ? data.titulos : data.titulos_pagos}
         customerName={data.customer.nome}
-        doc={
-          data.customer.documento
-            ? formatDocument(data.customer.documento)
-            : '-'
-        }
+        doc={docNumber}
         mode={view === 'titulos' ? 'open' : 'paid'}
         onItems={onItems}
         onSettle={onSettle}
@@ -533,6 +524,25 @@ function ViewContent({
   );
 }
 
+function FilialChip({ filial }: { filial: string | null }) {
+  return (
+    <Badge
+      variant="outline"
+      colorScheme="blue"
+      textTransform="none"
+      borderRadius="full"
+      px={2}
+      display="inline-flex"
+      alignItems="center"
+      gap={1}
+      fontWeight="500"
+    >
+      <Store size={11} />
+      {filial ?? '-'}
+    </Badge>
+  );
+}
+
 function TitlesTable({
   titles,
   customerName,
@@ -550,8 +560,41 @@ function TitlesTable({
   onSettle: (title: ReceivableTitle) => void;
   onReceipt: (title: ReceivableTitle) => void;
 }) {
-  const overdueBg = useColorModeValue('#FEF2F2', 'rgba(251,113,133,0.10)');
+  const overdueBg = useColorModeValue('#FEF3F2', 'rgba(251,113,133,0.10)');
   const soonBg = useColorModeValue('#FFFBEB', 'rgba(251,191,36,0.10)');
+  const footBg = useColorModeValue('#F8FAFC', 'rgba(255,255,255,0.03)');
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+
+  const toggle = (id: number) =>
+    setSelected(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  const allSelected = titles.length > 0 && selected.size === titles.length;
+  const toggleAll = () =>
+    setSelected(
+      allSelected ? new Set() : new Set(titles.map(t => t.idconta_receber))
+    );
+
+  const totals = useMemo(() => {
+    const base = selected.size
+      ? titles.filter(t => selected.has(t.idconta_receber))
+      : titles;
+    const semJuros = base.reduce((sum, t) => sum + t.valor, 0);
+    const comJuros = base.reduce(
+      (sum, t) => sum + (mode === 'open' ? t.valor_com_juros : t.valor_pago),
+      0
+    );
+    return {
+      count: base.length,
+      semJuros,
+      comJuros,
+      juros: comJuros - semJuros,
+      partial: selected.size > 0,
+    };
+  }, [titles, selected, mode]);
 
   if (titles.length === 0) {
     return (
@@ -573,13 +616,19 @@ function TitlesTable({
       <Table size="sm" variant="simple">
         <Thead>
           <Tr>
+            <Th w="40px" pr={0}>
+              <Checkbox
+                isChecked={allSelected}
+                isIndeterminate={selected.size > 0 && !allSelected}
+                onChange={toggleAll}
+              />
+            </Th>
             <Th>Contrato</Th>
             <Th>Cliente</Th>
             <Th>CPF/CNPJ</Th>
-            <Th>{mode === 'open' ? 'Vencimento' : 'Recebido em'}</Th>
-            <Th>Parcela</Th>
-            <Th isNumeric>{mode === 'open' ? 'Com juros' : 'Valor pago'}</Th>
-            <Th>{mode === 'open' ? 'Situacao' : 'Meio'}</Th>
+            <Th>Vencimento</Th>
+            <Th isNumeric>Parcela</Th>
+            <Th isNumeric>Com juros</Th>
             <Th>Filial</Th>
             <Th textAlign="right">Acoes</Th>
           </Tr>
@@ -602,31 +651,62 @@ function TitlesTable({
                 : due.kind === 'soon'
                   ? 'erp.warning'
                   : 'transparent';
+            const isChecked = selected.has(title.idconta_receber);
             return (
               <Tr key={title.idconta_receber} bg={rowBg}>
-                <Td
-                  fontWeight="600"
-                  borderLeft="3px solid"
-                  borderLeftColor={accent}
-                >
-                  {title.contrato}
-                </Td>
-                <Td maxW="180px">
-                  <Text noOfLines={1}>{customerName}</Text>
-                </Td>
-                <Td>{doc}</Td>
-                <Td
-                  color={due.kind === 'overdue' ? 'erp.danger' : undefined}
-                  fontWeight={due.kind === 'overdue' ? '600' : undefined}
-                >
-                  {formatDate(
-                    mode === 'open'
-                      ? title.data_vencimento
-                      : title.data_recebimento
-                  )}
+                <Td pr={0} borderLeft="3px solid" borderLeftColor={accent}>
+                  <Checkbox
+                    isChecked={isChecked}
+                    onChange={() => toggle(title.idconta_receber)}
+                  />
                 </Td>
                 <Td>
-                  {title.parcela_numero}/{title.parcelas_total}
+                  <Text fontWeight="600">{title.contrato}</Text>
+                  <Text fontSize="11px" color="erp.textMuted">
+                    Parcela {title.parcela_numero}/{title.parcelas_total}
+                  </Text>
+                </Td>
+                <Td maxW="200px">
+                  <Text noOfLines={1} fontWeight="500">
+                    {customerName}
+                  </Text>
+                </Td>
+                <Td>{doc}</Td>
+                <Td>
+                  <Flex align="center" gap={2}>
+                    <Text
+                      color={due.kind === 'overdue' ? 'erp.danger' : undefined}
+                      fontWeight={due.kind === 'overdue' ? '600' : undefined}
+                    >
+                      {formatDate(
+                        mode === 'open'
+                          ? title.data_vencimento
+                          : title.data_recebimento
+                      )}
+                    </Text>
+                    {mode === 'open' && due.kind === 'overdue' && (
+                      <Badge colorScheme="red" textTransform="none">
+                        Vencido
+                      </Badge>
+                    )}
+                    {mode === 'open' && due.kind === 'soon' && (
+                      <Badge colorScheme="orange" textTransform="none">
+                        {due.days === 0
+                          ? 'Vence hoje'
+                          : `Vence em ${due.days}d`}
+                      </Badge>
+                    )}
+                    {mode === 'paid' && (
+                      <Badge colorScheme="green" textTransform="none">
+                        {formatPaymentMethod(title.forma_pagamento)}
+                      </Badge>
+                    )}
+                  </Flex>
+                </Td>
+                <Td isNumeric fontWeight="600">
+                  {formatCurrency(
+                    mode === 'open' ? title.valor : title.valor_pago
+                  )}
                 </Td>
                 <Td isNumeric fontWeight="700">
                   {formatCurrency(
@@ -634,35 +714,7 @@ function TitlesTable({
                   )}
                 </Td>
                 <Td>
-                  {mode === 'open' ? (
-                    due.kind === 'overdue' ? (
-                      <Badge colorScheme="red" textTransform="none">
-                        Vencido ha {due.days}d
-                      </Badge>
-                    ) : due.kind === 'soon' ? (
-                      <Badge colorScheme="orange" textTransform="none">
-                        {due.days === 0
-                          ? 'Vence hoje'
-                          : `Vence em ${due.days}d`}
-                      </Badge>
-                    ) : (
-                      <Badge colorScheme="gray" textTransform="none">
-                        A vencer
-                      </Badge>
-                    )
-                  ) : (
-                    <Text fontSize="12px">
-                      {formatPaymentMethod(title.forma_pagamento)}
-                    </Text>
-                  )}
-                </Td>
-                <Td>
-                  <Flex align="center" gap={1}>
-                    <Store size={13} />
-                    <Text fontSize="12px" noOfLines={1}>
-                      {title.filial ?? '-'}
-                    </Text>
-                  </Flex>
+                  <FilialChip filial={title.filial} />
                 </Td>
                 <Td>
                   <Flex justify="flex-end" gap={1}>
@@ -682,7 +734,6 @@ function TitlesTable({
                           icon={<HandCoins size={15} />}
                           size="sm"
                           colorScheme="blue"
-                          variant="ghost"
                           onClick={() => onSettle(title)}
                         />
                       </Tooltip>
@@ -704,6 +755,40 @@ function TitlesTable({
             );
           })}
         </Tbody>
+        <Tfoot>
+          <Tr bg={footBg}>
+            <Td colSpan={4} borderBottom="none">
+              <Text fontSize="12px" color="erp.textSecondary">
+                <Text as="span" textStyle="overline" mr={2}>
+                  Totais
+                </Text>
+                {totals.count} parcela{totals.count === 1 ? '' : 's'}
+                {totals.partial ? ' selecionada(s)' : ''} · juros embutidos{' '}
+                <Text as="span" fontWeight="700" color="erp.text">
+                  {formatCurrency(totals.juros)}
+                </Text>
+              </Text>
+            </Td>
+            <Td isNumeric borderBottom="none">
+              <Text fontSize="10px" color="erp.textMuted">
+                {mode === 'open' ? 'SEM JUROS' : 'PARCELAS'}
+              </Text>
+              <Text textStyle="numeric" fontWeight="700">
+                {formatCurrency(totals.semJuros)}
+              </Text>
+            </Td>
+            <Td isNumeric borderBottom="none">
+              <Text fontSize="10px" color="erp.textMuted">
+                {mode === 'open' ? 'COM JUROS' : 'RECEBIDO'}
+              </Text>
+              <Text textStyle="numeric" fontWeight="800" color="erp.brandText">
+                {formatCurrency(totals.comJuros)}
+              </Text>
+            </Td>
+            <Td borderBottom="none" />
+            <Td borderBottom="none" />
+          </Tr>
+        </Tfoot>
       </Table>
     </Box>
   );
@@ -772,18 +857,13 @@ function OrdersTable({
                     {formatDate(order.proximo_vencimento)}
                   </Text>
                 ) : (
-                  <Text fontSize="12px">
+                  <Badge colorScheme="green" textTransform="none">
                     {formatPaymentMethod(order.forma_pagamento)}
-                  </Text>
+                  </Badge>
                 )}
               </Td>
               <Td>
-                <Flex align="center" gap={1}>
-                  <Store size={13} />
-                  <Text fontSize="12px" noOfLines={1}>
-                    {order.filial ?? '-'}
-                  </Text>
-                </Flex>
+                <FilialChip filial={order.filial} />
               </Td>
               <Td>
                 <Flex justify="flex-end" gap={1}>
