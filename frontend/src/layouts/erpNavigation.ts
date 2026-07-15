@@ -109,7 +109,7 @@ export const erpNavigation: ErpNavGroup[] = [
         label: 'Empresa',
         path: '/companies',
         icon: Building2,
-        permission: 'configuracao:visualizar',
+        permission: 'empresa:visualizar',
       },
       {
         label: 'Filiais',
