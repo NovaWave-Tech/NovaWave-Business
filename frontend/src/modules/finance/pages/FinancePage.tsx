@@ -69,6 +69,7 @@ import {
   Plus,
   ReceiptText,
   Search,
+  Settings2,
   Target,
   TrendingDown,
   TrendingUp,
@@ -133,6 +134,7 @@ import {
 import { useAuth } from '../../../shared/auth/AuthContext';
 import { AttachmentsPanel } from '../components/AttachmentsPanel';
 import { CardFormModal, type CompanyCard } from '../components/CardFormModal';
+import { FinanceInfraModal } from '../components/FinanceInfraModal';
 
 const MotionBox = motion(Box);
 const steps = ['Dados', 'Financeiro', 'Resumo'];
@@ -191,6 +193,7 @@ export default function FinancePage() {
   const { can } = useAuth();
   const detailDrawer = useDisclosure();
   const cardModal = useDisclosure();
+  const infraModal = useDisclosure();
   const [editingCard, setEditingCard] = useState<CompanyCard | null>(null);
   const openCard = (card: CompanyCard | null) => {
     setEditingCard(card);
@@ -343,6 +346,13 @@ export default function FinancePage() {
         breadcrumbs={[{ label: 'Financeiro' }]}
         actions={
           <>
+            <Button
+              variant="ghost"
+              leftIcon={<Settings2 size={16} />}
+              onClick={infraModal.onOpen}
+            >
+              Infraestrutura
+            </Button>
             <Button
               variant="outline"
               leftIcon={<ArrowDownLeft size={16} />}
@@ -743,8 +753,12 @@ export default function FinancePage() {
                   ) : (
                     <EmptyState
                       title="Sem contas"
-                      description="Cadastre contas bancarias na infraestrutura financeira."
+                      description="Cadastre a primeira conta bancaria em Infraestrutura."
                       icon={Landmark}
+                      action={
+                        can('financeiro:criar') ? infraModal.onOpen : undefined
+                      }
+                      actionLabel="Abrir infraestrutura"
                     />
                   )}
                 </SimpleGrid>
@@ -932,6 +946,12 @@ export default function FinancePage() {
         isOpen={cardModal.isOpen}
         onClose={cardModal.onClose}
         card={editingCard}
+      />
+      <FinanceInfraModal
+        isOpen={infraModal.isOpen}
+        onClose={infraModal.onClose}
+        canCreate={can('financeiro:criar')}
+        canEdit={can('financeiro:editar')}
       />
       <FinanceFormDrawer
         disclosure={formDrawer}

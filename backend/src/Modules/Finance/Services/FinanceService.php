@@ -102,6 +102,32 @@ final class FinanceService
         return mb_substr(trim($name)!==''?$name:'anexo',0,180);
     }
 
+    public function infra(int $companyId):array{return $this->repository->infra($companyId);}
+    public function createBank(int $companyId,int $actorId,array $data,?string $ip,?string $agent):array{$this->validateBank($data);return ['idconta_bancaria'=>$this->repository->createBank($companyId,$actorId,$data,$ip,$agent)];}
+    public function updateBank(int $companyId,int $actorId,int $id,array $data,?string $ip,?string $agent):void{$this->validateBank($data);$this->repository->updateBank($companyId,$actorId,$id,$data,$ip,$agent);}
+    public function createCategory(int $companyId,int $actorId,array $data,?string $ip,?string $agent):array{$this->validateCategory($data);return ['idcategoria_financeira'=>$this->repository->createCategory($companyId,$actorId,$data,$ip,$agent)];}
+    public function updateCategory(int $companyId,int $actorId,int $id,array $data,?string $ip,?string $agent):void{$this->validateCategory($data);$this->repository->updateCategory($companyId,$actorId,$id,$data,$ip,$agent);}
+    public function createCostCenter(int $companyId,int $actorId,array $data,?string $ip,?string $agent):array{$this->validateName($data,'Centro de custo');return ['idcentro_custo'=>$this->repository->createCostCenter($companyId,$actorId,$data,$ip,$agent)];}
+    public function updateCostCenter(int $companyId,int $actorId,int $id,array $data,?string $ip,?string $agent):void{$this->validateName($data,'Centro de custo');$this->repository->updateCostCenter($companyId,$actorId,$id,$data,$ip,$agent);}
+    public function setInfraStatus(int $companyId,int $actorId,string $entity,int $id,int $status,?string $ip,?string $agent):void{if(!in_array($status,[0,1],true))throw new InvalidArgumentException('Situacao invalida');$this->repository->setInfraStatus($companyId,$actorId,$entity,$id,$status,$ip,$agent);}
+
+    private function validateBank(array $data):void
+    {
+        if(mb_strlen(trim((string)($data['banco']??'')))<2)throw new InvalidArgumentException('Banco e obrigatorio');
+        if(trim((string)($data['conta']??''))==='')throw new InvalidArgumentException('Conta e obrigatoria');
+        if((float)($data['saldo_inicial']??0)<0)throw new InvalidArgumentException('Saldo inicial nao pode ser negativo');
+    }
+
+    private function validateCategory(array $data):void
+    {
+        $this->validateName($data,'Categoria');
+        if(!in_array((int)($data['tipo']??0),[1,2],true))throw new InvalidArgumentException('Tipo deve ser receita ou despesa');
+        $color=trim((string)($data['cor']??''));
+        if($color!==''&&!preg_match('/^#[0-9A-Fa-f]{6}$/',$color))throw new InvalidArgumentException('Cor deve estar no formato #RRGGBB');
+    }
+
+    private function validateName(array $data,string $label):void{if(mb_strlen(trim((string)($data['nome']??'')))<2)throw new InvalidArgumentException($label.': informe um nome com ao menos 2 caracteres');}
+
     public function createCard(int $companyId,int $actorId,array $data,?string $ip,?string $agent):array{$this->validateCard($data);return ['idcartao'=>$this->repository->createCard($companyId,$actorId,$data,$ip,$agent)];}
     public function updateCard(int $companyId,int $actorId,int $id,array $data,?string $ip,?string $agent):void{$this->validateCard($data);$this->repository->updateCard($companyId,$actorId,$id,$data,$ip,$agent);}
     public function setCardStatus(int $companyId,int $actorId,int $id,int $status,?string $ip,?string $agent):void{if(!in_array($status,[0,1],true))throw new InvalidArgumentException('Situacao invalida');$this->repository->setCardStatus($companyId,$actorId,$id,$status,$ip,$agent);}
