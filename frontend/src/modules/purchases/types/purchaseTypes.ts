@@ -9,6 +9,9 @@ export type PurchaseRow = {
   quantidade: number;
   valor_total: number;
   situacao: number;
+  forma_pagamento: string | null;
+  a_prazo: boolean;
+  parcelas: number;
 };
 
 export type PurchaseMetrics = {
@@ -65,9 +68,32 @@ export type PurchaseDetail = PurchaseRow & {
   }>;
 };
 
+export type PurchasePayment =
+  | 'dinheiro'
+  | 'pix'
+  | 'cartao_credito'
+  | 'cartao_debito'
+  | 'boleto'
+  | 'transferencia';
+
+export const PURCHASE_PAYMENT_METHODS: Array<{
+  value: PurchasePayment;
+  label: string;
+}> = [
+  { value: 'dinheiro', label: 'Dinheiro' },
+  { value: 'pix', label: 'PIX' },
+  { value: 'boleto', label: 'Boleto' },
+  { value: 'transferencia', label: 'Transferencia' },
+  { value: 'cartao_credito', label: 'Credito' },
+  { value: 'cartao_debito', label: 'Debito' },
+];
+
 export type PurchasePayload = {
   idfilial: number;
   idfornecedor?: number | null;
+  forma_pagamento: PurchasePayment;
+  a_prazo: boolean;
+  parcelas: number;
   items: Array<{
     idproduto: number;
     quantidade: number;

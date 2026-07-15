@@ -79,15 +79,18 @@ import {
   formatDate,
   formatDateTime,
   formatNumber,
+  formatPaymentMethod,
   isoDaysAgo,
   isoToday,
 } from '../../../shared/utils/formatters';
 import { purchaseService } from '../services/purchaseService';
 import {
+  PURCHASE_PAYMENT_METHODS,
   PURCHASE_STATUS,
   type ProductOption,
   type PurchaseDetail,
   type PurchaseListData,
+  type PurchasePayment,
   type PurchaseRow,
 } from '../types/purchaseTypes';
 
@@ -123,6 +126,10 @@ export default function PurchasesPage() {
 
   const [branchId, setBranchId] = useState('');
   const [supplierId, setSupplierId] = useState('');
+  const [paymentMethod, setPaymentMethod] =
+    useState<PurchasePayment>('dinheiro');
+  const [onCredit, setOnCredit] = useState(false);
+  const [installments, setInstallments] = useState(1);
   const [productSearch, setProductSearch] = useState('');
   const [cart, setCart] = useState<CartLine[]>([]);
 
@@ -163,6 +170,9 @@ export default function PurchasesPage() {
       purchaseService.create({
         idfilial: Number(branchId),
         idfornecedor: supplierId ? Number(supplierId) : null,
+        forma_pagamento: paymentMethod,
+        a_prazo: onCredit,
+        parcelas: onCredit ? installments : 1,
         items: cart.map(line => ({
           idproduto: line.idproduto,
           quantidade: line.quantidade,
@@ -189,6 +199,9 @@ export default function PurchasesPage() {
   const resetPurchase = () => {
     setCart([]);
     setSupplierId('');
+    setPaymentMethod('dinheiro');
+    setOnCredit(false);
+    setInstallments(1);
     setProductSearch('');
   };
   const openPurchase = () => {
@@ -406,6 +419,7 @@ export default function PurchasesPage() {
                   <Th>Filial</Th>
                   <Th isNumeric>Itens</Th>
                   <Th isNumeric>Total</Th>
+                  <Th>Pagamento</Th>
                   <Th>Situacao</Th>
                   <Th>Data</Th>
                   <Th w="48px" />
@@ -424,6 +438,16 @@ export default function PurchasesPage() {
                     <Td isNumeric>{formatNumber(purchase.itens)}</Td>
                     <Td isNumeric fontWeight="700">
                       {formatCurrency(purchase.valor_total)}
+                    </Td>
+                    <Td whiteSpace="nowrap">
+                      <Text fontSize="12px">
+                        {formatPaymentMethod(purchase.forma_pagamento)}
+                      </Text>
+                      <Text fontSize="10px" color="erp.textMuted">
+                        {purchase.a_prazo
+                          ? `A prazo · ${purchase.parcelas}x`
+                          : 'A vista'}
+                      </Text>
                     </Td>
                     <Td>
                       <StatusBadge status={purchase.situacao} />
@@ -706,6 +730,91 @@ export default function PurchasesPage() {
                 </Flex>
               )}
             </Box>
+
+            {cart.length > 0 && (
+              <Box mt={5}>
+                <Text textStyle="overline" color="erp.textMuted" mb={2}>
+                  Pagamento ao fornecedor
+                </Text>
+                <SimpleGrid columns={{ base: 2, sm: 3 }} spacing={2}>
+                  {PURCHASE_PAYMENT_METHODS.map(method => {
+                    const active = paymentMethod === method.value;
+                    return (
+                      <Button
+                        key={method.value}
+                        size="sm"
+                        variant="outline"
+                        h="42px"
+                        onClick={() => setPaymentMethod(method.value)}
+                        bg={active ? 'erp.brandSoft' : undefined}
+                        color={active ? 'erp.brandText' : undefined}
+                        borderColor={active ? 'brand.400' : 'erp.border'}
+                        fontWeight={active ? '700' : '500'}
+                      >
+                        {method.label}
+                      </Button>
+                    );
+                  })}
+                </SimpleGrid>
+
+                <Flex mt={3} gap={2} align="center" wrap="wrap">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setOnCredit(false)}
+                    bg={!onCredit ? 'erp.brandSoft' : undefined}
+                    color={!onCredit ? 'erp.brandText' : undefined}
+                    borderColor={!onCredit ? 'brand.400' : 'erp.border'}
+                    fontWeight={!onCredit ? '700' : '500'}
+                  >
+                    A vista
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setOnCredit(true);
+                      setInstallments(current => Math.max(2, current));
+                    }}
+                    bg={onCredit ? 'erp.brandSoft' : undefined}
+                    color={onCredit ? 'erp.brandText' : undefined}
+                    borderColor={onCredit ? 'brand.400' : 'erp.border'}
+                    fontWeight={onCredit ? '700' : '500'}
+                  >
+                    A prazo
+                  </Button>
+                  {onCredit && (
+                    <Flex align="center" gap={2}>
+                      <Text fontSize="12px" color="erp.textSecondary">
+                        Parcelas
+                      </Text>
+                      <NumberInput
+                        size="sm"
+                        w="90px"
+                        min={2}
+                        max={24}
+                        value={installments}
+                        onChange={(_, value) =>
+                          setInstallments(Number.isNaN(value) ? 2 : value)
+                        }
+                      >
+                        <NumberInputField />
+                        <NumberInputStepper>
+                          <NumberIncrementStepper />
+                          <NumberDecrementStepper />
+                        </NumberInputStepper>
+                      </NumberInput>
+                    </Flex>
+                  )}
+                </Flex>
+
+                <Text mt={2} fontSize="11px" color="erp.textMuted">
+                  {onCredit
+                    ? `Gera ${installments} parcela(s) em aberto no Financeiro, com vencimentos mensais.`
+                    : 'Gera uma conta a pagar ja quitada no Financeiro, na data de hoje.'}
+                </Text>
+              </Box>
+            )}
           </DrawerBody>
           <DrawerFooter borderTop="1px solid" borderColor="erp.border">
             <Flex justify="space-between" align="center" w="full" gap={4}>
