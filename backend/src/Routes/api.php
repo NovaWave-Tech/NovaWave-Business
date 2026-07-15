@@ -71,8 +71,8 @@ $app->group('/api/platform', function ($group): void {
 $app->group('', function ($group): void {
     $group->get('/auth/me', AuthController::class . ':me');
     $group->get('/dashboard', DashboardController::class . ':index')->add(PermissionMiddleware::check('dashboard:visualizar'));
-    $group->get('/companies', CompanyController::class . ':index')->add(PermissionMiddleware::check('configuracao:visualizar'));
-    $group->put('/companies', CompanyController::class . ':update')->add(PermissionMiddleware::check('configuracao:editar'));
+    $group->get('/companies', CompanyController::class . ':index')->add(PermissionMiddleware::check('empresa:visualizar'));
+    $group->put('/companies', CompanyController::class . ':update')->add(PermissionMiddleware::check('empresa:editar'));
     $group->get('/suppliers', SupplierController::class . ':index')->add(PermissionMiddleware::check('fornecedor:visualizar'));
     $group->post('/suppliers', SupplierController::class . ':store')->add(PermissionMiddleware::check('fornecedor:criar'));
     $group->get('/suppliers/{id:[0-9]+}', SupplierController::class . ':show')->add(PermissionMiddleware::check('fornecedor:visualizar'));
@@ -111,7 +111,7 @@ $app->group('', function ($group): void {
     $group->put('/products/{id:[0-9]+}', ProductController::class . ':update')->add(PermissionMiddleware::check('produto:editar'));
     $group->patch('/products/{id:[0-9]+}/status', ProductController::class . ':status')->add(PermissionMiddleware::check('produto:editar'));
     $group->post('/products/{id:[0-9]+}/duplicate', ProductController::class . ':duplicate')->add(PermissionMiddleware::check('produto:criar'));
-    $group->post('/products/{id:[0-9]+}/movements', ProductController::class . ':movement')->add(PermissionMiddleware::check('estoque:criar'));
+    $group->post('/products/{id:[0-9]+}/movements', ProductController::class . ':movement')->add(PermissionMiddleware::check('estoque:movimentar'));
     $group->get('/catalog', CatalogController::class . ':index')->add(PermissionMiddleware::check('produto:visualizar'));
     $group->post('/catalog/categories', CatalogController::class . ':createCategory')->add(PermissionMiddleware::check('produto:editar'));
     $group->put('/catalog/categories/{id:[0-9]+}', CatalogController::class . ':updateCategory')->add(PermissionMiddleware::check('produto:editar'));
