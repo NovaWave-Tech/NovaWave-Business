@@ -13,6 +13,7 @@ use App\Modules\Customers\Controllers\CustomerController;
 use App\Modules\Dashboard\Controllers\DashboardController;
 use App\Modules\Finance\Controllers\FinanceController;
 use App\Modules\Inventory\Controllers\InventoryController;
+use App\Modules\Notifications\Controllers\NotificationController;
 use App\Modules\Permissions\Controllers\PermissionController;
 use App\Modules\Platform\Controllers\PlatformAuthController;
 use App\Modules\Platform\Controllers\PlatformController;
@@ -82,6 +83,11 @@ $app->group('', function ($group): void {
     $group->post('/cashier/open', CashierController::class . ':open')->add(PermissionMiddleware::check('financeiro:criar'));
     $group->post('/cashier/{id:[0-9]+}/movements', CashierController::class . ':movement')->add(PermissionMiddleware::check('financeiro:criar'));
     $group->post('/cashier/{id:[0-9]+}/close', CashierController::class . ':close')->add(PermissionMiddleware::check('financeiro:gerenciar'));
+    // Notificacoes sao pessoais (derivadas do estado da empresa para o
+    // usuario logado), como as preferencias: nao exigem permissao de modulo.
+    $group->get('/notifications', NotificationController::class . ':index');
+    $group->post('/notifications/read-all', NotificationController::class . ':readAll');
+    $group->post('/notifications/{id:[0-9]+}/read', NotificationController::class . ':read');
     $group->get('/settings', SettingsController::class . ':index');
     $group->put('/settings/preferences', SettingsController::class . ':savePreferences');
     $group->put('/settings/finance', SettingsController::class . ':saveFinance')->add(PermissionMiddleware::check('configuracao:editar'));
