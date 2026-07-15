@@ -51,7 +51,14 @@ export type SaleMetrics = {
   items_sold: number;
 };
 
-export type BranchOption = { id: number; nome: string };
+export type BranchOption = {
+  id: number;
+  nome: string;
+  /** Filial exige caixa aberto para registrar venda em dinheiro. */
+  caixa_obrigatorio: boolean;
+  /** Ha um caixa aberto na filial no momento. */
+  caixa_aberto: boolean;
+};
 export type CustomerOption = { id: number; nome: string; documento?: string };
 export type ProductOption = {
   id: number;

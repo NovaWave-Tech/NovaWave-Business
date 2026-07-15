@@ -1,4 +1,6 @@
 import {
+  Alert,
+  AlertIcon,
   Badge,
   Box,
   Button,
@@ -54,6 +56,7 @@ import {
   Ban,
   CheckCircle2,
   CircleDollarSign,
+  CreditCard,
   Eye,
   MoreHorizontal,
   Package,
@@ -202,6 +205,17 @@ export default function SalesPage() {
       )
     : 0;
   const total = Math.max(0, subtotal - discount);
+
+  // Venda em dinheiro so entra no caixa fisico; se a filial exige caixa e nao
+  // ha nenhum aberto, o backend recusa. Avisamos antes de montar a venda.
+  const selectedBranch = options?.branches.find(
+    branch => String(branch.id) === branchId
+  );
+  const cashBlocked =
+    !onCredit &&
+    paymentMethod === 'dinheiro' &&
+    !!selectedBranch?.caixa_obrigatorio &&
+    !selectedBranch?.caixa_aberto;
 
   const create = useMutation({
     mutationFn: () =>
@@ -1167,7 +1181,41 @@ export default function SalesPage() {
               </Box>
             )}
           </DrawerBody>
-          <DrawerFooter borderTop="1px solid" borderColor="erp.border" py={4}>
+          <DrawerFooter
+            borderTop="1px solid"
+            borderColor="erp.border"
+            py={4}
+            display="block"
+          >
+            {cashBlocked && (
+              <Alert
+                status="warning"
+                variant="left-accent"
+                borderRadius="8px"
+                mb={3}
+                py={2.5}
+              >
+                <AlertIcon />
+                <Box flex="1">
+                  <Text fontSize="13px" fontWeight="600">
+                    Caixa fechado nesta filial
+                  </Text>
+                  <Text fontSize="12px" color="erp.textSecondary">
+                    Vendas em dinheiro exigem um caixa aberto. Abra o caixa ou
+                    escolha outra forma de pagamento.
+                  </Text>
+                </Box>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  flexShrink={0}
+                  leftIcon={<CreditCard size={14} />}
+                  onClick={() => navigate('/cashier')}
+                >
+                  Abrir caixa
+                </Button>
+              </Alert>
+            )}
             <Flex w="full" align="center" justify="space-between" gap={4}>
               <Box>
                 <Text
@@ -1203,7 +1251,7 @@ export default function SalesPage() {
                 <Button
                   px={6}
                   leftIcon={<CheckCircle2 size={16} />}
-                  isDisabled={!branchId || cart.length === 0}
+                  isDisabled={!branchId || cart.length === 0 || cashBlocked}
                   isLoading={create.isPending}
                   onClick={() => create.mutate()}
                 >
