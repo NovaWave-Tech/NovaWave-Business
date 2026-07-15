@@ -519,10 +519,22 @@ final class SalesRepository
     private function options(int $companyId): array
     {
         return [
-            'branches' => $this->all(
-                'SELECT idfilial id, nome FROM filial WHERE idempresa = :company_id AND situacao = 1 ORDER BY matriz DESC, nome',
+            // caixa_obrigatorio + caixa_aberto permitem a tela avisar antes de
+            // montar a venda que o dinheiro exige caixa aberto naquela filial.
+            'branches' => array_map(fn ($branch) => [
+                'id' => (int) $branch['id'],
+                'nome' => $branch['nome'],
+                'caixa_obrigatorio' => $this->truthy($branch['caixa_obrigatorio']),
+                'caixa_aberto' => (int) $branch['caixas_abertos'] > 0,
+            ], $this->all(
+                'SELECT f.idfilial id, f.nome, f.caixa_obrigatorio,
+                        (SELECT COUNT(*) FROM caixa c
+                          WHERE c.idempresa = f.idempresa AND c.idfilial = f.idfilial AND c.situacao = 1) AS caixas_abertos
+                 FROM filial f
+                 WHERE f.idempresa = :company_id AND f.situacao = 1
+                 ORDER BY f.matriz DESC, f.nome',
                 ['company_id' => $companyId]
-            ),
+            )),
             'customers' => $this->all(
                 'SELECT idcliente id, nome, documento FROM cliente WHERE idempresa = :company_id AND situacao = 1 ORDER BY nome LIMIT 500',
                 ['company_id' => $companyId]
