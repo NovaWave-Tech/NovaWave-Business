@@ -42,6 +42,7 @@ export type PurchaseListData = {
     branches: BranchOption[];
     suppliers: SupplierOption[];
     products: ProductOption[];
+    categories: Array<{ id: number; nome: string }>;
   };
 };
 

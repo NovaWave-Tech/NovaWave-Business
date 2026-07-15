@@ -110,6 +110,19 @@ export type ProductPayload = Omit<
   'imagens_texto'
 > & { imagens: string[] };
 
+/**
+ * Contrato minimo aceito por POST /products: o backend exige nome,
+ * categoria e preco de venda; os demais campos tem default. Usado pelo
+ * cadastro rapido (ex.: produto novo direto na compra).
+ */
+export type QuickProductPayload = {
+  nome: string;
+  idcategoria: number;
+  unidade: string;
+  preco_custo: number;
+  preco_venda: number;
+};
+
 export const productService = {
   list: async (params: Record<string, string>) =>
     (await http.get<{ data: ProductList }>('/products', { params })).data.data,
@@ -117,6 +130,9 @@ export const productService = {
     (await http.get<{ data: ProductDetail }>(`/products/${id}`)).data.data,
   create: async (payload: ProductPayload) =>
     (await http.post('/products', payload)).data,
+  quickCreate: async (payload: QuickProductPayload) =>
+    (await http.post<{ data: { idproduto: number } }>('/products', payload))
+      .data,
   update: async (id: number, payload: ProductPayload) =>
     (await http.put(`/products/${id}`, payload)).data,
   status: async (id: number, situacao: number) =>

@@ -48,6 +48,7 @@ import {
   Eye,
   MoreHorizontal,
   Package,
+  PackagePlus,
   Plus,
   Receipt,
   Search,
@@ -83,6 +84,8 @@ import {
   isoDaysAgo,
   isoToday,
 } from '../../../shared/utils/formatters';
+import { useAuth } from '../../../shared/auth/AuthContext';
+import { QuickProductModal } from '../components/QuickProductModal';
 import { purchaseService } from '../services/purchaseService';
 import {
   PURCHASE_PAYMENT_METHODS,
@@ -117,6 +120,9 @@ export default function PurchasesPage() {
   const client = useQueryClient();
   const detailDrawer = useDisclosure();
   const purchaseDrawer = useDisclosure();
+  const quickProduct = useDisclosure();
+  const { can } = useAuth();
+  const canCreateProduct = can('produto:criar');
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [range, setRange] = useState<DateRange>({
     start: isoDaysAgo(30),
@@ -583,6 +589,55 @@ export default function PurchasesPage() {
                   placeholder="Buscar produto por nome, SKU ou codigo de barras..."
                 />
               </InputGroup>
+              {productSearch.trim().length > 0 &&
+                productResults.length === 0 && (
+                  <Surface position="absolute" zIndex={2} mt={1} w="full" p={1}>
+                    {canCreateProduct ? (
+                      <Flex
+                        align="center"
+                        gap={3}
+                        px={3}
+                        py={2.5}
+                        borderRadius="8px"
+                        cursor="pointer"
+                        _hover={{ bg: 'erp.hover' }}
+                        onClick={quickProduct.onOpen}
+                      >
+                        <Flex
+                          w="28px"
+                          h="28px"
+                          align="center"
+                          justify="center"
+                          borderRadius="7px"
+                          bg="erp.brandSoft"
+                          border="1px solid"
+                          borderColor="erp.brandBorder"
+                          color="brand.500"
+                          flexShrink={0}
+                        >
+                          <PackagePlus size={14} />
+                        </Flex>
+                        <Box>
+                          <Text
+                            fontSize="13px"
+                            fontWeight="600"
+                            color="erp.brandText"
+                          >
+                            + Cadastrar produto rapidamente
+                          </Text>
+                          <Text fontSize="11px" color="erp.textSecondary">
+                            Nenhum produto encontrado para "
+                            {productSearch.trim()}"
+                          </Text>
+                        </Box>
+                      </Flex>
+                    ) : (
+                      <Text px={3} py={3} fontSize="12px" color="erp.textMuted">
+                        Nenhum produto encontrado para "{productSearch.trim()}".
+                      </Text>
+                    )}
+                  </Surface>
+                )}
               {productResults.length > 0 && (
                 <Surface
                   position="absolute"
@@ -847,6 +902,14 @@ export default function PurchasesPage() {
           </DrawerFooter>
         </DrawerContent>
       </Drawer>
+
+      <QuickProductModal
+        isOpen={quickProduct.isOpen}
+        onClose={quickProduct.onClose}
+        initialName={productSearch.trim()}
+        categories={options?.categories ?? []}
+        onCreated={addProduct}
+      />
     </Box>
   );
 }
