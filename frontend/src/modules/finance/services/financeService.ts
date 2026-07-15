@@ -122,7 +122,56 @@ export type CardPayload = {
   dia_vencimento: number;
 };
 
+export type InfraEntity = 'banks' | 'categories' | 'cost-centers';
+export type InfraBank = {
+  idconta_bancaria: number;
+  banco: string;
+  agencia?: string | null;
+  conta: string;
+  saldo_inicial: number;
+  situacao: number;
+};
+export type InfraCategory = {
+  idcategoria_financeira: number;
+  nome: string;
+  tipo: number;
+  cor?: string | null;
+  situacao: number;
+};
+export type InfraCostCenter = {
+  idcentro_custo: number;
+  nome: string;
+  situacao: number;
+};
+export type FinanceInfra = {
+  banks: InfraBank[];
+  categories: InfraCategory[];
+  cost_centers: InfraCostCenter[];
+};
+
 export const financeService = {
+  infra: async () =>
+    (await http.get<{ data: FinanceInfra }>('/finance/infra')).data.data,
+  createBank: async (
+    payload: Omit<InfraBank, 'idconta_bancaria' | 'situacao'>
+  ) => (await http.post('/finance/banks', payload)).data,
+  updateBank: async (
+    id: number,
+    payload: Omit<InfraBank, 'idconta_bancaria' | 'situacao'>
+  ) => (await http.put(`/finance/banks/${id}`, payload)).data,
+  createCategory: async (
+    payload: Omit<InfraCategory, 'idcategoria_financeira' | 'situacao'>
+  ) => (await http.post('/finance/categories', payload)).data,
+  updateCategory: async (
+    id: number,
+    payload: Omit<InfraCategory, 'idcategoria_financeira' | 'situacao'>
+  ) => (await http.put(`/finance/categories/${id}`, payload)).data,
+  createCostCenter: async (payload: { nome: string }) =>
+    (await http.post('/finance/cost-centers', payload)).data,
+  updateCostCenter: async (id: number, payload: { nome: string }) =>
+    (await http.put(`/finance/cost-centers/${id}`, payload)).data,
+  infraStatus: async (entity: InfraEntity, id: number, situacao: number) =>
+    (await http.patch(`/finance/${entity}/${id}/status`, { situacao })).data,
   createCard: async (payload: CardPayload) =>
     (await http.post('/finance/cards', payload)).data,
   updateCard: async (id: number, payload: CardPayload) =>

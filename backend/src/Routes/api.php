@@ -126,8 +126,16 @@ $app->group('', function ($group): void {
     $group->put('/catalog/brands/{id:[0-9]+}', CatalogController::class . ':updateBrand')->add(PermissionMiddleware::check('produto:editar'));
     $group->patch('/catalog/brands/{id:[0-9]+}/status', CatalogController::class . ':brandStatus')->add(PermissionMiddleware::check('produto:editar'));
     $group->get('/finance', FinanceController::class . ':index')->add(PermissionMiddleware::check('financeiro:visualizar'));
-    // Cartoes corporativos. Declarados antes de /finance/{type} para nao
-    // colidir com o padrao de lancamento (revenue|expense).
+    // Infraestrutura financeira e cartoes. Declarados antes de /finance/{type}
+    // para nao colidir com o padrao de lancamento (revenue|expense).
+    $group->get('/finance/infra', FinanceController::class . ':infra')->add(PermissionMiddleware::check('financeiro:visualizar'));
+    $group->post('/finance/banks', FinanceController::class . ':storeBank')->add(PermissionMiddleware::check('financeiro:criar'));
+    $group->put('/finance/banks/{id:[0-9]+}', FinanceController::class . ':updateBank')->add(PermissionMiddleware::check('financeiro:editar'));
+    $group->post('/finance/categories', FinanceController::class . ':storeCategory')->add(PermissionMiddleware::check('financeiro:criar'));
+    $group->put('/finance/categories/{id:[0-9]+}', FinanceController::class . ':updateCategory')->add(PermissionMiddleware::check('financeiro:editar'));
+    $group->post('/finance/cost-centers', FinanceController::class . ':storeCostCenter')->add(PermissionMiddleware::check('financeiro:criar'));
+    $group->put('/finance/cost-centers/{id:[0-9]+}', FinanceController::class . ':updateCostCenter')->add(PermissionMiddleware::check('financeiro:editar'));
+    $group->patch('/finance/{entity:banks|categories|cost-centers}/{id:[0-9]+}/status', FinanceController::class . ':infraStatus')->add(PermissionMiddleware::check('financeiro:editar'));
     $group->post('/finance/cards', FinanceController::class . ':storeCard')->add(PermissionMiddleware::check('financeiro:criar'));
     $group->put('/finance/cards/{id:[0-9]+}', FinanceController::class . ':updateCard')->add(PermissionMiddleware::check('financeiro:editar'));
     $group->patch('/finance/cards/{id:[0-9]+}/status', FinanceController::class . ':cardStatus')->add(PermissionMiddleware::check('financeiro:editar'));

@@ -82,6 +82,94 @@ final class FinanceRepository
     }
 
     /**
+     * Infraestrutura financeira (contas bancarias, categorias e centros de
+     * custo) com os campos completos - o `options` do index() so devolve
+     * id/nome, que nao basta para editar.
+     */
+    public function infra(int $companyId):array
+    {
+        return [
+            'banks'=>$this->all('SELECT idconta_bancaria,banco,agencia,conta,saldo_inicial,situacao FROM conta_bancaria WHERE idempresa=:company_id ORDER BY banco,conta',['company_id'=>$companyId]),
+            'categories'=>$this->all('SELECT idcategoria_financeira,nome,tipo,cor,situacao FROM financeiro_categoria WHERE idempresa=:company_id ORDER BY tipo,nome',['company_id'=>$companyId]),
+            'cost_centers'=>$this->all('SELECT idcentro_custo,nome,situacao FROM centro_custo WHERE idempresa=:company_id ORDER BY nome',['company_id'=>$companyId]),
+        ];
+    }
+
+    public function createBank(int $companyId,int $actorId,array $data,?string $ip,?string $agent):int
+    {
+        $s=$this->pdo->prepare('INSERT INTO conta_bancaria(idempresa,banco,agencia,conta,saldo_inicial,situacao) VALUES(:company_id,:bank,:branch,:account,:balance,1) RETURNING idconta_bancaria');
+        $s->execute(['company_id'=>$companyId,'bank'=>trim((string)$data['banco']),'branch'=>($data['agencia']??'')!==''?trim((string)$data['agencia']):null,'account'=>trim((string)$data['conta']),'balance'=>(float)($data['saldo_inicial']??0)]);
+        $id=(int)$s->fetchColumn();
+        $this->audit($companyId,$actorId,'conta_bancaria',$id,'criar',null,['banco'=>$data['banco']],$ip,$agent);
+        return $id;
+    }
+
+    public function updateBank(int $companyId,int $actorId,int $id,array $data,?string $ip,?string $agent):void
+    {
+        $before=$this->one('SELECT banco,conta,saldo_inicial FROM conta_bancaria WHERE idempresa=:company_id AND idconta_bancaria=:id',['company_id'=>$companyId,'id'=>$id]);
+        if(!$before)throw new InvalidArgumentException('Conta bancaria nao encontrada');
+        $this->pdo->prepare('UPDATE conta_bancaria SET banco=:bank,agencia=:branch,conta=:account,saldo_inicial=:balance,atualizado_em=CURRENT_TIMESTAMP WHERE idempresa=:company_id AND idconta_bancaria=:id')
+            ->execute(['company_id'=>$companyId,'id'=>$id,'bank'=>trim((string)$data['banco']),'branch'=>($data['agencia']??'')!==''?trim((string)$data['agencia']):null,'account'=>trim((string)$data['conta']),'balance'=>(float)($data['saldo_inicial']??0)]);
+        $this->audit($companyId,$actorId,'conta_bancaria',$id,'editar',$before,['banco'=>$data['banco']],$ip,$agent);
+    }
+
+    public function createCategory(int $companyId,int $actorId,array $data,?string $ip,?string $agent):int
+    {
+        $s=$this->pdo->prepare('INSERT INTO financeiro_categoria(idempresa,nome,tipo,cor,situacao) VALUES(:company_id,:name,:type,:color,1) RETURNING idcategoria_financeira');
+        $s->execute(['company_id'=>$companyId,'name'=>trim((string)$data['nome']),'type'=>(int)$data['tipo'],'color'=>($data['cor']??'')!==''?trim((string)$data['cor']):null]);
+        $id=(int)$s->fetchColumn();
+        $this->audit($companyId,$actorId,'financeiro_categoria',$id,'criar',null,['nome'=>$data['nome']],$ip,$agent);
+        return $id;
+    }
+
+    public function updateCategory(int $companyId,int $actorId,int $id,array $data,?string $ip,?string $agent):void
+    {
+        $before=$this->one('SELECT nome,tipo FROM financeiro_categoria WHERE idempresa=:company_id AND idcategoria_financeira=:id',['company_id'=>$companyId,'id'=>$id]);
+        if(!$before)throw new InvalidArgumentException('Categoria nao encontrada');
+        $this->pdo->prepare('UPDATE financeiro_categoria SET nome=:name,tipo=:type,cor=:color WHERE idempresa=:company_id AND idcategoria_financeira=:id')
+            ->execute(['company_id'=>$companyId,'id'=>$id,'name'=>trim((string)$data['nome']),'type'=>(int)$data['tipo'],'color'=>($data['cor']??'')!==''?trim((string)$data['cor']):null]);
+        $this->audit($companyId,$actorId,'financeiro_categoria',$id,'editar',$before,['nome'=>$data['nome']],$ip,$agent);
+    }
+
+    public function createCostCenter(int $companyId,int $actorId,array $data,?string $ip,?string $agent):int
+    {
+        $s=$this->pdo->prepare('INSERT INTO centro_custo(idempresa,nome,situacao) VALUES(:company_id,:name,1) RETURNING idcentro_custo');
+        $s->execute(['company_id'=>$companyId,'name'=>trim((string)$data['nome'])]);
+        $id=(int)$s->fetchColumn();
+        $this->audit($companyId,$actorId,'centro_custo',$id,'criar',null,['nome'=>$data['nome']],$ip,$agent);
+        return $id;
+    }
+
+    public function updateCostCenter(int $companyId,int $actorId,int $id,array $data,?string $ip,?string $agent):void
+    {
+        $before=$this->one('SELECT nome FROM centro_custo WHERE idempresa=:company_id AND idcentro_custo=:id',['company_id'=>$companyId,'id'=>$id]);
+        if(!$before)throw new InvalidArgumentException('Centro de custo nao encontrado');
+        $this->pdo->prepare('UPDATE centro_custo SET nome=:name WHERE idempresa=:company_id AND idcentro_custo=:id')
+            ->execute(['company_id'=>$companyId,'id'=>$id,'name'=>trim((string)$data['nome'])]);
+        $this->audit($companyId,$actorId,'centro_custo',$id,'editar',$before,['nome'=>$data['nome']],$ip,$agent);
+    }
+
+    /** Ativa/inativa uma entidade da infraestrutura financeira. */
+    public function setInfraStatus(int $companyId,int $actorId,string $entity,int $id,int $status,?string $ip,?string $agent):void
+    {
+        [$table,$pk,$label]=$this->infraMapping($entity);
+        $s=$this->pdo->prepare("UPDATE $table SET situacao=:status WHERE idempresa=:company_id AND $pk=:id");
+        $s->execute(['status'=>$status,'company_id'=>$companyId,'id'=>$id]);
+        if(!$s->rowCount())throw new InvalidArgumentException($label.' nao encontrado');
+        $this->audit($companyId,$actorId,$table,$id,$status?'ativar':'inativar',null,['situacao'=>$status],$ip,$agent);
+    }
+
+    private function infraMapping(string $entity):array
+    {
+        return match($entity){
+            'banks'=>['conta_bancaria','idconta_bancaria','Conta bancaria'],
+            'categories'=>['financeiro_categoria','idcategoria_financeira','Categoria'],
+            'cost-centers'=>['centro_custo','idcentro_custo','Centro de custo'],
+            default=>throw new InvalidArgumentException('Cadastro invalido'),
+        };
+    }
+
+    /**
      * Cartoes corporativos. A fatura em aberto de cada cartao sai do
      * conta_pagar cuja forma_pagamento e 'cartao:{idcartao}' (ver index()).
      */
