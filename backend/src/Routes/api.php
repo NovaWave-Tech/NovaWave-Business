@@ -126,6 +126,11 @@ $app->group('', function ($group): void {
     $group->put('/catalog/brands/{id:[0-9]+}', CatalogController::class . ':updateBrand')->add(PermissionMiddleware::check('produto:editar'));
     $group->patch('/catalog/brands/{id:[0-9]+}/status', CatalogController::class . ':brandStatus')->add(PermissionMiddleware::check('produto:editar'));
     $group->get('/finance', FinanceController::class . ':index')->add(PermissionMiddleware::check('financeiro:visualizar'));
+    // Cartoes corporativos. Declarados antes de /finance/{type} para nao
+    // colidir com o padrao de lancamento (revenue|expense).
+    $group->post('/finance/cards', FinanceController::class . ':storeCard')->add(PermissionMiddleware::check('financeiro:criar'));
+    $group->put('/finance/cards/{id:[0-9]+}', FinanceController::class . ':updateCard')->add(PermissionMiddleware::check('financeiro:editar'));
+    $group->patch('/finance/cards/{id:[0-9]+}/status', FinanceController::class . ':cardStatus')->add(PermissionMiddleware::check('financeiro:editar'));
     $group->get('/finance/{type:revenue|expense}/{id:[0-9]+}', FinanceController::class . ':show')->add(PermissionMiddleware::check('financeiro:visualizar'));
     $group->post('/finance/{type:revenue|expense}', FinanceController::class . ':store')->add(PermissionMiddleware::check('financeiro:criar'));
     $group->put('/finance/{type:revenue|expense}/{id:[0-9]+}', FinanceController::class . ':update')->add(PermissionMiddleware::check('financeiro:editar'));

@@ -66,6 +66,7 @@ import {
   Landmark,
   MoreHorizontal,
   Pencil,
+  Plus,
   ReceiptText,
   Search,
   Target,
@@ -131,6 +132,7 @@ import {
 } from '../services/financeService';
 import { useAuth } from '../../../shared/auth/AuthContext';
 import { AttachmentsPanel } from '../components/AttachmentsPanel';
+import { CardFormModal, type CompanyCard } from '../components/CardFormModal';
 
 const MotionBox = motion(Box);
 const steps = ['Dados', 'Financeiro', 'Resumo'];
@@ -188,6 +190,12 @@ export default function FinancePage() {
   const qc = useQueryClient();
   const { can } = useAuth();
   const detailDrawer = useDisclosure();
+  const cardModal = useDisclosure();
+  const [editingCard, setEditingCard] = useState<CompanyCard | null>(null);
+  const openCard = (card: CompanyCard | null) => {
+    setEditingCard(card);
+    cardModal.onOpen();
+  };
   const formDrawer = useDisclosure();
   const [selected, setSelected] = useState<{
     type: FinanceType;
@@ -742,6 +750,70 @@ export default function FinancePage() {
                 </SimpleGrid>
               </Surface>
             </SimpleGrid>
+
+            <Surface p={5} mb={5}>
+              <Flex justify="space-between" align="center" gap={3}>
+                <Text fontSize="14px" fontWeight="700">
+                  Cartoes corporativos
+                </Text>
+                {can('financeiro:criar') && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    leftIcon={<Plus size={14} />}
+                    onClick={() => openCard(null)}
+                  >
+                    Novo cartao
+                  </Button>
+                )}
+              </Flex>
+              <SimpleGrid
+                columns={{ base: 1, md: 2, xl: 3 }}
+                spacing={3}
+                mt={4}
+              >
+                {data.cards.length ? (
+                  data.cards.map(x => (
+                    <BrandSurface
+                      key={x.idcartao}
+                      p={4}
+                      cursor={can('financeiro:editar') ? 'pointer' : undefined}
+                      onClick={() => can('financeiro:editar') && openCard(x)}
+                    >
+                      <Flex justify="space-between" align="center">
+                        <CreditCard size={17} />
+                        <Text fontSize="10px" color="erp.textMuted">
+                          {x.final_cartao ? `**** ${x.final_cartao}` : '****'}
+                        </Text>
+                      </Flex>
+                      <Text mt={3} fontSize="12px" fontWeight="700">
+                        {x.banco}
+                      </Text>
+                      <Text fontSize="10px" color="erp.textMuted" noOfLines={1}>
+                        {x.descricao}
+                      </Text>
+                      <Text mt={2} fontSize="20px" fontWeight="700">
+                        {formatCurrency(x.invoice)}
+                      </Text>
+                      <Text fontSize="10px" color="erp.textMuted">
+                        Fatura aberta · disponivel {formatCurrency(x.available)}{' '}
+                        de {formatCurrency(x.limite)}
+                      </Text>
+                      <Text fontSize="10px" color="erp.textMuted">
+                        Vence em {formatDate(x.next_due)}
+                      </Text>
+                    </BrandSurface>
+                  ))
+                ) : (
+                  <EmptyState
+                    title="Sem cartoes"
+                    description="Cadastre um cartao para acompanhar a fatura em aberto e o limite disponivel."
+                    icon={CreditCard}
+                  />
+                )}
+              </SimpleGrid>
+            </Surface>
+
             <Surface overflow="hidden">
               <Flex
                 p={4}
@@ -855,6 +927,11 @@ export default function FinancePage() {
         detail={detail.data}
         loading={detail.isLoading}
         canEditFinance={can('financeiro:editar')}
+      />
+      <CardFormModal
+        isOpen={cardModal.isOpen}
+        onClose={cardModal.onClose}
+        card={editingCard}
       />
       <FinanceFormDrawer
         disclosure={formDrawer}
