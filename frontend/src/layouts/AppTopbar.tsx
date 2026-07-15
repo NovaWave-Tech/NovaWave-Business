@@ -16,7 +16,6 @@ import {
   useColorMode,
 } from '@chakra-ui/react';
 import {
-  Bell,
   ChevronDown,
   LogOut,
   Menu as MenuIcon,
@@ -28,6 +27,7 @@ import {
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { NotificationsMenu } from '../modules/notifications/components/NotificationsMenu';
 import { useAuth } from '../shared/auth/AuthContext';
 import { erpNavItems } from './erpNavigation';
 
@@ -134,27 +134,7 @@ export default function AppTopbar({ onMenuOpen }: { onMenuOpen: () => void }) {
             onClick={toggleColorMode}
           />
         </Tooltip>
-        <Menu>
-          <Tooltip label="Notificacoes">
-            <MenuButton
-              as={IconButton}
-              aria-label="Notificacoes"
-              icon={<Bell size={18} />}
-              variant="ghost"
-            />
-          </Tooltip>
-          <MenuList>
-            <Text px={3} py={2} fontSize="sm" fontWeight="600">
-              Notificacoes
-            </Text>
-            <MenuDivider />
-            <Box px={4} py={5} textAlign="center">
-              <Text color="erp.textSecondary" fontSize="sm">
-                Nenhuma notificacao nova
-              </Text>
-            </Box>
-          </MenuList>
-        </Menu>
+        <NotificationsMenu />
         <Menu>
           <MenuButton
             ml={1}
