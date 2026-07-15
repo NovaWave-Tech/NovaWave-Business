@@ -364,11 +364,11 @@ export default function FinancePage() {
               (data?.kpis.current_balance || 0) < 0 ? 'erp.danger' : undefined,
           },
           {
-            label: 'Receitas do mes',
+            label: 'Recebido no mes',
             count: Number(data?.kpis.month_revenue),
             format: formatCurrency,
             delta: revenueChange,
-            detail: 'vs mes anterior',
+            detail: 'Baixas do mes (com juros e multas)',
             icon: TrendingUp,
             tone: 'success',
           },

@@ -326,7 +326,7 @@ export default function DashboardPage() {
           count={kpis.revenue_month}
           format={formatCurrency}
           delta={kpis.revenue_change}
-          detail="Faturamento consolidado"
+          detail="Vendas do mes (sem juros de atraso)"
           icon={CircleDollarSign}
         />
         <KpiCard
