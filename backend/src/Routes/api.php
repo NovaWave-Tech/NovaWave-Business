@@ -131,6 +131,9 @@ $app->group('', function ($group): void {
     $group->put('/finance/{type:revenue|expense}/{id:[0-9]+}', FinanceController::class . ':update')->add(PermissionMiddleware::check('financeiro:editar'));
     $group->patch('/finance/{type:revenue|expense}/{id:[0-9]+}/status', FinanceController::class . ':status')->add(PermissionMiddleware::check('financeiro:editar'));
     $group->post('/finance/{type:revenue|expense}/{id:[0-9]+}/duplicate', FinanceController::class . ':duplicate')->add(PermissionMiddleware::check('financeiro:criar'));
+    $group->post('/finance/{type:revenue|expense}/{id:[0-9]+}/attachments', FinanceController::class . ':storeAttachment')->add(PermissionMiddleware::check('financeiro:editar'));
+    $group->get('/finance/{type:revenue|expense}/{id:[0-9]+}/attachments/{attachment:[0-9]+}', FinanceController::class . ':downloadAttachment')->add(PermissionMiddleware::check('financeiro:visualizar'));
+    $group->delete('/finance/{type:revenue|expense}/{id:[0-9]+}/attachments/{attachment:[0-9]+}', FinanceController::class . ':deleteAttachment')->add(PermissionMiddleware::check('financeiro:editar'));
     $group->get('/receivables/customers', ReceivableController::class . ':customers')->add(PermissionMiddleware::check('financeiro:visualizar'));
     $group->get('/receivables', ReceivableController::class . ':index')->add(PermissionMiddleware::check('financeiro:visualizar'));
     $group->post('/receivables/{id:[0-9]+}/settle', ReceivableController::class . ':settle')->add(PermissionMiddleware::check('financeiro:editar'));
