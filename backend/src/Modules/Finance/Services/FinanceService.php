@@ -102,6 +102,22 @@ final class FinanceService
         return mb_substr(trim($name)!==''?$name:'anexo',0,180);
     }
 
+    public function createCard(int $companyId,int $actorId,array $data,?string $ip,?string $agent):array{$this->validateCard($data);return ['idcartao'=>$this->repository->createCard($companyId,$actorId,$data,$ip,$agent)];}
+    public function updateCard(int $companyId,int $actorId,int $id,array $data,?string $ip,?string $agent):void{$this->validateCard($data);$this->repository->updateCard($companyId,$actorId,$id,$data,$ip,$agent);}
+    public function setCardStatus(int $companyId,int $actorId,int $id,int $status,?string $ip,?string $agent):void{if(!in_array($status,[0,1],true))throw new InvalidArgumentException('Situacao invalida');$this->repository->setCardStatus($companyId,$actorId,$id,$status,$ip,$agent);}
+
+    private function validateCard(array $data):void
+    {
+        foreach(['banco'=>'Banco','descricao'=>'Descricao']as$field=>$label){
+            if(mb_strlen(trim((string)($data[$field]??'')))<2)throw new InvalidArgumentException("{$label} e obrigatorio");
+        }
+        if((float)($data['limite']??0)<0)throw new InvalidArgumentException('Limite nao pode ser negativo');
+        $day=(int)($data['dia_vencimento']??0);
+        if($day<1||$day>31)throw new InvalidArgumentException('Dia de vencimento deve estar entre 1 e 31');
+        $digits=preg_replace('/\D/','',(string)($data['final_cartao']??''));
+        if($digits!==''&&strlen($digits)!==4)throw new InvalidArgumentException('Final do cartao deve ter 4 digitos');
+    }
+
     private function type(string $type):void{if(!in_array($type,['revenue','expense'],true))throw new InvalidArgumentException('Tipo de lancamento invalido');}
     private function validate(array $data):void{foreach(['descricao','idcategoria_financeira','idcentro_custo','idconta_bancaria','data_vencimento']as$field)if(empty($data[$field]))throw new InvalidArgumentException("Campo {$field} e obrigatorio");if((float)($data['valor']??0)<=0)throw new InvalidArgumentException('Valor deve ser maior que zero');$installments=(int)($data['parcelas_total']??1);if($installments<1||$installments>120)throw new InvalidArgumentException('Parcelamento deve possuir entre 1 e 120 parcelas');}
 }

@@ -114,7 +114,21 @@ export type FinanceDetail = Movement & {
   history: Array<{ idauditoria: number; acao: string; criado_em: string }>;
 };
 
+export type CardPayload = {
+  banco: string;
+  descricao: string;
+  final_cartao?: string;
+  limite: number;
+  dia_vencimento: number;
+};
+
 export const financeService = {
+  createCard: async (payload: CardPayload) =>
+    (await http.post('/finance/cards', payload)).data,
+  updateCard: async (id: number, payload: CardPayload) =>
+    (await http.put(`/finance/cards/${id}`, payload)).data,
+  cardStatus: async (id: number, situacao: number) =>
+    (await http.patch(`/finance/cards/${id}/status`, { situacao })).data,
   list: async (params: Record<string, string>) =>
     (await http.get<{ data: FinanceData }>('/finance', { params })).data.data,
   detail: async (type: FinanceType, id: number) =>

@@ -81,6 +81,37 @@ final class FinanceRepository
         return (string)$item['url'];
     }
 
+    /**
+     * Cartoes corporativos. A fatura em aberto de cada cartao sai do
+     * conta_pagar cuja forma_pagamento e 'cartao:{idcartao}' (ver index()).
+     */
+    public function createCard(int $companyId,int $actorId,array $data,?string $ip,?string $agent):int
+    {
+        $s=$this->pdo->prepare('INSERT INTO cartao_empresa(idempresa,banco,descricao,final_cartao,limite,dia_vencimento,situacao) VALUES(:company_id,:bank,:description,:last_digits,:limit,:due_day,1) RETURNING idcartao');
+        $s->execute($this->cardParams($companyId,$data));
+        $id=(int)$s->fetchColumn();
+        $this->audit($companyId,$actorId,'cartao_empresa',$id,'criar',null,['descricao'=>$data['descricao']],$ip,$agent);
+        return $id;
+    }
+
+    public function updateCard(int $companyId,int $actorId,int $id,array $data,?string $ip,?string $agent):void
+    {
+        $before=$this->one('SELECT descricao,limite FROM cartao_empresa WHERE idempresa=:company_id AND idcartao=:id',['company_id'=>$companyId,'id'=>$id]);
+        if(!$before)throw new InvalidArgumentException('Cartao nao encontrado');
+        $this->pdo->prepare('UPDATE cartao_empresa SET banco=:bank,descricao=:description,final_cartao=:last_digits,limite=:limit,dia_vencimento=:due_day WHERE idempresa=:company_id AND idcartao=:id')
+            ->execute($this->cardParams($companyId,$data)+['id'=>$id]);
+        $this->audit($companyId,$actorId,'cartao_empresa',$id,'editar',$before,['descricao'=>$data['descricao']],$ip,$agent);
+    }
+
+    public function setCardStatus(int $companyId,int $actorId,int $id,int $status,?string $ip,?string $agent):void
+    {
+        $s=$this->pdo->prepare('UPDATE cartao_empresa SET situacao=:status WHERE idempresa=:company_id AND idcartao=:id');
+        $s->execute(['status'=>$status,'company_id'=>$companyId,'id'=>$id]);
+        if(!$s->rowCount())throw new InvalidArgumentException('Cartao nao encontrado');
+        $this->audit($companyId,$actorId,'cartao_empresa',$id,$status?'ativar':'inativar',null,['situacao'=>$status],$ip,$agent);
+    }
+
+    private function cardParams(int $companyId,array $data):array{return ['company_id'=>$companyId,'bank'=>trim((string)$data['banco']),'description'=>trim((string)$data['descricao']),'last_digits'=>($data['final_cartao']??'')!==''?preg_replace('/\D/','',(string)$data['final_cartao']):null,'limit'=>(float)($data['limite']??0),'due_day'=>(int)$data['dia_vencimento']];}
     private function assertEntry(int $companyId,string $type,int $id):void{[$table,$pk]=$this->mapping($type);if(!$this->one("SELECT 1 FROM $table WHERE idempresa=:company_id AND $pk=:id",['company_id'=>$companyId,'id'=>$id]))throw new InvalidArgumentException('Lancamento nao encontrado');}
     private function attachmentType(string $type):int{return $type==='revenue'?1:2;}
     private function mapping(string $type):array{return $type==='revenue'?['conta_receber','idconta_receber','data_recebimento']:['conta_pagar','idconta_pagar','data_pagamento'];}
