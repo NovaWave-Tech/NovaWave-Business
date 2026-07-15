@@ -9,6 +9,9 @@ use Throwable;
 
 final class PurchasesRepository
 {
+    /** Formas de pagamento aceitas na compra. */
+    private const PAYMENTS = ['dinheiro', 'pix', 'cartao_credito', 'cartao_debito', 'boleto', 'transferencia'];
+
     private PDO $pdo;
 
     public function __construct()
@@ -41,6 +44,7 @@ final class PurchasesRepository
 
         $purchases = $this->all(
             "SELECT c.idcompra, c.data_compra, c.valor_total, c.situacao, c.idfornecedor,
+                    c.forma_pagamento, c.a_prazo, c.parcelas,
                     COALESCE(fo.nome_fantasia, fo.razao_social, 'Sem fornecedor') fornecedor,
                     f.nome filial, COALESCE(u.nome, '-') usuario,
                     COALESCE(i.itens, 0) itens, COALESCE(i.quantidade, 0) quantidade
@@ -69,6 +73,7 @@ final class PurchasesRepository
     {
         $purchase = $this->one(
             "SELECT c.idcompra, c.data_compra, c.valor_total, c.situacao, c.idfornecedor, c.idfilial,
+                    c.forma_pagamento, c.a_prazo, c.parcelas,
                     COALESCE(fo.nome_fantasia, fo.razao_social, 'Sem fornecedor') fornecedor,
                     f.nome filial, COALESCE(u.nome, '-') usuario, c.criado_em
              FROM compra c
@@ -123,6 +128,13 @@ final class PurchasesRepository
                 throw new InvalidArgumentException('Fornecedor invalido');
             }
 
+            $payment = (string) ($data['forma_pagamento'] ?? 'dinheiro');
+            if (!in_array($payment, self::PAYMENTS, true)) {
+                throw new InvalidArgumentException('Forma de pagamento invalida');
+            }
+            $onCredit = !empty($data['a_prazo']);
+            $installments = $onCredit ? max(1, min(24, (int) ($data['parcelas'] ?? 1))) : 1;
+
             $lines = $this->normalizeItems($companyId, $data['items'] ?? []);
             $total = 0.0;
             foreach ($lines as $line) {
@@ -130,8 +142,8 @@ final class PurchasesRepository
             }
 
             $statement = $this->pdo->prepare(
-                'INSERT INTO compra (idempresa, idfilial, idfornecedor, idusuario, valor_total, situacao)
-                 VALUES (:company_id, :branch, :supplier, :actor, :total, 1) RETURNING idcompra'
+                'INSERT INTO compra (idempresa, idfilial, idfornecedor, idusuario, valor_total, situacao, forma_pagamento, a_prazo, parcelas)
+                 VALUES (:company_id, :branch, :supplier, :actor, :total, 1, :payment, :on_credit, :installments) RETURNING idcompra'
             );
             $statement->execute([
                 'company_id' => $companyId,
@@ -139,6 +151,9 @@ final class PurchasesRepository
                 'supplier' => $supplierId,
                 'actor' => $actorId,
                 'total' => $total,
+                'payment' => $payment,
+                'on_credit' => $onCredit ? 'true' : 'false',
+                'installments' => $installments,
             ]);
             $purchaseId = (int) $statement->fetchColumn();
 
@@ -159,9 +174,70 @@ final class PurchasesRepository
                 $this->moveStock($companyId, $actorId, $branchId, $line['idproduto'], $line['quantidade'], 1, "Compra #{$purchaseId}", true);
             }
 
-            $this->audit($companyId, $actorId, $purchaseId, 'criar', null, ['valor_total' => $total, 'itens' => count($lines)], $ip, $agent);
+            // Toda compra concluida vira obrigacao no Financeiro: a prazo gera
+            // as parcelas em aberto; a vista gera uma conta ja quitada.
+            if ($total > 0) {
+                $this->createPayables($companyId, $branchId, $supplierId, $purchaseId, $total, $installments, $payment, $onCredit);
+            }
+
+            $this->audit($companyId, $actorId, $purchaseId, 'criar', null, [
+                'valor_total' => $total,
+                'itens' => count($lines),
+                'forma_pagamento' => $payment,
+                'a_prazo' => $onCredit,
+                'parcelas' => $installments,
+            ], $ip, $agent);
             return $purchaseId;
         });
+    }
+
+    /**
+     * Gera as contas a pagar da compra. A prazo: parcelas iguais (ajuste de
+     * centavos na ultima) com vencimentos mensais a partir de +30 dias. A
+     * vista: uma unica conta ja quitada na data da compra.
+     */
+    private function createPayables(int $companyId, int $branchId, ?int $supplierId, int $purchaseId, float $total, int $installments, string $payment, bool $onCredit): void
+    {
+        $today = new \DateTimeImmutable('today');
+        if (!$onCredit) {
+            $this->pdo->prepare(
+                'INSERT INTO conta_pagar (idempresa, idfilial, idfornecedor, idcompra, descricao, valor, data_vencimento, data_pagamento, situacao, forma_pagamento, parcela_numero, parcelas_total)
+                 VALUES (:company_id, :branch, :supplier, :purchase, :description, :amount, :date, :date, 2, :payment, 1, 1)'
+            )->execute([
+                'company_id' => $companyId,
+                'branch' => $branchId,
+                'supplier' => $supplierId,
+                'purchase' => $purchaseId,
+                'description' => "Compra #{$purchaseId}",
+                'amount' => $total,
+                'date' => $today->format('Y-m-d'),
+                'payment' => $payment,
+            ]);
+            return;
+        }
+
+        $base = floor(($total / $installments) * 100) / 100;
+        $statement = $this->pdo->prepare(
+            'INSERT INTO conta_pagar (idempresa, idfilial, idfornecedor, idcompra, descricao, valor, data_vencimento, situacao, forma_pagamento, parcela_numero, parcelas_total)
+             VALUES (:company_id, :branch, :supplier, :purchase, :description, :amount, :due_date, 1, :payment, :number, :total_installments)'
+        );
+        for ($number = 1; $number <= $installments; $number++) {
+            $amount = $number === $installments
+                ? round($total - $base * ($installments - 1), 2)
+                : $base;
+            $statement->execute([
+                'company_id' => $companyId,
+                'branch' => $branchId,
+                'supplier' => $supplierId,
+                'purchase' => $purchaseId,
+                'description' => "Compra #{$purchaseId} - parcela {$number}/{$installments}",
+                'amount' => $amount,
+                'due_date' => $today->modify("+{$number} month")->format('Y-m-d'),
+                'payment' => $payment,
+                'number' => $number,
+                'total_installments' => $installments,
+            ]);
+        }
     }
 
     public function setStatus(int $companyId, int $actorId, int $purchaseId, int $status, ?string $ip, ?string $agent): void
@@ -189,6 +265,13 @@ final class PurchasesRepository
                 foreach ($items as $item) {
                     $this->moveStock($companyId, $actorId, (int) $purchase['idfilial'], (int) $item['idproduto'], (float) $item['quantidade'], 2, "Cancelamento compra #{$purchaseId}", true);
                 }
+
+                // Estorna a obrigacao no Financeiro: parcelas em aberto (a
+                // prazo) e a conta ja quitada (a vista) sao canceladas.
+                $this->pdo->prepare(
+                    'UPDATE conta_pagar SET situacao = 3, data_pagamento = NULL, atualizado_em = CURRENT_TIMESTAMP
+                     WHERE idempresa = :company_id AND idcompra = :purchase AND situacao IN (1, 2)'
+                )->execute(['company_id' => $companyId, 'purchase' => $purchaseId]);
             }
 
             $this->audit($companyId, $actorId, $purchaseId, $status === 4 ? 'cancelar' : 'atualizar', ['situacao' => (int) $purchase['situacao']], ['situacao' => $status], $ip, $agent);
@@ -338,6 +421,9 @@ final class PurchasesRepository
             'valor_total' => (float) $purchase['valor_total'],
             'itens' => (int) ($purchase['itens'] ?? 0),
             'quantidade' => (float) ($purchase['quantidade'] ?? 0),
+            'forma_pagamento' => $purchase['forma_pagamento'] ?? null,
+            'a_prazo' => in_array($purchase['a_prazo'] ?? false, [true, 't', 'true', 1, '1'], true),
+            'parcelas' => (int) ($purchase['parcelas'] ?? 1),
         ];
     }
 
