@@ -246,6 +246,11 @@ final class ReceivableRepository
     /**
      * Baixa (recebe) um titulo: situacao 2, data_recebimento hoje, forma de
      * pagamento escolhida e eventuais juros/multa/desconto aplicados.
+     *
+     * Recebimento em dinheiro entra no caixa fisico da filial (movimentacao
+     * tipo 3), espelhando a regra da venda a vista em dinheiro: se a filial
+     * exige caixa (`caixa_obrigatorio`) e nao ha caixa aberto, a baixa e
+     * recusada. As demais formas nao passam pelo caixa.
      */
     public function settle(int $companyId, int $actorId, int $id, array $data, ?string $ip, ?string $agent): void
     {
@@ -259,7 +264,8 @@ final class ReceivableRepository
 
         $this->transaction(function () use ($companyId, $actorId, $id, $payment, $interest, $fine, $discount, $ip, $agent) {
             $title = $this->one(
-                'SELECT situacao, valor FROM conta_receber WHERE idempresa = :company_id AND idconta_receber = :id FOR UPDATE',
+                'SELECT situacao, valor, idfilial, idvenda, parcela_numero, parcelas_total
+                 FROM conta_receber WHERE idempresa = :company_id AND idconta_receber = :id FOR UPDATE',
                 ['company_id' => $companyId, 'id' => $id]
             );
             if (!$title) {
@@ -274,6 +280,11 @@ final class ReceivableRepository
             if ($discount > (float) $title['valor'] + $interest + $fine) {
                 throw new InvalidArgumentException('Desconto maior que o valor do titulo');
             }
+
+            $cashRegister = $payment === 'dinheiro'
+                ? $this->resolveCashRegister($companyId, $title['idfilial'])
+                : null;
+
             $this->pdo->prepare(
                 'UPDATE conta_receber
                     SET situacao = 2, data_recebimento = CURRENT_DATE, forma_pagamento = :payment,
@@ -287,13 +298,62 @@ final class ReceivableRepository
                 'company_id' => $companyId,
                 'id' => $id,
             ]);
+            $received = round((float) $title['valor'] + $interest + $fine - $discount, 2);
+            if ($cashRegister !== null && $received > 0) {
+                $this->pdo->prepare(
+                    'INSERT INTO movimentacao_caixa (idempresa, idfilial, idcaixa, idusuario, tipo, descricao, valor, situacao)
+                     VALUES (:company_id, :branch, :register, :actor, 3, :description, :amount, 1)'
+                )->execute([
+                    'company_id' => $companyId,
+                    'branch' => (int) $title['idfilial'],
+                    'register' => (int) $cashRegister['idcaixa'],
+                    'actor' => $actorId,
+                    'description' => $this->cashDescription($id, $title),
+                    'amount' => $received,
+                ]);
+            }
+
             $this->audit($companyId, $actorId, $id, 'receber', null, [
                 'forma_pagamento' => $payment,
                 'juros' => $interest,
                 'multa' => $fine,
                 'desconto' => $discount,
+                'caixa' => $cashRegister !== null ? (int) $cashRegister['idcaixa'] : null,
             ], $ip, $agent);
         });
+    }
+
+    /**
+     * Caixa aberto da filial para receber em dinheiro. Recusa quando a filial
+     * exige caixa e nao ha nenhum aberto. Titulo sem filial nao passa no caixa.
+     */
+    private function resolveCashRegister(int $companyId, mixed $branchId): ?array
+    {
+        if ($branchId === null) {
+            return null;
+        }
+        $branch = $this->one(
+            'SELECT caixa_obrigatorio FROM filial WHERE idempresa = :company_id AND idfilial = :branch AND situacao = 1',
+            ['company_id' => $companyId, 'branch' => (int) $branchId]
+        );
+        $register = $this->one(
+            'SELECT idcaixa FROM caixa WHERE idempresa = :company_id AND idfilial = :branch AND situacao = 1
+             ORDER BY idcaixa DESC LIMIT 1 FOR UPDATE',
+            ['company_id' => $companyId, 'branch' => (int) $branchId]
+        ) ?: null;
+        if (!$register && $branch && $this->truthy($branch['caixa_obrigatorio'])) {
+            throw new InvalidArgumentException('Abra o caixa da filial para receber em dinheiro');
+        }
+        return $register;
+    }
+
+    /** Descricao da entrada no caixa, referenciando a venda/parcela de origem. */
+    private function cashDescription(int $id, array $title): string
+    {
+        $parcel = sprintf('parcela %d/%d', (int) $title['parcela_numero'], (int) $title['parcelas_total']);
+        return $title['idvenda'] !== null
+            ? sprintf('Recebimento venda #%d - %s', (int) $title['idvenda'], $parcel)
+            : sprintf('Recebimento titulo #%d - %s', $id, $parcel);
     }
 
     /** Itens (produtos) das vendas a prazo do cliente, agrupados por venda. */
