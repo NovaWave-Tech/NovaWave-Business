@@ -378,6 +378,11 @@ final class PurchasesRepository
                 "SELECT idfornecedor id, COALESCE(nome_fantasia, razao_social) nome FROM fornecedor WHERE idempresa = :company_id AND situacao = 1 ORDER BY nome LIMIT 500",
                 ['company_id' => $companyId]
             ),
+            // Categorias para o cadastro rapido de produto direto na compra.
+            'categories' => $this->all(
+                'SELECT idcategoria id, nome FROM categoria_produto WHERE idempresa = :company_id AND situacao = 1 ORDER BY nome',
+                ['company_id' => $companyId]
+            ),
             'products' => array_map(fn ($product) => [
                 'id' => (int) $product['id'],
                 'nome' => $product['nome'],
