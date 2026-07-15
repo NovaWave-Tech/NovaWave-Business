@@ -63,7 +63,6 @@ import {
   Copy,
   CreditCard,
   Eye,
-  FileText,
   Landmark,
   MoreHorizontal,
   Pencil,
@@ -130,6 +129,8 @@ import {
   type FinanceType,
   type Movement,
 } from '../services/financeService';
+import { useAuth } from '../../../shared/auth/AuthContext';
+import { AttachmentsPanel } from '../components/AttachmentsPanel';
 
 const MotionBox = motion(Box);
 const steps = ['Dados', 'Financeiro', 'Resumo'];
@@ -185,6 +186,7 @@ function Status({ item }: { item: Movement }) {
 export default function FinancePage() {
   const toast = useToast();
   const qc = useQueryClient();
+  const { can } = useAuth();
   const detailDrawer = useDisclosure();
   const formDrawer = useDisclosure();
   const [selected, setSelected] = useState<{
@@ -852,6 +854,7 @@ export default function FinancePage() {
         disclosure={detailDrawer}
         detail={detail.data}
         loading={detail.isLoading}
+        canEditFinance={can('financeiro:editar')}
       />
       <FinanceFormDrawer
         disclosure={formDrawer}
@@ -1019,10 +1022,12 @@ function DetailDrawer({
   disclosure,
   detail,
   loading,
+  canEditFinance,
 }: {
   disclosure: ReturnType<typeof useDisclosure>;
   detail?: FinanceDetail;
   loading: boolean;
+  canEditFinance: boolean;
 }) {
   return (
     <Drawer
@@ -1102,22 +1107,12 @@ function DetailDrawer({
                   />
                 </TabPanel>
                 <TabPanel px={0}>
-                  {detail.attachments.length ? (
-                    detail.attachments.map(x => (
-                      <Surface key={x.idanexo} p={3} mb={2}>
-                        <Flex gap={2}>
-                          <FileText size={15} />
-                          <Text fontSize="12px">{x.nome}</Text>
-                        </Flex>
-                      </Surface>
-                    ))
-                  ) : (
-                    <EmptyState
-                      title="Sem anexos"
-                      description="Boletos, notas e comprovantes aparecerao aqui."
-                      icon={FileText}
-                    />
-                  )}
+                  <AttachmentsPanel
+                    type={detail.type}
+                    id={detail.id}
+                    attachments={detail.attachments}
+                    canEdit={canEditFinance}
+                  />
                 </TabPanel>
                 <TabPanel px={0}>
                   {detail.history.length ? (

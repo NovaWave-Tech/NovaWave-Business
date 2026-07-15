@@ -128,4 +128,38 @@ export const financeService = {
     (await http.patch(`/finance/${type}/${id}/status`, { situacao })).data,
   duplicate: async (type: FinanceType, id: number) =>
     (await http.post(`/finance/${type}/${id}/duplicate`)).data,
+  uploadAttachment: async (type: FinanceType, id: number, file: File) => {
+    const form = new FormData();
+    form.append('arquivo', file);
+    // Content-Type undefined: o browser monta o multipart com o boundary
+    // (o http tem application/json como padrao).
+    return (
+      await http.post(`/finance/${type}/${id}/attachments`, form, {
+        headers: { 'Content-Type': undefined },
+      })
+    ).data;
+  },
+  deleteAttachment: async (type: FinanceType, id: number, attachment: number) =>
+    (await http.delete(`/finance/${type}/${id}/attachments/${attachment}`))
+      .data,
+  /** Baixa o anexo autenticado e dispara o download com o nome original. */
+  downloadAttachment: async (
+    type: FinanceType,
+    id: number,
+    attachment: number,
+    nome: string
+  ) => {
+    const response = await http.get(
+      `/finance/${type}/${id}/attachments/${attachment}`,
+      { responseType: 'blob' }
+    );
+    const url = URL.createObjectURL(response.data as Blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = nome;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  },
 };

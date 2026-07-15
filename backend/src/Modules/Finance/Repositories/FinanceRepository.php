@@ -49,6 +49,40 @@ final class FinanceRepository
     private function params(int $companyId,array $data):array{return ['company_id'=>$companyId,'branch'=>!empty($data['idfilial'])?(int)$data['idfilial']:null,'description'=>trim($data['descricao']),'category'=>(int)$data['idcategoria_financeira'],'cost_center'=>(int)$data['idcentro_custo'],'bank'=>(int)$data['idconta_bancaria'],'payment'=>$data['forma_pagamento']??null,'document'=>$data['documento']??null,'notes'=>$data['observacoes']??null,'interest'=>(float)($data['juros']??0),'discount'=>(float)($data['desconto']??0),'fine'=>(float)($data['multa']??0),'recurring'=>!empty($data['recorrente'])?'true':'false'];}
     private function assertReferences(int $companyId,string $type,array $data):void{if(!$this->one('SELECT idcategoria_financeira FROM financeiro_categoria WHERE idempresa=:company_id AND idcategoria_financeira=:id AND tipo=:type AND situacao=1',['company_id'=>$companyId,'id'=>(int)$data['idcategoria_financeira'],'type'=>$type==='revenue'?1:2]))throw new InvalidArgumentException('Categoria invalida');foreach([['centro_custo','idcentro_custo'],['conta_bancaria','idconta_bancaria']]as[$table,$field])if(!$this->one("SELECT $field FROM $table WHERE idempresa=:company_id AND $field=:id AND situacao=1",['company_id'=>$companyId,'id'=>(int)$data[$field]]))throw new InvalidArgumentException('Referencia financeira invalida');}
     private function options(int $companyId):array{return ['categories'=>$this->all('SELECT idcategoria_financeira id,nome,tipo FROM financeiro_categoria WHERE idempresa=:company_id AND situacao=1 ORDER BY tipo,nome',['company_id'=>$companyId]),'cost_centers'=>$this->all('SELECT idcentro_custo id,nome FROM centro_custo WHERE idempresa=:company_id AND situacao=1 ORDER BY nome',['company_id'=>$companyId]),'banks'=>$this->all('SELECT idconta_bancaria id,banco||\' - \'||conta nome FROM conta_bancaria WHERE idempresa=:company_id AND situacao=1 ORDER BY banco',['company_id'=>$companyId]),'branches'=>$this->all('SELECT idfilial id,nome FROM filial WHERE idempresa=:company_id AND situacao=1 ORDER BY matriz DESC,nome',['company_id'=>$companyId]),'customers'=>$this->all('SELECT idcliente id,nome FROM cliente WHERE idempresa=:company_id AND situacao=1 ORDER BY nome LIMIT 500',['company_id'=>$companyId]),'suppliers'=>$this->all('SELECT idfornecedor id,COALESCE(nome_fantasia,razao_social) nome FROM fornecedor WHERE idempresa=:company_id AND situacao=1 ORDER BY nome LIMIT 500',['company_id'=>$companyId])];}
+    /**
+     * Anexos do lancamento (boleto, nota, comprovante). O arquivo em si fica
+     * no disco (fora do public/); aqui guardamos so o nome e o caminho
+     * relativo, sempre amarrados a empresa e ao lancamento.
+     */
+    public function addAttachment(int $companyId,int $actorId,string $type,int $id,string $name,string $path,?string $ip,?string $agent):int
+    {
+        $this->assertEntry($companyId,$type,$id);
+        $s=$this->pdo->prepare('INSERT INTO anexo_financeiro(idempresa,tipo_lancamento,idlancamento,nome,url) VALUES(:company_id,:type,:id,:name,:path) RETURNING idanexo');
+        $s->execute(['company_id'=>$companyId,'type'=>$this->attachmentType($type),'id'=>$id,'name'=>$name,'path'=>$path]);
+        $attachmentId=(int)$s->fetchColumn();
+        [$table]=$this->mapping($type);
+        $this->audit($companyId,$actorId,$table,$id,'anexar',null,['anexo'=>$name],$ip,$agent);
+        return $attachmentId;
+    }
+
+    public function attachment(int $companyId,string $type,int $id,int $attachmentId):array
+    {
+        $item=$this->one('SELECT idanexo,nome,url FROM anexo_financeiro WHERE idempresa=:company_id AND tipo_lancamento=:type AND idlancamento=:id AND idanexo=:attachment',['company_id'=>$companyId,'type'=>$this->attachmentType($type),'id'=>$id,'attachment'=>$attachmentId]);
+        if(!$item)throw new InvalidArgumentException('Anexo nao encontrado');
+        return $item;
+    }
+
+    public function removeAttachment(int $companyId,int $actorId,string $type,int $id,int $attachmentId,?string $ip,?string $agent):string
+    {
+        $item=$this->attachment($companyId,$type,$id,$attachmentId);
+        $this->pdo->prepare('DELETE FROM anexo_financeiro WHERE idempresa=:company_id AND idanexo=:attachment')->execute(['company_id'=>$companyId,'attachment'=>$attachmentId]);
+        [$table]=$this->mapping($type);
+        $this->audit($companyId,$actorId,$table,$id,'remover_anexo',['anexo'=>$item['nome']],null,$ip,$agent);
+        return (string)$item['url'];
+    }
+
+    private function assertEntry(int $companyId,string $type,int $id):void{[$table,$pk]=$this->mapping($type);if(!$this->one("SELECT 1 FROM $table WHERE idempresa=:company_id AND $pk=:id",['company_id'=>$companyId,'id'=>$id]))throw new InvalidArgumentException('Lancamento nao encontrado');}
+    private function attachmentType(string $type):int{return $type==='revenue'?1:2;}
     private function mapping(string $type):array{return $type==='revenue'?['conta_receber','idconta_receber','data_recebimento']:['conta_pagar','idconta_pagar','data_pagamento'];}
     private function range(array $filters):array{$pattern='/^\d{4}-\d{2}-\d{2}$/';$rawStart=$filters['start']??null;$rawEnd=$filters['end']??null;if($rawStart&&$rawEnd&&preg_match($pattern,(string)$rawStart)&&preg_match($pattern,(string)$rawEnd)){$start=new \DateTimeImmutable((string)$rawStart);$end=new \DateTimeImmutable((string)$rawEnd);if($end<$start){[$start,$end]=[$end,$start];}$days=(int)$start->diff($end)->days;$prevEnd=$start->modify('-1 day');$prevStart=$prevEnd->modify("-$days days");return[$start->format('Y-m-d'),$end->format('Y-m-d'),$prevStart->format('Y-m-d'),$prevEnd->format('Y-m-d')];}return $this->period($filters['period']??'30d');}
     private function period(string $period):array{$end=new \DateTimeImmutable('today');$days=match($period){'today'=>0,'7d'=>6,'90d'=>89,'year'=>(int)$end->format('z'),default=>29};$start=$end->modify("-$days days");$prevEnd=$start->modify('-1 day');$prevStart=$prevEnd->modify("-$days days");return[$start->format('Y-m-d'),$end->format('Y-m-d'),$prevStart->format('Y-m-d'),$prevEnd->format('Y-m-d')];}
