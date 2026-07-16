@@ -12,6 +12,7 @@ use App\Modules\Companies\Controllers\CompanyController;
 use App\Modules\Customers\Controllers\CustomerController;
 use App\Modules\Dashboard\Controllers\DashboardController;
 use App\Modules\Finance\Controllers\FinanceController;
+use App\Modules\Goals\Controllers\GoalController;
 use App\Modules\Inventory\Controllers\InventoryController;
 use App\Modules\Notifications\Controllers\NotificationController;
 use App\Modules\Permissions\Controllers\PermissionController;
@@ -72,6 +73,8 @@ $app->group('/api/platform', function ($group): void {
 $app->group('', function ($group): void {
     $group->get('/auth/me', AuthController::class . ':me');
     $group->get('/dashboard', DashboardController::class . ':index')->add(PermissionMiddleware::check('dashboard:visualizar'));
+    $group->get('/goals', GoalController::class . ':index')->add(PermissionMiddleware::check('dashboard:visualizar'));
+    $group->put('/goals', GoalController::class . ':save')->add(PermissionMiddleware::check('configuracao:editar'));
     $group->get('/companies', CompanyController::class . ':index')->add(PermissionMiddleware::check('empresa:visualizar'));
     $group->put('/companies', CompanyController::class . ':update')->add(PermissionMiddleware::check('empresa:editar'));
     $group->get('/suppliers', SupplierController::class . ':index')->add(PermissionMiddleware::check('fornecedor:visualizar'));

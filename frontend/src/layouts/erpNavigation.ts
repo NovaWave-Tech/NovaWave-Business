@@ -12,6 +12,7 @@ import {
   ShieldCheck,
   ShoppingBag,
   ShoppingCart,
+  Target,
   Truck,
   Users,
   type LucideIcon,
@@ -105,6 +106,12 @@ export const erpNavigation: ErpNavGroup[] = [
   {
     label: 'Gestao',
     items: [
+      {
+        label: 'Metas',
+        path: '/goals',
+        icon: Target,
+        permission: 'dashboard:visualizar',
+      },
       {
         label: 'Empresa',
         path: '/companies',

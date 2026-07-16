@@ -53,17 +53,15 @@ final class DashboardRepository
             $params
         );
 
-        // Meta do mes. `meta_venda` (por competencia/filial) tem precedencia,
-        // mas hoje quem alimenta a meta e a tela de Configuracoes, que grava
-        // em configuracao_financeira.meta_mensal - mesma fonte do Financeiro.
-        // Sem esse fallback o card ficava zerado mesmo com a meta definida.
+        // Meta geral do mes: a meta explicita da empresa (meta_venda com
+        // filial/vendedor nulos, definida na tela de Metas) tem precedencia;
+        // senao usa a meta unica das Configuracoes. As metas por filial/
+        // vendedor tem acompanhamento proprio e NAO viram a meta da empresa -
+        // do contrario definir uma meta de filial reduziria o alvo do card.
         $goal = $this->fetchOne(
             "SELECT COALESCE(
                (SELECT valor_meta FROM meta_venda
-                WHERE idempresa = :company_id AND idfilial IS NULL
-                  AND competencia = date_trunc('month', CURRENT_DATE)::date),
-               (SELECT SUM(valor_meta) FROM meta_venda
-                WHERE idempresa = :company_id AND idfilial IS NOT NULL
+                WHERE idempresa = :company_id AND idfilial IS NULL AND idusuario IS NULL
                   AND competencia = date_trunc('month', CURRENT_DATE)::date),
                (SELECT meta_mensal FROM configuracao_financeira
                 WHERE idempresa = :company_id), 0
