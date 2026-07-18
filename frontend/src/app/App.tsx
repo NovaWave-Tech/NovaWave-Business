@@ -56,6 +56,7 @@ const ProductsPage = lazy(
 );
 const FinancePage = lazy(() => import('../modules/finance/pages/FinancePage'));
 const GoalsPage = lazy(() => import('../modules/goals/pages/GoalsPage'));
+const HrPage = lazy(() => import('../modules/hr/pages/HrPage'));
 const ReportsPage = lazy(() => import('../modules/reports/pages/ReportsPage'));
 const SalesPage = lazy(() => import('../modules/sales/pages/SalesPage'));
 const SaleReceiptPage = lazy(
@@ -170,6 +171,7 @@ export default function App() {
           <Route element={<ProtectedRoutes />}>
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/goals" element={<GoalsPage />} />
+            <Route path="/hr" element={<HrPage />} />
             <Route path="/branches" element={<BranchesPage />} />
             <Route path="/users" element={<UsersPage />} />
             <Route path="/customers" element={<CustomersPage />} />

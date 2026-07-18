@@ -13,6 +13,7 @@ use App\Modules\Customers\Controllers\CustomerController;
 use App\Modules\Dashboard\Controllers\DashboardController;
 use App\Modules\Finance\Controllers\FinanceController;
 use App\Modules\Goals\Controllers\GoalController;
+use App\Modules\Hr\Controllers\HrController;
 use App\Modules\Inventory\Controllers\InventoryController;
 use App\Modules\Notifications\Controllers\NotificationController;
 use App\Modules\Permissions\Controllers\PermissionController;
@@ -75,6 +76,18 @@ $app->group('', function ($group): void {
     $group->get('/dashboard', DashboardController::class . ':index')->add(PermissionMiddleware::check('dashboard:visualizar'));
     $group->get('/goals', GoalController::class . ':index')->add(PermissionMiddleware::check('dashboard:visualizar'));
     $group->put('/goals', GoalController::class . ':save')->add(PermissionMiddleware::check('configuracao:editar'));
+    // RH: funcionarios, cargos e departamentos. As rotas de estrutura ficam
+    // antes de /employees/{id} para nao colidir com o padrao numerico.
+    $group->get('/employees', HrController::class . ':index')->add(PermissionMiddleware::check('funcionario:visualizar'));
+    $group->post('/employees/departments', HrController::class . ':storeDepartment')->add(PermissionMiddleware::check('funcionario:criar'));
+    $group->put('/employees/departments/{id:[0-9]+}', HrController::class . ':updateDepartment')->add(PermissionMiddleware::check('funcionario:editar'));
+    $group->post('/employees/positions', HrController::class . ':storePosition')->add(PermissionMiddleware::check('funcionario:criar'));
+    $group->put('/employees/positions/{id:[0-9]+}', HrController::class . ':updatePosition')->add(PermissionMiddleware::check('funcionario:editar'));
+    $group->patch('/employees/{entity:departments|positions}/{id:[0-9]+}/status', HrController::class . ':structureStatus')->add(PermissionMiddleware::check('funcionario:editar'));
+    $group->post('/employees', HrController::class . ':store')->add(PermissionMiddleware::check('funcionario:criar'));
+    $group->get('/employees/{id:[0-9]+}', HrController::class . ':show')->add(PermissionMiddleware::check('funcionario:visualizar'));
+    $group->put('/employees/{id:[0-9]+}', HrController::class . ':update')->add(PermissionMiddleware::check('funcionario:editar'));
+    $group->patch('/employees/{id:[0-9]+}/status', HrController::class . ':status')->add(PermissionMiddleware::check('funcionario:editar'));
     $group->get('/companies', CompanyController::class . ':index')->add(PermissionMiddleware::check('empresa:visualizar'));
     $group->put('/companies', CompanyController::class . ':update')->add(PermissionMiddleware::check('empresa:editar'));
     $group->get('/suppliers', SupplierController::class . ':index')->add(PermissionMiddleware::check('fornecedor:visualizar'));
