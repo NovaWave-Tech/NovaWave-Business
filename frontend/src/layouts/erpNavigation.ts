@@ -125,6 +125,12 @@ export const erpNavigation: ErpNavGroup[] = [
         permission: 'filial:visualizar',
       },
       {
+        label: 'RH',
+        path: '/hr',
+        icon: Users,
+        permission: 'funcionario:visualizar',
+      },
+      {
         label: 'Usuarios',
         path: '/users',
         icon: Users,
