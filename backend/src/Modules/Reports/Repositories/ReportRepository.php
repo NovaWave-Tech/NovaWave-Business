@@ -7,6 +7,10 @@ use PDO;
 
 final class ReportRepository
 {
+    // Rotulos de situacao para o relatorio sair legivel (e nao como codigo).
+    private const ORDER_STATUS = "CASE situacao WHEN 1 THEN 'Concluida' WHEN 2 THEN 'Pendente' WHEN 3 THEN 'Devolvida' WHEN 4 THEN 'Cancelada' ELSE 'Outro' END";
+    private const FINANCE_STATUS = "CASE situacao WHEN 1 THEN 'Em aberto' WHEN 2 THEN 'Liquidado' WHEN 3 THEN 'Cancelado' ELSE 'Outro' END";
+
     private PDO $pdo;
     public function __construct() { $this->pdo = Database::getInstance(); }
 
@@ -51,9 +55,9 @@ final class ReportRepository
         return match ($slug) {
             'customers' => $this->all("SELECT c.nome name,c.documento document,c.cidade city,c.estado state,COUNT(v.idvenda) orders,COALESCE(SUM(v.valor_total),0) total FROM cliente c LEFT JOIN venda v ON v.idempresa=c.idempresa AND v.idcliente=c.idcliente AND v.situacao<>4 AND v.data_venda::date BETWEEN :start AND :end WHERE c.idempresa=:company GROUP BY c.idcliente ORDER BY total DESC LIMIT 100", array_diff_key($params, ['branch' => true])),
             'products', 'stock' => $this->all("SELECT p.sku,p.nome name,p.preco_venda price,COALESCE(SUM(e.quantidade),0) stock,COALESCE(SUM(e.quantidade*p.preco_custo),0) stock_value FROM produto p LEFT JOIN estoque e ON e.idempresa=p.idempresa AND e.idproduto=p.idproduto WHERE p.idempresa=:company GROUP BY p.idproduto ORDER BY stock_value DESC LIMIT 100", ['company' => $params['company']]),
-            'finance' => $this->all("SELECT type,description,due_date,status,total FROM (SELECT 'Receita' type,descricao description,data_vencimento due_date,situacao status,valor+juros+multa-desconto total FROM conta_receber WHERE idempresa=:company UNION ALL SELECT 'Despesa',descricao,data_vencimento,situacao,valor+juros+multa-desconto FROM conta_pagar WHERE idempresa=:company) x WHERE due_date BETWEEN :start AND :end ORDER BY due_date DESC LIMIT 100", array_diff_key($params, ['branch' => true])),
-            'purchases' => $this->all("SELECT c.idcompra id,c.data_compra date,f.nome branch,c.valor_total total,c.situacao status FROM compra c JOIN filial f ON f.idempresa=c.idempresa AND f.idfilial=c.idfilial WHERE c.idempresa=:company AND c.data_compra::date BETWEEN :start AND :end ORDER BY c.data_compra DESC LIMIT 100", array_diff_key($params, ['branch' => true])),
-            default => $this->all("SELECT v.idvenda id,v.data_venda date,f.nome branch,COALESCE(c.nome,'Consumidor') customer,v.valor_total total,v.situacao status FROM venda v JOIN filial f ON f.idempresa=v.idempresa AND f.idfilial=v.idfilial LEFT JOIN cliente c ON c.idempresa=v.idempresa AND c.idcliente=v.idcliente WHERE v.idempresa=:company AND v.situacao<>4 AND v.data_venda::date BETWEEN :start AND :end{$branchSale} ORDER BY v.data_venda DESC LIMIT 100", $params),
+            'finance' => $this->all("SELECT type,description,due_date," . self::FINANCE_STATUS . " status,total FROM (SELECT 'Receita' type,descricao description,data_vencimento due_date,situacao,valor+juros+multa-desconto total FROM conta_receber WHERE idempresa=:company UNION ALL SELECT 'Despesa',descricao,data_vencimento,situacao,valor+juros+multa-desconto FROM conta_pagar WHERE idempresa=:company) x WHERE due_date BETWEEN :start AND :end ORDER BY due_date DESC LIMIT 100", array_diff_key($params, ['branch' => true])),
+            'purchases' => $this->all("SELECT c.idcompra id,c.data_compra::date date,f.nome branch,c.valor_total total," . str_replace('situacao', 'c.situacao', self::ORDER_STATUS) . " status FROM compra c JOIN filial f ON f.idempresa=c.idempresa AND f.idfilial=c.idfilial WHERE c.idempresa=:company AND c.data_compra::date BETWEEN :start AND :end ORDER BY c.data_compra DESC LIMIT 100", array_diff_key($params, ['branch' => true])),
+            default => $this->all("SELECT v.idvenda id,v.data_venda::date date,f.nome branch,COALESCE(c.nome,'Consumidor') customer,v.valor_total total," . str_replace('situacao', 'v.situacao', self::ORDER_STATUS) . " status FROM venda v JOIN filial f ON f.idempresa=v.idempresa AND f.idfilial=v.idfilial LEFT JOIN cliente c ON c.idempresa=v.idempresa AND c.idcliente=v.idcliente WHERE v.idempresa=:company AND v.situacao<>4 AND v.data_venda::date BETWEEN :start AND :end{$branchSale} ORDER BY v.data_venda DESC LIMIT 100", $params),
         };
     }
 
