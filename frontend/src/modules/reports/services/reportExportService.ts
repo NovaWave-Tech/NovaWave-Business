@@ -21,6 +21,26 @@ const labels: Record<string, string> = {
   due_date: 'Vencimento',
 };
 const moneyKeys = new Set(['total', 'price', 'stock_value']);
+// Colunas numericas (o PostgreSQL/PDO devolve numeros como string). No Excel
+// precisam virar numero de verdade, senao o formato monetario nao aplica e
+// nao da para somar/ordenar a coluna.
+const numericKeys = new Set([
+  'total',
+  'price',
+  'stock_value',
+  'stock',
+  'orders',
+]);
+
+/** Converte texto numerico do backend em number; mantem o resto como esta. */
+function cellValue(key: string, raw: unknown): string | number {
+  if (raw === null || raw === undefined || raw === '') return '';
+  if (numericKeys.has(key)) {
+    const value = Number(raw);
+    return Number.isFinite(value) ? value : String(raw);
+  }
+  return String(raw);
+}
 
 export async function exportReportExcel(
   title: string,
@@ -80,7 +100,7 @@ export async function exportReportExcel(
   data.rows.forEach((row, rowIndex) =>
     columns.forEach((key, columnIndex) => {
       const cell = sheet.getCell(rowIndex + 11, columnIndex + 1);
-      cell.value = row[key] ?? '';
+      cell.value = cellValue(key, row[key]);
       if (moneyKeys.has(key)) cell.numFmt = 'R$ #,##0.00';
       if (rowIndex % 2)
         cell.fill = {
